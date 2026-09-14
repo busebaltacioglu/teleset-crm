@@ -1,0 +1,471 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Ürün Teklif Süreci | Teleset CRM{% endblock %}
+
+{% block sayfa_basligi %}Ürün Teklif Süreci{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <!-- 1. ÜST METRİK KARTLARI -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl-3">
+            <div class="portal-card p-3 shadow-sm d-flex align-items-center">
+                <div class="rounded-circle p-3 bg-primary-subtle text-primary me-3 d-flex align-items-center justify-content-center" style="width: 54px; height: 54px;">
+                    <i class="bi bi-file-earmark-spreadsheet fs-4"></i>
+                </div>
+                <div>
+                    <span class="text-muted small fw-bold text-uppercase" style="letter-spacing: 0.5px;">Toplam Teklif</span>
+                    <h3 class="fw-bold mb-0 text-dark">{{ toplam_surec }}</h3>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-sm-6 col-xl-3">
+            <div class="portal-card p-3 shadow-sm d-flex align-items-center">
+                <div class="rounded-circle p-3 bg-info-subtle text-info me-3 d-flex align-items-center justify-content-center" style="width: 54px; height: 54px;">
+                    <i class="bi bi-hourglass-split fs-4"></i>
+                </div>
+                <div>
+                    <span class="text-muted small fw-bold text-uppercase" style="letter-spacing: 0.5px;">Devam Edenler</span>
+                    <h3 class="fw-bold mb-0 text-info">{{ aktif_surec }}</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-xl-3">
+            <div class="portal-card p-3 shadow-sm d-flex align-items-center">
+                <div class="rounded-circle p-3 bg-warning-subtle text-warning-emphasis me-3 d-flex align-items-center justify-content-center" style="width: 54px; height: 54px;">
+                    <i class="bi bi-send-check-fill fs-4"></i>
+                </div>
+                <div>
+                    <span class="text-muted small fw-bold text-uppercase" style="letter-spacing: 0.5px;">Müşteriye İletilen</span>
+                    <h3 class="fw-bold mb-0 text-warning-emphasis">{{ iletilen_surec }}</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-xl-3">
+            <div class="portal-card p-3 shadow-sm d-flex align-items-center">
+                <div class="rounded-circle p-3 bg-success-subtle text-success me-3 d-flex align-items-center justify-content-center" style="width: 54px; height: 54px;">
+                    <i class="bi bi-cash-coin fs-4"></i>
+                </div>
+                <div>
+                    <span class="text-muted small fw-bold text-uppercase" style="letter-spacing: 0.5px;">Toplam Teklif Portföyü</span>
+                    <h3 class="fw-bold mb-0 text-success">€{{ toplam_tutar_eur|floatformat:0|intcomma }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. ÜST EYLEM & ÖZET ÇUBUĞU -->
+    <div class="portal-card p-3 shadow-sm mb-4 bg-white d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2">
+        <div class="d-flex align-items-center gap-2">
+            <h6 class="fw-bold mb-0 text-dark">
+                <i class="bi bi-receipt-cutoff text-primary me-2"></i>Ürün Teklif Süreç Listesi (15 Adım)
+            </h6>
+            <span id="teklifKayitSayisi" class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1">
+                {{ surecler|length }} Kayıt
+            </span>
+        </div>
+
+        <div>
+            <button class="btn btn-primary rounded-pill btn-sm px-3 shadow-sm fw-semibold" data-bs-toggle="modal" data-bs-target="#yeniTeklifModal">
+                <i class="bi bi-plus-lg me-1"></i> Yeni Teklif Süreci Başlat
+            </button>
+        </div>
+    </div>
+
+    <!-- SÜREÇ LİSTESİ TABLOSU -->
+    <div class="portal-card shadow-sm bg-white overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="font-size: 0.90rem;">
+                <thead class="table-light">
+                    <!-- ENTEGRE SÜTUN & FİLTRELEME BAŞLIK SATIRI -->
+                    <tr class="table-filter-row bg-light">
+                        <th class="ps-4 py-3">
+                            <input type="text" id="filterTeklifKodMusteri" class="form-control form-control-sm table-teklif-filter shadow-sm" placeholder="Süreç Kodu & Müşteri..." style="font-size: 0.78rem; border-radius: 6px;">
+                        </th>
+                        <th class="py-3">
+                            <input type="text" id="filterTeklifKonu" class="form-control form-control-sm table-teklif-filter shadow-sm" placeholder="Teklif Konusu / Sorumlu..." style="font-size: 0.78rem; border-radius: 6px;">
+                        </th>
+                        <th class="py-3">
+                            <input type="text" id="filterTeklifDonemFabrika" class="form-control form-control-sm table-teklif-filter shadow-sm" placeholder="Dönem & Fabrika & Ürün..." style="font-size: 0.78rem; border-radius: 6px;">
+                        </th>
+                        <th class="py-3">
+                            <select id="filterTeklifIstasyon" class="form-select form-select-sm table-teklif-filter shadow-sm" style="font-size: 0.78rem; border-radius: 6px;">
+                                <option value="">Güncel İstasyon (Tümü)</option>
+                                <option value="1">1. Fiyat Stratejisi</option>
+                                <option value="2">2. Bölüm Yöneticileri Paylaşımı</option>
+                                <option value="3">3. Üst Yönetim Onayı</option>
+                                <option value="4">4. RFQ Alımı & İletim</option>
+                                <option value="5">5. Satış Koşulu Kontrolü</option>
+                                <option value="6">6. Detaylı Maliyet Analizi</option>
+                                <option value="7">7. Makine / Kalıp Maliyeti</option>
+                                <option value="8">8. Teklif Özet & Yönetim</option>
+                                <option value="9">9. Teklif Müşteriye İletim</option>
+                                <option value="10">10. Geri Bildirim & Hedef Fiyat</option>
+                                <option value="11">11. Teklif Güncelleme Kararı</option>
+                                <option value="12">12. Revize Teklif İletim</option>
+                                <option value="13">13. Gerçekleşen Maliyet Kontrol</option>
+                                <option value="14">14. Süreç Kapatma & Rapor</option>
+                                <option value="15">15. Öğrenilmiş Dersler</option>
+                            </select>
+                        </th>
+                        <th class="py-3" style="min-width: 120px;">
+                            <select id="filterTeklifIlerleme" class="form-select form-select-sm table-teklif-filter shadow-sm" style="font-size: 0.78rem; border-radius: 6px;">
+                                <option value="">İlerleme (Tümü)</option>
+                                <option value="0-25">%0 - %25</option>
+                                <option value="26-50">%26 - %50</option>
+                                <option value="51-75">%51 - %75</option>
+                                <option value="76-100">%76 - %100</option>
+                            </select>
+                        </th>
+                        <th class="py-3">
+                            <select id="filterTeklifTutar" class="form-select form-select-sm table-teklif-filter shadow-sm" style="font-size: 0.78rem; border-radius: 6px;">
+                                <option value="">Teklif Tutarı (Tümü)</option>
+                                <option value="0-250k">0 - 250.000 €</option>
+                                <option value="250k-750k">250.000 - 750.000 €</option>
+                                <option value="750k+">750.000 € Üzeri</option>
+                            </select>
+                        </th>
+                        <th class="py-3">
+                            <select id="filterTeklifDurum" class="form-select form-select-sm table-teklif-filter shadow-sm" style="font-size: 0.78rem; border-radius: 6px;">
+                                <option value="">Durum (Tümü)</option>
+                                <option value="Devam Ediyor">Devam Ediyor</option>
+                                <option value="Yönetim Onayında">Yönetim Onayında</option>
+                                <option value="Teklif Müşteriye İletildi">Müşteriye İletildi</option>
+                                <option value="Revizyon Aşamasında">Revizyon Aşamasında</option>
+                                <option value="Başarıyla Tamamlandı">Başarıyla Tamamlandı</option>
+                            </select>
+                        </th>
+                        <th class="text-center py-3 px-2" style="width: 100px; min-width: 95px;">
+                            <button type="button" id="clearTeklifFiltersBtn" class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1 shadow-sm w-100 fw-semibold text-nowrap d-inline-flex align-items-center justify-content-center" title="Filtreleri Sıfırla" style="font-size: 0.76rem;">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i>Sıfırla
+                            </button>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in surecler %}
+                        <tr class="teklif-surec-row"
+                            data-kod-musteri="{{ s.kod }} {{ s.musteri_adi }}"
+                            data-konu="{{ s.ad }} {{ s.sorumlu_satis_uzmani }}"
+                            data-donem-fabrika="{{ s.donem }} {{ s.ilgili_fabrika }} {{ s.get_urun_grubu_display }}"
+                            data-istasyon-no="{{ s.guncel_adim_no }}"
+                            data-ilerleme="{{ s.tamamlanma_yuzdesi }}"
+                            data-tutar="{{ s.teklif_tutari|default:'0' }}"
+                            data-durum="{{ s.get_durum_display }}">
+                            
+                            <!-- 1. Süreç Kodu & Müşteri -->
+                            <td class="ps-4 py-3">
+                                <a href="{% url 'urun_teklif_detay' s.pk %}" class="fw-bold text-dark text-decoration-none hover-primary d-block">
+                                    {{ s.kod }}
+                                </a>
+                                <div class="text-muted small">
+                                    {{ s.musteri_adi }}
+                                </div>
+                            </td>
+
+                            <!-- 2. Teklif Konusu & Sorumlular -->
+                            <td class="py-3">
+                                <div class="fw-semibold text-dark text-truncate" style="max-width: 260px;" title="{{ s.ad }}">
+                                    {{ s.ad }}
+                                </div>
+                                <div class="text-muted small mt-0.5">
+                                    <i class="bi bi-person me-1"></i>{{ s.sorumlu_satis_uzmani }}
+                                </div>
+                            </td>
+
+                            <!-- 3. Dönem & Fabrika & Ürün Grubu -->
+                            <td class="py-3">
+                                <div><span class="badge bg-secondary-subtle text-secondary fw-semibold">{{ s.donem }}</span></div>
+                                <div class="text-muted small mt-1">
+                                    {{ s.ilgili_fabrika }} • <span class="text-primary">{{ s.get_urun_grubu_display }}</span>
+                                </div>
+                            </td>
+
+                            <!-- 4. Güncel İstasyon -->
+                            <td class="py-3">
+                                <div class="d-flex align-items-center">
+                                    <span class="badge bg-primary text-white rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 26px; height: 26px; font-size: 0.75rem;">
+                                        {{ s.guncel_adim_no }}
+                                    </span>
+                                    <div>
+                                        <span class="fw-bold text-dark d-block" style="font-size: 0.85rem;">{{ s.guncel_adim.adim.baslik }}</span>
+                                        <span class="text-muted" style="font-size: 0.75rem;">{{ s.guncel_adim.adim.get_faz_display|truncatechars:35 }}</span>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <!-- 5. İlerleme -->
+                            <td class="py-3">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="progress flex-grow-1" style="height: 7px; border-radius: 4px;">
+                                        <div class="progress-bar {% if s.durum == 'BASARIYLA_TAMAMLANDI' %}bg-success{% elif s.durum == 'REVIZYONDA' %}bg-warning{% else %}bg-primary{% endif %}" style="width: {{ s.tamamlanma_yuzdesi }}%;"></div>
+                                    </div>
+                                    <span class="fw-bold text-muted small">%{{ s.tamamlanma_yuzdesi }}</span>
+                                </div>
+                            </td>
+
+                            <!-- 6. Teklif Tutarı (EUR) -->
+                            <td class="py-3">
+                                {% if s.teklif_tutari %}
+                                    <span class="fw-bold text-dark font-monospace">€{{ s.teklif_tutari|floatformat:2|intcomma }}</span>
+                                {% else %}
+                                    <span class="text-muted small">-</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- 7. Durum -->
+                            <td class="py-3">
+                                {% if s.durum == 'DEVAM_EDIYOR' %}
+                                    <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill px-2.5 py-1">
+                                        <i class="bi bi-hourglass-split me-1"></i>Devam Ediyor
+                                    </span>
+                                {% elif s.durum == 'YONETIM_ONAYINDA' %}
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1">
+                                        <i class="bi bi-shield-check me-1"></i>Yönetim Onayında
+                                    </span>
+                                {% elif s.durum == 'MUSTERIYE_ILETILDI' %}
+                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2.5 py-1">
+                                        <i class="bi bi-send me-1"></i>Müşteriye İletildi
+                                    </span>
+                                {% elif s.durum == 'REVIZYONDA' %}
+                                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill px-2.5 py-1">
+                                        <i class="bi bi-arrow-repeat me-1"></i>Revizyon Aşamasında
+                                    </span>
+                                {% elif s.durum == 'BASARIYLA_TAMAMLANDI' %}
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1">
+                                        <i class="bi bi-check-circle-fill me-1"></i>Tamamlandı
+                                    </span>
+                                {% elif s.durum == 'OLUMSUZ_KAPATILDI' %}
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2.5 py-1">
+                                        <i class="bi bi-x-circle me-1"></i>Olumsuz Kapatıldı
+                                    </span>
+                                {% endif %}
+                            </td>
+
+                            <!-- 8. Süreci Yönet -->
+                            <td class="text-center text-nowrap px-3">
+                                <a href="{% url 'urun_teklif_detay' s.pk %}" class="btn btn-outline-primary btn-sm rounded-circle d-inline-flex align-items-center justify-content-center shadow-sm" style="width: 32px; height: 32px;" title="Süreci Yönet">
+                                    <i class="bi bi-chevron-right fw-bold"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr id="teklifTableEmptyRow">
+                            <td colspan="8" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary opacity-50"></i>
+                                Henüz kayıtlı Ürün Teklif Süreci bulunmamaktadır.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    <!-- Filtreleme sonucu boş çıktığında gösterilecek satır -->
+                    <tr id="teklifNoResultsRow" style="display: none;">
+                        <td colspan="8" class="text-center py-5 text-muted">
+                            <i class="bi bi-search fs-2 d-block mb-2 text-secondary opacity-50"></i>
+                            Filtrelere uygun ürün teklif süreci bulunamadı.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- YENİ ÜRÜN TEKLİF SÜRECİ MODAL -->
+<div class="modal fade" id="yeniTeklifModal" tabindex="-1" aria-labelledby="yeniTeklifModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form action="{% url 'urun_teklif_olustur' %}" method="POST">
+                {% csrf_token %}
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold" id="yeniTeklifModalLabel">
+                        <i class="bi bi-plus-circle me-2"></i>Yeni Ürün Teklif Süreci Başlat
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="alert alert-info py-2 px-3 small mb-4">
+                        <i class="bi bi-info-circle-fill me-1"></i> Yeni teklif süreci oluşturulduğunda resmi <strong>15 Adımlık Ürün Teklif İş Akışı</strong> ve karar kapıları otomatik devreye alınır.
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Süreç Kodu</label>
+                            <input type="text" name="kod" class="form-control form-control-sm font-monospace" placeholder="Otomatik (TEK-2026-XXX)">
+                            <div class="form-text" style="font-size: 0.72rem;">Boş bırakılırsa sıradaki numara otomatik verilir.</div>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label small fw-bold">Teklif / Proje Başlığı <span class="text-danger">*</span></label>
+                            <input type="text" name="ad" class="form-control form-control-sm" placeholder="Örn: Arçelik Fırın Gövdesi Sac Kalıp & Seri Üretim Teklifi" required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Müşteri / Firma Adı <span class="text-danger">*</span></label>
+                            <input type="text" name="musteri_adi" id="teklifMusteriAdiInput" class="form-control form-control-sm" placeholder="Müşteri Ünvanı" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Müşteri Portföy Kartı İle Eşle</label>
+                            <select name="musteri_karti_id" id="teklifMusteriKartiSelect" class="form-select form-select-sm">
+                                <option value="">-- Portföy Kartı Seç (Opsiyonel) --</option>
+                                {% for m in musteriler %}
+                                    <option value="{{ m.pk }}" data-ad="{{ m.ad }}">{{ m.kod }} - {{ m.kisa_ad }} ({{ m.ad }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Dönem / Yıl</label>
+                            <input type="text" name="donem" class="form-control form-control-sm" value="2026 / Q1">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">İlgili Fabrika</label>
+                            <select name="ilgili_fabrika" class="form-select form-select-sm">
+                                {% for fab_val, fab_lbl in fabrikalar %}
+                                    <option value="{{ fab_val }}">{{ fab_lbl }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Ürün Grubu</label>
+                            <select name="urun_grubu" class="form-select form-select-sm">
+                                {% for grp_val, grp_lbl in urun_gruplari %}
+                                    <option value="{{ grp_val }}">{{ grp_lbl }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Toplam Teklif Tutarı (€)</label>
+                            <input type="number" step="0.01" name="teklif_tutari" class="form-control form-control-sm font-monospace" placeholder="Örn: 450000.00">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Satış Uzmanı</label>
+                            <input type="text" name="sorumlu_satis_uzmani" class="form-control form-control-sm" value="Buse Nur Baltacıoğlu">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Satış Analiz Uzmanı</label>
+                            <input type="text" name="sorumlu_satis_analiz_uzmani" class="form-control form-control-sm" value="Ahmet Erdem">
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Teklif Özeti / Başlangıç Notları</label>
+                            <textarea name="aciklama" rows="3" class="form-control form-control-sm" placeholder="RFQ kapsamı, müşteri beklentileri ve başlangıç değerlendirmeleri..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-primary btn-sm rounded-pill px-4 shadow-sm fw-semibold">
+                        <i class="bi bi-check-lg me-1"></i> Süreci Başlat
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- CANLI FİLTRELEME VE SENKRONİZASYON JS -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Portföy kartı seçildiğinde müşteri adını otomatik doldur
+    const musteriSelect = document.getElementById('teklifMusteriKartiSelect');
+    const musteriInput = document.getElementById('teklifMusteriAdiInput');
+    if (musteriSelect && musteriInput) {
+        musteriSelect.addEventListener('change', function() {
+            const opt = this.options[this.selectedIndex];
+            if (opt && opt.dataset.ad) {
+                musteriInput.value = opt.dataset.ad;
+            }
+        });
+    }
+
+    // Tablo Canlı Filtreleme
+    const filterKodMusteri = document.getElementById('filterTeklifKodMusteri');
+    const filterKonu = document.getElementById('filterTeklifKonu');
+    const filterDonemFabrika = document.getElementById('filterTeklifDonemFabrika');
+    const filterIstasyon = document.getElementById('filterTeklifIstasyon');
+    const filterIlerleme = document.getElementById('filterTeklifIlerleme');
+    const filterTutar = document.getElementById('filterTeklifTutar');
+    const filterDurum = document.getElementById('filterTeklifDurum');
+    const clearBtn = document.getElementById('clearTeklifFiltersBtn');
+
+    const rows = document.querySelectorAll('.teklif-surec-row');
+    const countBadge = document.getElementById('teklifKayitSayisi');
+    const noResultsRow = document.getElementById('teklifNoResultsRow');
+
+    function applyFilters() {
+        const valKodMusteri = (filterKodMusteri ? filterKodMusteri.value.trim().toLowerCase() : '');
+        const valKonu = (filterKonu ? filterKonu.value.trim().toLowerCase() : '');
+        const valDonemFabrika = (filterDonemFabrika ? filterDonemFabrika.value.trim().toLowerCase() : '');
+        const valIstasyon = (filterIstasyon ? filterIstasyon.value.trim() : '');
+        const valIlerleme = (filterIlerleme ? filterIlerleme.value.trim() : '');
+        const valTutar = (filterTutar ? filterTutar.value.trim() : '');
+        const valDurum = (filterDurum ? filterDurum.value.trim().toLowerCase() : '');
+
+        let visibleCount = 0;
+
+        rows.forEach(function(row) {
+            const dKodMusteri = (row.dataset.kodMusteri || '').toLowerCase();
+            const dKonu = (row.dataset.konu || '').toLowerCase();
+            const dDonemFabrika = (row.dataset.donemFabrika || '').toLowerCase();
+            const dIstasyonNo = (row.dataset.istasyonNo || '');
+            const dIlerleme = parseInt(row.dataset.ilerleme || '0', 10);
+            const dTutar = parseFloat(row.dataset.tutar || '0');
+            const dDurum = (row.dataset.durum || '').toLowerCase();
+
+            let match = true;
+
+            if (valKodMusteri && !dKodMusteri.includes(valKodMusteri)) match = false;
+            if (valKonu && !dKonu.includes(valKonu)) match = false;
+            if (valDonemFabrika && !dDonemFabrika.includes(valDonemFabrika)) match = false;
+            if (valIstasyon && dIstasyonNo !== valIstasyon) match = false;
+
+            if (valIlerleme) {
+                if (valIlerleme === '0-25' && !(dIlerleme >= 0 && dIlerleme <= 25)) match = false;
+                else if (valIlerleme === '26-50' && !(dIlerleme >= 26 && dIlerleme <= 50)) match = false;
+                else if (valIlerleme === '51-75' && !(dIlerleme >= 51 && dIlerleme <= 75)) match = false;
+                else if (valIlerleme === '76-100' && !(dIlerleme >= 76 && dIlerleme <= 100)) match = false;
+            }
+
+            if (valTutar) {
+                if (valTutar === '0-250k' && !(dTutar >= 0 && dTutar <= 250000)) match = false;
+                else if (valTutar === '250k-750k' && !(dTutar > 250000 && dTutar <= 750000)) match = false;
+                else if (valTutar === '750k+' && !(dTutar > 750000)) match = false;
+            }
+
+            if (valDurum && !dDurum.includes(valDurum)) match = false;
+
+            if (match) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        if (countBadge) countBadge.textContent = visibleCount + ' Kayıt';
+        if (noResultsRow) {
+            noResultsRow.style.display = (visibleCount === 0 && rows.length > 0) ? '' : 'none';
+        }
+    }
+
+    const filterInputs = document.querySelectorAll('.table-teklif-filter');
+    filterInputs.forEach(input => {
+        input.addEventListener('input', applyFilters);
+        input.addEventListener('change', applyFilters);
+    });
+
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function() {
+            filterInputs.forEach(input => {
+                input.value = '';
+            });
+            applyFilters();
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,152 @@
+{% load humanize %}
+<div id="adim-{{ k.adim.adim_no }}" class="portal-card mb-3 p-4 shadow-sm 
+    {% if k.durum == 'TAMAMLANDI' %}card-step-completed
+    {% elif k.adim.adim_no == surec.guncel_adim_no %}card-step-active
+    {% elif k.durum == 'PAS_GECILDI' %}card-step-pending opacity-75
+    {% else %}card-step-pending{% endif %}">
+    
+    <div class="d-flex justify-content-between align-items-start mb-2">
+        <div class="d-flex align-items-center">
+            <span class="badge 
+                {% if k.durum == 'TAMAMLANDI' %}bg-success
+                {% elif k.adim.adim_no == surec.guncel_adim_no %}bg-primary
+                {% elif k.durum == 'PAS_GECILDI' %}bg-secondary
+                {% else %}bg-light text-muted border{% endif %} 
+                me-2 px-2.5 py-1.5 fs-6 font-monospace">
+                Adım {{ k.adim.adim_no }}
+            </span>
+            <h6 class="fw-bold text-dark mb-0 fs-6">{{ k.adim.baslik }}</h6>
+        </div>
+        <div>
+            {% if k.durum == 'TAMAMLANDI' %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1"><i class="bi bi-check-circle-fill me-1"></i> Tamamlandı</span>
+            {% elif k.adim.adim_no == surec.guncel_adim_no %}
+                <span class="badge bg-primary text-white rounded-pill px-3 py-1 shadow-sm"><span class="live-pulse me-1"></span> Aktif İstasyon</span>
+            {% elif k.durum == 'PAS_GECILDI' %}
+                <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2 py-1">Pas Geçildi</span>
+            {% else %}
+                <span class="badge bg-light text-muted border rounded-pill px-2 py-1">Bekliyor</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- FAALİYET TANIMI -->
+    <p class="text-secondary small mb-3 lh-base">{{ k.adim.faaliyet_tanimi }}</p>
+
+    <!-- GEÇMİŞ TAMAMLANMA VE KARAR ÖZETİ -->
+    {% if k.durum == 'TAMAMLANDI' or k.karar_sonucu %}
+    <div class="p-3 rounded-3 {% if 'NOK' in k.karar_sonucu or 'HAYIR' in k.karar_sonucu or 'Red' in k.karar_sonucu or 'Uygunsuz' in k.karar_sonucu %}bg-warning-subtle border border-warning-subtle text-dark{% else %}bg-success-subtle border border-success-subtle text-dark{% endif %} small mb-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <strong>
+                    {% if 'NOK' in k.karar_sonucu or 'HAYIR' in k.karar_sonucu or 'Red' in k.karar_sonucu or 'Uygunsuz' in k.karar_sonucu %}
+                        <i class="bi bi-exclamation-circle text-warning-emphasis me-1"></i>
+                    {% else %}
+                        <i class="bi bi-check2-circle text-success me-1"></i>
+                    {% endif %}
+                    Karar / Sonuç:
+                </strong> {{ k.karar_sonucu|default:'Tamamlandı' }}
+                {% if k.dokuman_referansi %} • <span class="text-primary fw-semibold"><i class="bi bi-link-45deg me-1"></i>Doküman / Form: {{ k.dokuman_referansi }}</span>{% endif %}
+            </div>
+            {% if k.tamamlanma_tarihi %}<span class="text-muted fw-semibold" style="font-size: 0.75rem;"><i class="bi bi-clock me-1"></i>{{ k.tamamlanma_tarihi|date:"d.m.Y H:i" }}</span>{% endif %}
+        </div>
+        {% if k.notlar %}
+        <div class="mt-2 text-secondary bg-white p-2 rounded-2 border">
+            <strong>Adım Açıklaması / Değerlendirme:</strong> {{ k.notlar }}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- FORM: NOTLAR VE AKSİYONLAR (SADECE GÜNCEL AKTİF İSTASYONDA AÇILIR) -->
+    {% if k.adim.adim_no == surec.guncel_adim_no and k.durum == 'DEVAM_EDIYOR' or k.adim.adim_no == surec.guncel_adim_no and surec.durum == 'REVIZYONDA' %}
+    <form action="{% url 'muhendislik_degisikligi_adim_aksiyon' surec.pk k.pk %}" method="POST">
+        {% csrf_token %}
+        <div class="mt-3 p-3 bg-white border rounded-3 shadow-sm border-primary">
+            <div class="row g-2 mb-3">
+                <div class="col-md-8">
+                    <label class="form-label small fw-bold text-muted mb-1">Bu Adım İçin Açıklama / Değerlendirme / Teknik Notlar:</label>
+                    <textarea name="notlar" rows="2" class="form-control form-control-sm" placeholder="Yapılan çalışmalar, teknik revizyonlar veya karar gerekçesini yazınız...">{{ k.notlar|default:'' }}</textarea>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold text-muted mb-1">İlgili Doküman / Form Referansı:</label>
+                    <input type="text" name="dokuman_referansi" class="form-control form-control-sm" placeholder="Örn: ISIR-2026-001 / FMEA-V2 / BOM-Excel" value="{{ k.dokuman_referansi|default:'' }}">
+                </div>
+            </div>
+
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 pt-2 border-top">
+                <!-- Ara Kaydet / Not Güncelleme Butonu -->
+                <div>
+                    <button type="submit" name="aksiyon" value="KAYDET" class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-sm fw-semibold">
+                        <i class="bi bi-floppy me-1"></i> İlerlemeyi / Notları Kaydet
+                    </button>
+                </div>
+
+                <!-- Adımı Tamamlama & Karar Butonları -->
+                <div class="d-flex flex-wrap gap-2">
+                    
+                    <!-- ADIM 11: YENİ ÜRÜN KAPSAM DEĞERLENDİRMESİ -->
+                    {% if k.adim.adim_no == 11 %}
+                        <button type="submit" name="aksiyon" value="EVET" class="btn btn-warning btn-sm rounded-pill px-3 shadow-sm fw-semibold">
+                            <i class="bi bi-arrow-right-circle me-1"></i> Yeni Ürün Sürecine Aktar (NPI Başlat)
+                        </button>
+                        <button type="submit" name="aksiyon" value="HAYIR" class="btn btn-success btn-sm rounded-pill px-3 shadow-sm fw-semibold">
+                            <i class="bi bi-check-lg me-1"></i> Standart Değişiklik Olarak Devam Et (Faz 2'ye Geç)
+                        </button>
+
+                    <!-- ADIM 20: NUMUNE ISIR ÖLÇÜM SONUÇLARI -->
+                    {% elif k.adim.adim_no == 20 %}
+                        <button type="submit" name="aksiyon" value="HAYIR" class="btn btn-danger btn-sm rounded-pill px-3 shadow-sm fw-semibold">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i> Ölçüm Uygunsuzluğu (Adım 13 BOM Revizyonuna Dön)
+                        </button>
+                        <button type="submit" name="aksiyon" value="EVET" class="btn btn-success btn-sm rounded-pill px-3 shadow-sm fw-semibold">
+                            <i class="bi bi-check-circle-fill me-1"></i> ISIR Ölçümleri Uygun (Adım 21 Sevk)
+                        </button>
+
+                    <!-- ADIM 22: MÜŞTERİ NUMUNE ONAYI -->
+                    {% elif k.adim.adim_no == 22 %}
+                        <button type="submit" name="aksiyon" value="HAYIR" class="btn btn-danger btn-sm rounded-pill px-3 shadow-sm fw-semibold">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i> Müşteri Numuneyi Reddetti (Adım 13'e Dön)
+                        </button>
+                        <button type="submit" name="aksiyon" value="EVET" class="btn btn-success btn-sm rounded-pill px-3 shadow-sm fw-semibold">
+                            <i class="bi bi-check-circle-fill me-1"></i> Müşteri Numuneyi Onayladı (Adım 23'e Geç)
+                        </button>
+
+                    <!-- ADIM 23: ÖN SERİ ÜRETİM TALEBİ -->
+                    {% elif k.adim.adim_no == 23 %}
+                        <button type="submit" name="aksiyon" value="HAYIR" class="btn btn-info text-white btn-sm rounded-pill px-3 shadow-sm fw-semibold">
+                            <i class="bi bi-skip-forward-circle me-1"></i> Ön Seri Talebi Yok (Doğrudan Faz 4 Seri BOM'a Geç)
+                        </button>
+                        <button type="submit" name="aksiyon" value="EVET" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm fw-semibold">
+                            <i class="bi bi-check-lg me-1"></i> Ön Seri Talebi Var (Adım 24 Planlama)
+                        </button>
+
+                    <!-- ADIM 27: ÖN SERİ MÜŞTERİ ONAYI -->
+                    {% elif k.adim.adim_no == 27 %}
+                        <button type="submit" name="aksiyon" value="HAYIR" class="btn btn-danger btn-sm rounded-pill px-3 shadow-sm fw-semibold">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i> Müşteri Ön Seriyi Reddetti (Adım 24'e Dön)
+                        </button>
+                        <button type="submit" name="aksiyon" value="EVET" class="btn btn-success btn-sm rounded-pill px-3 shadow-sm fw-semibold">
+                            <i class="bi bi-check-circle-fill me-1"></i> Müşteri Ön Seriyi Onayladı (Faz 4 Seri Üretime Geç)
+                        </button>
+
+                    <!-- ADIM 34: SON ADIM KAPANIŞ & SERİ REÇETE KONTROLÜ -->
+                    {% elif k.adim.adim_no == 34 %}
+                        <button type="submit" name="aksiyon" value="TAMAMLA" class="btn btn-success btn-sm rounded-pill px-4 shadow-sm fw-semibold">
+                            <i class="bi bi-check2-circle me-1"></i> Süreci Başarıyla Tamamla & Seri Üretime Al
+                        </button>
+
+                    <!-- STANDART ADIMLAR -->
+                    {% else %}
+                        <button type="submit" name="aksiyon" value="TAMAMLA" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm fw-semibold">
+                            <i class="bi bi-check-lg me-1"></i> Adımı Onayla ve İlerle ({{ k.adim.adim_no|add:"1" }}. Adıma Geç)
+                        </button>
+                    {% endif %}
+
+                </div>
+            </div>
+        </div>
+    </form>
+    {% endif %}
+
+</div>

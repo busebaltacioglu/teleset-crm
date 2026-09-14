@@ -1,0 +1,687 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Teleset CRM | Pazarlama Süreci Takip Portalı{% endblock %}</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --teleset-blue: #22609d;
+            --teleset-dark: #184775;
+            --teleset-navy: #0f2c4d;
+            --teleset-accent: #0ea5e9;
+            --teleset-bg: #f8fafc;
+            --teleset-card-border: rgba(226, 232, 240, 0.9);
+        }
+
+        body { 
+            background-color: var(--teleset-bg); 
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+            color: #1e293b;
+        }
+
+        .sidebar { 
+            min-height: 100vh; 
+            background-color: #ffffff; 
+            border-right: 1px solid #e2e8f0; 
+        }
+        @media (min-width: 768px) {
+            .sidebar { 
+                position: sticky;
+                top: 0;
+                height: 100vh;
+                overflow-y: auto;
+            }
+        }
+        .sidebar::-webkit-scrollbar {
+            width: 5px;
+        }
+        .sidebar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .sidebar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        .nav-link { 
+            color: #64748b; 
+            font-weight: 500; 
+            margin-bottom: 5px; 
+            border-radius: 10px; 
+            padding: 9px 14px;
+            transition: all 0.2s ease;
+            font-size: 0.92rem;
+        }
+        .nav-link:hover { 
+            background-color: #f1f5f9; 
+            color: var(--teleset-blue); 
+        }
+        .nav-link.active { 
+            background-color: #eff6ff; 
+            color: var(--teleset-blue); 
+            font-weight: 600;
+        }
+
+        .cursor-pointer {
+            cursor: pointer;
+        }
+
+        .chevron-icon {
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        [aria-expanded="false"] .chevron-icon {
+            transform: rotate(-90deg);
+        }
+
+        .portal-card {
+            border-radius: 14px;
+            border: 1px solid var(--teleset-card-border);
+            background: #ffffff;
+            transition: all 0.2s ease;
+        }
+        .portal-card:hover {
+            box-shadow: 0 8px 20px -6px rgba(15, 44, 77, 0.08) !important;
+        }
+
+        .hero-banner {
+            background: linear-gradient(135deg, var(--teleset-dark) 0%, var(--teleset-blue) 100%);
+            color: white;
+            border-radius: 16px;
+        }
+
+        .brand-logo-text {
+            font-size: 1.4rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            color: var(--teleset-dark);
+            text-transform: uppercase;
+        }
+        .brand-subtext {
+            font-size: 0.70rem;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+            color: #64748b;
+            text-transform: uppercase;
+        }
+
+        .raci-badge-a {
+            background-color: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+        }
+        .raci-badge-r {
+            background-color: #e0f2fe;
+            color: #0369a1;
+            border: 1px solid #bae6fd;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+        }
+        .raci-badge-c {
+            background-color: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fde68a;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+        }
+        .raci-badge-i {
+            background-color: #f1f5f9;
+            color: #475569;
+            border: 1px solid #e2e8f0;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+        }
+
+        .platform-tag {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            color: #334155;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 3px 7px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            margin-right: 4px;
+            margin-bottom: 4px;
+        }
+
+        .doc-tag {
+            background-color: #eff6ff;
+            border: 1px solid #dbeafe;
+            color: #1e40af;
+            font-size: 0.75rem;
+            padding: 3px 8px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            margin-right: 4px;
+            margin-bottom: 4px;
+        }
+
+        .live-pulse {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background-color: #22c55e;
+            border-radius: 50%;
+            animation: pulseAnimation 2s infinite;
+        }
+        /* HIZLI YUKARI ÇIKMA BUTONU (SCROLL TO TOP) */
+        .btn-scroll-top {
+            position: fixed;
+            bottom: 28px;
+            right: 28px;
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--teleset-dark) 0%, var(--teleset-blue) 100%);
+            color: #ffffff;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            box-shadow: 0 6px 18px rgba(15, 44, 77, 0.35);
+            cursor: pointer;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(20px) scale(0.9);
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: 1040;
+            outline: none;
+        }
+        .btn-scroll-top:hover {
+            color: #ffffff;
+            transform: translateY(-4px) scale(1.05);
+            box-shadow: 0 10px 25px rgba(15, 44, 77, 0.45);
+            background: linear-gradient(135deg, var(--teleset-blue) 0%, #0ea5e9 100%);
+        }
+        .btn-scroll-top:active {
+            transform: translateY(0) scale(0.95);
+        }
+        .btn-scroll-top.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0) scale(1);
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<div class="container-fluid">
+    <div class="row">
+        
+        <!-- SOL MENÜ (SIDEBAR) -->
+        <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse p-3 shadow-sm">
+            <div class="text-center mb-4 mt-2">
+                <a href="{% url 'ana_sayfa' %}" class="text-decoration-none">
+                    <div class="d-flex align-items-center justify-content-center">
+                        <div class="me-2 text-primary">
+                            <i class="bi bi-diagram-3-fill fs-2"></i>
+                        </div>
+                        <div class="text-start">
+                            <div class="brand-logo-text">TELESET</div>
+                            <div class="brand-subtext">CRM PORTAL</div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            
+            <!-- ANA SAYFA / EXECUTIVE WORKSPACE -->
+            <ul class="nav flex-column mb-3">
+                <li class="nav-item">
+                    <a class="nav-link py-2 d-flex align-items-center gap-2 {% if request.resolver_match.url_name == 'ana_sayfa' %}active{% endif %}" href="{% url 'ana_sayfa' %}">
+                        <i class="bi bi-house-door-fill text-primary fs-6"></i>
+                        <span class="fw-semibold">Ana Sayfa</span>
+                    </a>
+                </li>
+            </ul>
+
+            <!-- MÜŞTERİ YÖNETİMİ -->
+            <div class="px-2 mt-2 mb-1 d-flex justify-content-between align-items-center cursor-pointer user-select-none" 
+                 data-bs-toggle="collapse" 
+                 data-bs-target="#musteriYonetimiMenu" 
+                 aria-expanded="true">
+                <small class="text-uppercase fw-bold text-primary" style="font-size: 0.72rem; letter-spacing: 0.8px;">
+                    Müşteri Yönetimi
+                </small>
+                <i class="bi bi-chevron-down chevron-icon text-muted" style="font-size: 0.75rem;"></i>
+            </div>
+
+            <div class="collapse show" id="musteriYonetimiMenu">
+                <ul class="nav flex-column mb-3 ps-2">
+                    <li class="nav-item">
+                        <a class="nav-link py-2 {% if request.resolver_match.url_name == 'kartlar' and request.GET.tab == 'musteriler' or request.resolver_match.url_name == 'kartlar' and not request.GET.tab %}active{% endif %}" href="{% url 'kartlar' %}?tab=musteriler">
+                            Müşteri Kartları
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link py-2 {% if request.resolver_match.url_name == 'kartlar' and request.GET.tab == 'ulkeler' or request.resolver_match.url_name == 'kanvas_listesi' %}active{% endif %}" href="{% url 'kartlar' %}?tab=ulkeler">
+                            Ülke Kartları
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link py-2 {% if request.resolver_match.url_name == 'kartlar' and request.GET.tab == 'urunler' %}active{% endif %}" href="{% url 'kartlar' %}?tab=urunler">
+                            Ürün Grubu Kartları
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- SÜREÇ YÖNETİMİ -->
+            <div class="px-2 mt-3 mb-1 d-flex justify-content-between align-items-center cursor-pointer user-select-none" 
+                 data-bs-toggle="collapse" 
+                 data-bs-target="#surecYonetimiMenu" 
+                 aria-expanded="true">
+                <small class="text-uppercase fw-bold text-primary" style="font-size: 0.72rem; letter-spacing: 0.8px;">
+                    Süreç Yönetimi
+                </small>
+                <i class="bi bi-chevron-down chevron-icon text-muted" style="font-size: 0.75rem;"></i>
+            </div>
+
+            <div class="collapse show" id="surecYonetimiMenu">
+                <ul class="nav flex-column mb-3 ps-2">
+                    <li class="nav-item">
+                        <a class="nav-link py-2 {% if request.resolver_match.url_name in 'musteri_iliskileri_liste,musteri_iliskileri_detay' %}active{% endif %}" href="{% url 'musteri_iliskileri_liste' %}">
+                            Müşteri İlişkileri Süreci
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link py-2 {% if request.resolver_match.url_name in 'dashboard,proje_detay' %}active{% endif %}" href="{% url 'dashboard' %}">
+                            Pazarlama Süreci
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link py-2 {% if request.resolver_match.url_name in 'urun_teklif_liste,urun_teklif_detay' %}active{% endif %}" href="{% url 'urun_teklif_liste' %}">
+                            Ürün Teklif Süreci
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link py-2 {% if request.resolver_match.url_name in 'sozlesme_sureci_liste,sozlesme_sureci_detay' %}active{% endif %}" href="{% url 'sozlesme_sureci_liste' %}">
+                            Sözleşme Değerlendirme Süreci
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link py-2 {% if request.resolver_match.url_name in 'yeni_urun_liste,yeni_urun_detay' %}active{% endif %}" href="{% url 'yeni_urun_liste' %}">
+                            Yeni Ürün Devreye Alma Süreci
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link py-2 {% if request.resolver_match.url_name in 'muhendislik_degisikligi_liste,muhendislik_degisikligi_detay' %}active{% endif %}" href="{% url 'muhendislik_degisikligi_liste' %}">
+                            Mühendislik Değişikliği Süreci
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link py-2 {% if request.resolver_match.url_name in 'prototip_liste,prototip_detay' %}active{% endif %}" href="{% url 'prototip_liste' %}">
+                            Prototip Süreci
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link py-2 {% if request.resolver_match.url_name in 'eop_listesi,eop_detay' %}active{% endif %}" href="{% url 'eop_listesi' %}">
+                            Ürün Seri Üretim Sonlandırma Süreci
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- ANKETLER & FORMLAR -->
+            <div class="px-2 mt-3 mb-1 d-flex justify-content-between align-items-center cursor-pointer user-select-none" 
+                 data-bs-toggle="collapse" 
+                 data-bs-target="#anketlerFormlarMenu" 
+                 aria-expanded="true">
+                <small class="text-uppercase fw-bold text-primary" style="font-size: 0.72rem; letter-spacing: 0.8px;">
+                    Anketler & Formlar
+                </small>
+                <i class="bi bi-chevron-down chevron-icon text-muted" style="font-size: 0.75rem;"></i>
+            </div>
+
+            <div class="collapse show" id="anketlerFormlarMenu">
+                <ul class="nav flex-column mb-3 ps-2">
+                    <li class="nav-item">
+                        <a class="nav-link py-2 {% if request.resolver_match.url_name in 'anket_musteri_memnuniyeti,anket_raporu' %}active{% endif %}" href="{% url 'anket_musteri_memnuniyeti' %}">
+                            Müşteri Memnuniyeti
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- SAĞ ANA ALAN -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 d-flex flex-column min-vh-100 py-3">
+            
+            <header class="d-flex justify-content-between align-items-center pt-2 pb-3 mb-3 border-bottom">
+                <div class="d-flex align-items-center">
+                    <h1 class="h4 text-dark mb-0 fw-bold">{% block sayfa_basligi %}Pazarlama Süreci Takibi{% endblock %}</h1>
+                </div>
+                
+                <div class="d-flex align-items-center gap-2">
+                    <!-- KULLANICI PROFİLİ -->
+                    <div class="dropdown">
+                        <button class="btn btn-white bg-white border rounded-pill d-flex align-items-center gap-2 px-2 py-1 shadow-sm dropdown-toggle text-start" type="button" id="userProfileDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="font-size: 0.85rem;">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold shadow-sm" style="width: 30px; height: 30px; background: linear-gradient(135deg, #184775 0%, #0ea5e9 100%); font-size: 0.75rem;">
+                                <i class="bi bi-person-fill"></i>
+                            </div>
+                            <div class="d-none d-sm-block lh-1 pe-1">
+                                <div class="fw-bold text-dark" style="font-size: 0.82rem;">Buse Nur Baltacıoğlu</div>
+                                <small class="text-muted" style="font-size: 0.70rem;">Pazarlama Uzmanı</small>
+                            </div>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-4 mt-2 p-2" aria-labelledby="userProfileDropdown" style="min-width: 240px; font-size: 0.88rem;">
+                            <li class="px-3 py-2 border-bottom mb-1 bg-light rounded-3">
+                                <div class="fw-bold text-dark">Buse Nur Baltacıoğlu</div>
+                                <small class="text-muted d-block text-truncate">busenur.baltacioglu@teleset.com</small>
+                                <div class="mt-1"><span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 0.68rem;">Pazarlama & İş Geliştirme</span></div>
+                            </li>
+                            <li><a class="dropdown-item rounded-3 py-2" href="#" data-bs-toggle="modal" data-bs-target="#profilModal"><i class="bi bi-person-badge me-2 text-primary"></i>Kullanıcı Profili</a></li>
+                            <li><a class="dropdown-item rounded-3 py-2" href="{% url 'kartlar' %}?tab=musteriler"><i class="bi bi-buildings me-2 text-primary"></i>Müşteri Portföyü</a></li>
+                            <li><a class="dropdown-item rounded-3 py-2" href="{% url 'dashboard' %}"><i class="bi bi-kanban me-2 text-primary"></i>Aktif Projelerim</a></li>
+                            <li><hr class="dropdown-divider my-1"></li>
+                            <li><a class="dropdown-item rounded-3 py-2 text-muted" href="javascript:void(0);"><i class="bi bi-shield-check me-2 text-success"></i>Teleset İntranet Aktif</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </header>
+
+            {% if messages %}
+                <div class="mb-3">
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show shadow-sm border-0 rounded-3" role="alert">
+                            <i class="bi bi-info-circle-fill me-2"></i> {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            {% block content %}
+            {% endblock %}
+            
+            <footer class="mt-auto pt-4 pb-3 border-top text-end">
+                <small class="text-muted" style="font-size: 0.80rem; letter-spacing: 0.3px;">
+                    &copy; 1986 Teleset Group | İş Geliştirme ve Dijital Çözümler
+                </small>
+            </footer>
+            
+        </main>
+    </div>
+</div>
+
+<!-- YENİ PROJE / FIRSAT OLUŞTURMA MODALI -->
+<div class="modal fade" id="yeniProjeModal" tabindex="-1" aria-labelledby="yeniProjeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+            <div class="modal-header bg-primary text-white" style="border-radius: 16px 16px 0 0; background: linear-gradient(135deg, #184775 0%, #22609d 100%) !important;">
+                <h5 class="modal-title fw-bold" id="yeniProjeModalLabel">
+                    <i class="bi bi-folder-plus me-2"></i>Yeni Pazarlama Fırsatı / Projesi Başlat
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <form action="{% url 'proje_olustur' %}" method="POST">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <div class="alert alert-info border-0 rounded-3 small py-2 mb-3">
+                        <i class="bi bi-lightning-charge-fill me-1"></i>
+                        Proje oluşturulduğunda standart <strong>15 Adımlık Teleset Pazarlama Süreci</strong> otomatik olarak tanımlanır ve 1. Adım başlatılır.
+                    </div>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted">Proje / Fırsat Kodu</label>
+                            <input type="text" name="kod" class="form-control" placeholder="Örn: PRJ-2026-001 (Boşsa otomatik)">
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label small fw-bold text-muted">Proje / Fırsat Başlığı <span class="text-danger">*</span></label>
+                            <input type="text" name="ad" class="form-control" placeholder="Örn: Batarya Muhafazası Pazarlama Fırsatı" required>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Hedef Müşteri / Firma <span class="text-danger">*</span></label>
+                            <input type="text" name="musteri_adi" class="form-control" placeholder="Örn: BSH, Electrolux, Miele, Whirlpool vb." required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Hedef Ülke / Pazar <span class="text-danger">*</span></label>
+                            <select name="hedef_ulke" class="form-select" required>
+                                <option value="Almanya">Almanya (Birincil Pazar)</option>
+                                <option value="Polonya">Polonya (Üretim Üssü)</option>
+                                <option value="İtalya">İtalya (Tasarım & Montaj)</option>
+                                <option value="İspanya">İspanya (Stratejik Pazar)</option>
+                                <option value="Portekiz">Portekiz (Entegre Pazar)</option>
+                                <option value="Fransa">Fransa</option>
+                                <option value="Romanya">Romanya</option>
+                                <option value="Diğer">Diğer Ülke</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Ürün Grubu</label>
+                            <select name="urun_grubu" class="form-select">
+                                <option value="Metal Parca & Sac">Metal Parça & Sac Şekillendirme</option>
+                                <option value="Kondenser & Sogutma">Kondenser & Soğutma</option>
+                                <option value="Kablo Grubu">Kablo Grubu</option>
+                                <option value="Kalıp & Fikstür">Kalıp & Fikstür</option>
+                                <option value="Montaj ve Kaynak">Montaj ve Kaynak</option>
+                                <option value="Plastik Enjeksiyon">Plastik Enjeksiyon</option>
+                                <option value="Batarya & EV Bilesenleri">Batarya & EV Bileşenleri</option>
+                                <option value="Genel / Diger">Genel / Diğer</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">İlgili Fabrika</label>
+                            <select name="ilgili_fabrika" class="form-select">
+                                <option value="Teleset 1 (Manisa)">Teleset 1 (Manisa)</option>
+                                <option value="Teleset 2 (Manisa)">Teleset 2 (Manisa)</option>
+                                <option value="Teleset 3 (Kocaeli)">Teleset 3 (Kocaeli)</option>
+                                <option value="Teleset Otomotiv">Teleset Otomotiv</option>
+                                <option value="Teleset Global">Teleset Global</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Sorumlu Pazarlama Uzmanı (R)</label>
+                            <input type="text" name="sorumlu_pazarlama_uzmani" class="form-control" value="Pazarlama Uzmanı" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Satış ve Pazarlama Müdürü (A)</label>
+                            <input type="text" name="sorumlu_satis_muduru" class="form-control" value="Satış ve Pazarlama Müdürü" required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Tahmini Bütçe (EUR)</label>
+                            <input type="number" step="0.01" name="tahmini_butce" class="form-control" placeholder="Örn: 25000">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Beklenen Yıllık Ciro (EUR)</label>
+                            <input type="number" step="0.01" name="beklenen_ciro" class="form-control" placeholder="Örn: 1500000">
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted">Proje Açıklaması / İlk Notlar</label>
+                            <textarea name="aciklama" rows="2" class="form-control" placeholder="Fırsatın kaynağı, müşteri temas geçmişi vb."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light" style="border-radius: 0 0 16px 16px;">
+                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-semibold">
+                        <i class="bi bi-check-circle me-1"></i> Süreci Başlat
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- SÜREÇ AKIŞ ŞEMASI BİLGİ MODALI -->
+<div class="modal fade" id="flowchartModal" tabindex="-1" aria-labelledby="flowchartModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+            <div class="modal-header bg-dark text-white" style="border-radius: 16px 16px 0 0;">
+                <h5 class="modal-title fw-bold" id="flowchartModalLabel">
+                    <i class="bi bi-diagram-3-fill me-2 text-info"></i>Pazarlama Süreci Standart Akış Şeması & Karar Ağacı
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <div class="modal-body p-4 bg-light">
+                <div class="card border-0 shadow-sm p-3 mb-3 bg-white">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="fw-bold text-primary mb-0"><i class="bi bi-shuffle me-1"></i> 15 Adım Karar ve Geri Yönlendirme Özeti</h6>
+                        <span class="badge bg-primary">Teleset Süreç Yönetimi</span>
+                    </div>
+                    <ul class="small text-muted mb-0 ps-3">
+                        <li><strong>Adım 6 (Bütçe & Plan Onayı):</strong> <span class="badge bg-success">EVET</span> -> 7. Adıma Geçer | <span class="badge bg-warning text-dark">HAYIR (Revizyon)</span> -> 4. Adıma Döndürür.</li>
+                        <li><strong>Adım 9 (Karşılanabilirlik):</strong> <span class="badge bg-success">Değerlendirme Tamam</span> -> 10. Adıma Geçer | <span class="badge bg-info text-dark">İlave Bilgi</span> -> 8. Adıma Döndürür.</li>
+                        <li><strong>Adım 10 (Müşteri Bildirimi):</strong> <span class="badge bg-success">Mutabakata Hazır</span> -> 11. Adıma Geçer | <span class="badge bg-warning text-dark">Müşteri Değişiklik İstedi</span> -> 8. Adıma Döndürür.</li>
+                        <li><strong>Adım 11 (Karşılıklı Ön Mutabakat):</strong> <span class="badge bg-success">EVET</span> -> 12. Adıma Geçer | <span class="badge bg-danger">HAYIR</span> -> 15. Adımda Kapatılır | <span class="badge bg-info text-dark">İlave Bilgi</span> -> 8. Adıma Döndürür.</li>
+                        <li><strong>Adım 12 (Tedarikçi Değerlendirme Kontrolü):</strong> <span class="badge bg-primary">EVET (Gerekli)</span> -> 13. Adıma Geçer | <span class="badge bg-success">HAYIR / GEÇERLİ ONAY VAR</span> ->  <strong>Doğrudan Ürün Teklif Sürecine Aktarılır</strong>.</li>
+                        <li><strong>Adım 14 (Tedarikçi Değerlendirme Sonucu):</strong> <span class="badge bg-success">OLUMLU</span> ->  <strong>Ürün Teklif Sürecine Aktarılır</strong> | <span class="badge bg-warning text-dark">Koşullu Onay (Aksiyon)</span> -> 13. Adıma Döndürür | <span class="badge bg-danger">OLUMSUZ</span> -> 15. Adımda Kapatılır.</li>
+                    </ul>
+                </div>
+
+                <div class="row g-2 text-center small">
+                    <div class="col-md-3">
+                        <div class="p-2 border rounded bg-white">
+                            <span class="badge bg-primary mb-1">Faz 1 (Adım 1-6)</span>
+                            <div class="fw-bold">Pazar & Strateji Planlama</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-2 border rounded bg-white">
+                            <span class="badge bg-info text-dark mb-1">Faz 2 (Adım 7-10)</span>
+                            <div class="fw-bold">Müşteri Teması & Talep</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-2 border rounded bg-white">
+                            <span class="badge bg-warning text-dark mb-1">Faz 3 (Adım 11-12)</span>
+                            <div class="fw-bold">Ön Mutabakat & Değerlendirme</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-2 border rounded bg-white">
+                            <span class="badge bg-success mb-1">Faz 4 (Adım 13-15)</span>
+                            <div class="fw-bold">Tedarikçi Onayı & Teklif</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-white">
+                <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Kapat</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- KULLANICI PROFİLİ DETAY MODALI -->
+<div class="modal fade" id="profilModal" tabindex="-1" aria-labelledby="profilModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+            <div class="modal-header bg-primary text-white" style="border-radius: 16px 16px 0 0; background: linear-gradient(135deg, #184775 0%, #22609d 100%) !important;">
+                <h5 class="modal-title fw-bold" id="profilModalLabel">
+                    <i class="bi bi-person-badge me-2"></i>Kullanıcı Profili
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="text-center mb-4">
+                    <div class="rounded-circle d-inline-flex align-items-center justify-content-center text-white fw-bold shadow mb-2" style="width: 72px; height: 72px; background: linear-gradient(135deg, #184775 0%, #0ea5e9 100%); font-size: 1.6rem;">
+                        <i class="bi bi-person-fill"></i>
+                    </div>
+                    <h5 class="fw-bold mb-0 text-dark">Buse Nur Baltacıoğlu</h5>
+                    <div class="text-muted small">Satış ve Pazarlama Uzmanı</div>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1 mt-1">
+                        Pazarlama & İş Geliştirme Departmanı
+                    </span>
+                </div>
+
+                <div class="card border-0 bg-light rounded-3 p-3 mb-3">
+                    <div class="row g-2 small">
+                        <div class="col-sm-5 text-muted"><i class="bi bi-envelope me-1"></i> E-Posta:</div>
+                        <div class="col-sm-7 fw-semibold text-dark">busenur.baltacioglu@teleset.com</div>
+                        
+                        <div class="col-sm-5 text-muted"><i class="bi bi-geo-alt me-1"></i> Lokasyon:</div>
+                        <div class="col-sm-7 fw-semibold text-dark">Teleset Manisa Kampüsü</div>
+                        
+                        <div class="col-sm-5 text-muted"><i class="bi bi-shield-check me-1"></i> CRM Yetkisi:</div>
+                        <div class="col-sm-7 fw-semibold text-success">Süreç Yöneticisi & KAM</div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <h6 class="small fw-bold text-uppercase text-muted mb-2">Sorumlu Olunan Süreçler & Rol</h6>
+                    <div class="d-flex flex-wrap gap-1">
+                        <span class="badge bg-white text-dark border">15 Adım Pazarlama Akışı (R)</span>
+                        <span class="badge bg-white text-dark border">Hedef Pazar Analizi (DE, PL, IT)</span>
+                        <span class="badge bg-white text-dark border">Stratejik Müşteri Yönetimi</span>
+                    </div>
+                </div>
+
+                <div>
+                    <h6 class="small fw-bold text-uppercase text-muted mb-2">Hızlı Erişim</h6>
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'dashboard' %}" class="btn btn-outline-primary btn-sm text-start rounded-3" data-bs-dismiss="modal">
+                            <i class="bi bi-kanban me-2"></i>Aktif Pazarlama Süreçlerimi Gör
+                        </a>
+                        <a href="{% url 'kartlar' %}?tab=musteriler" class="btn btn-outline-secondary btn-sm text-start rounded-3" data-bs-dismiss="modal">
+                            <i class="bi bi-buildings me-2"></i>360° Müşteri Kartlarına Git
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light" style="border-radius: 0 0 16px 16px;">
+                <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Kapat</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- HIZLI YUKARI ÇIKMA BUTONU (SCROLL TO TOP) -->
+<button type="button" id="btnScrollToTop" class="btn-scroll-top" title="Sayfa Başına Dön" aria-label="Yukarı Çık">
+    <i class="bi bi-chevron-up fs-5"></i>
+</button>
+
+<!-- Bootstrap 5 JS Bundle -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Hızlı yukarı çıkma (Scroll to top) butonu etkileşimi
+    document.addEventListener('DOMContentLoaded', function () {
+        const btnScrollToTop = document.getElementById('btnScrollToTop');
+        if (btnScrollToTop) {
+            window.addEventListener('scroll', function () {
+                if (window.scrollY > 220) {
+                    btnScrollToTop.classList.add('show');
+                } else {
+                    btnScrollToTop.classList.remove('show');
+                }
+            }, { passive: true });
+
+            btnScrollToTop.addEventListener('click', function () {
+                window.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            });
+        }
+    });
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

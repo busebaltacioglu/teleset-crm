@@ -1,0 +1,466 @@
+{% extends "base.html" %}
+
+{% block title %}Prototip Süreci (23 Adım - Prototype Management) | Teleset CRM{% endblock %}
+
+{% block sayfa_basligi %}Prototip Süreci (PRT / Prototype){% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <!-- 1. ÜST METRİK KARTLARI -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl-3">
+            <div class="portal-card p-3 shadow-sm d-flex align-items-center">
+                <div class="rounded-circle p-3 bg-primary-subtle text-primary me-3 d-flex align-items-center justify-content-center" style="width: 54px; height: 54px;">
+                    <i class="bi bi-boxes fs-4"></i>
+                </div>
+                <div>
+                    <span class="text-muted small fw-bold text-uppercase" style="letter-spacing: 0.5px;">Toplam Prototip Talebi</span>
+                    <h3 class="fw-bold mb-0 text-dark">{{ toplam_surec }}</h3>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-sm-6 col-xl-3">
+            <div class="portal-card p-3 shadow-sm d-flex align-items-center">
+                <div class="rounded-circle p-3 bg-info-subtle text-info me-3 d-flex align-items-center justify-content-center" style="width: 54px; height: 54px;">
+                    <i class="bi bi-hourglass-split fs-4"></i>
+                </div>
+                <div>
+                    <span class="text-muted small fw-bold text-uppercase" style="letter-spacing: 0.5px;">Aktif Devam Eden</span>
+                    <h3 class="fw-bold mb-0 text-info">{{ aktif_surec }}</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-xl-3">
+            <div class="portal-card p-3 shadow-sm d-flex align-items-center">
+                <div class="rounded-circle p-3 bg-warning-subtle text-warning-emphasis me-3 d-flex align-items-center justify-content-center" style="width: 54px; height: 54px;">
+                    <i class="bi bi-arrow-repeat fs-4"></i>
+                </div>
+                <div>
+                    <span class="text-muted small fw-bold text-uppercase" style="letter-spacing: 0.5px;">Revizyon Aşamasında</span>
+                    <h3 class="fw-bold mb-0 text-warning-emphasis">{{ revizyon_surec }}</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-xl-3">
+            <div class="portal-card p-3 shadow-sm d-flex align-items-center">
+                <div class="rounded-circle p-3 bg-success-subtle text-success me-3 d-flex align-items-center justify-content-center" style="width: 54px; height: 54px;">
+                    <i class="bi bi-check-circle-fill fs-4"></i>
+                </div>
+                <div>
+                    <span class="text-muted small fw-bold text-uppercase" style="letter-spacing: 0.5px;">Başarıyla Tamamlanan</span>
+                    <h3 class="fw-bold mb-0 text-success">{{ tamamlanan_surec }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. ÜST EYLEM & ÖZET ÇUBUĞU -->
+    <div class="portal-card p-3 shadow-sm mb-4 bg-white d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2">
+        <div class="d-flex align-items-center gap-2">
+            <h6 class="fw-bold mb-0 text-dark">
+                <i class="bi bi-diagram-3 text-primary me-2"></i>Prototip Geliştirme Süreç Listesi (23 Adım)
+            </h6>
+            <span id="prtKayitSayisi" class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1">
+                {{ surecler|length }} Kayıt
+            </span>
+        </div>
+
+        <div>
+            <button class="btn btn-primary rounded-pill btn-sm px-3 shadow-sm fw-semibold" data-bs-toggle="modal" data-bs-target="#yeniPrototipModal">
+                <i class="bi bi-plus-lg me-1"></i> Yeni Prototip Talebi Başlat
+            </button>
+        </div>
+    </div>
+
+    <!-- SÜREÇ LİSTESİ TABLOSU -->
+    <div class="portal-card shadow-sm bg-white overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="font-size: 0.90rem;">
+                <thead class="table-light">
+                    <!-- ENTEGRE SÜTUN & FİLTRELEME BAŞLIK SATIRI -->
+                    <tr class="table-filter-row bg-light">
+                        <th class="ps-4 py-3">
+                            <input type="text" id="filterPrtKodMusteri" class="form-control form-control-sm table-prt-filter shadow-sm" placeholder="Prototip Kodu & Müşteri..." style="font-size: 0.78rem; border-radius: 6px;">
+                        </th>
+                        <th class="py-3">
+                            <input type="text" id="filterPrtKonu" class="form-control form-control-sm table-prt-filter shadow-sm" placeholder="Konu / Parça Kodu..." style="font-size: 0.78rem; border-radius: 6px;">
+                        </th>
+                        <th class="py-3">
+                            <select id="filterPrtTip" class="form-select form-select-sm table-prt-filter shadow-sm" style="font-size: 0.78rem; border-radius: 6px;">
+                                <option value="">Prototip Tipi (Tümü)</option>
+                                <option value="Yeni Tasarım">Yeni Tasarım</option>
+                                <option value="Malzeme / Hammadde">Malzeme / Hammadde</option>
+                                <option value="Maliyet İyileştirme">Maliyet İyileştirme / VAVE</option>
+                                <option value="Müşteri Fonksiyonel">Müşteri Fonksiyonel Test</option>
+                                <option value="İç Proses">İç Proses & Kalıp Doğrulama</option>
+                            </select>
+                        </th>
+                        <th class="py-3">
+                            <select id="filterPrtIstasyon" class="form-select form-select-sm table-prt-filter shadow-sm" style="font-size: 0.78rem; border-radius: 6px;">
+                                <option value="">Güncel İstasyon (Tümü)</option>
+                                <optgroup label="Faz 1: Talep & Ön Değerlendirme">
+                                    <option value="1">1. Prototip Talebinin Alınması</option>
+                                    <option value="3">3. Ön Değerlendirme & Fizibilite</option>
+                                    <option value="4">4. Prototip Niteliği Sorgusu</option>
+                                    <option value="9">9. Müşteri Başlangıç Onayı</option>
+                                </optgroup>
+                                <optgroup label="Faz 2: Teknik Hazırlık & BOM">
+                                    <option value="10">10. Proje Ekibi Bilgilendirme</option>
+                                    <option value="14">14. Geçici Numune BOM & İş Emri</option>
+                                </optgroup>
+                                <optgroup label="Faz 3: İmalat & Müşteri Doğrulama">
+                                    <option value="15">15. Prototip Üretim Planlama</option>
+                                    <option value="18">18. Numune ISIR Ölçüm Kararı</option>
+                                    <option value="19">19. Müşteriye Numune Sevki</option>
+                                    <option value="20">20. Müşteri Prototip Onayı</option>
+                                </optgroup>
+                                <optgroup label="Faz 4: Reçete & Kapanış">
+                                    <option value="21">21. ERP Seri Reçete & Maliyet Doğrulama</option>
+                                    <option value="23">23. Süreç Tamamlama & Öğrenilmiş Dersler</option>
+                                </optgroup>
+                            </select>
+                        </th>
+                        <th class="py-3" style="min-width: 120px;">
+                            <select id="filterPrtIlerleme" class="form-select form-select-sm table-prt-filter shadow-sm" style="font-size: 0.78rem; border-radius: 6px;">
+                                <option value="">İlerleme (Tümü)</option>
+                                <option value="0-25">%0 - %25</option>
+                                <option value="26-50">%26 - %50</option>
+                                <option value="51-75">%51 - %75</option>
+                                <option value="76-100">%76 - %100</option>
+                            </select>
+                        </th>
+                        <th class="py-3">
+                            <select id="filterPrtDurum" class="form-select form-select-sm table-prt-filter shadow-sm" style="font-size: 0.78rem; border-radius: 6px;">
+                                <option value="">Durum (Tümü)</option>
+                                <option value="Devam Ediyor">Devam Ediyor</option>
+                                <option value="Revizyon">Revizyonda</option>
+                                <option value="Yeni Ürün">Yeni Ürün Sürecine Aktarıldı</option>
+                                <option value="Başarıyla">Başarıyla Tamamlandı</option>
+                                <option value="Olumsuz">İptal / Olumsuz Kapatıldı</option>
+                            </select>
+                        </th>
+                        <th class="text-center py-3 px-2" style="width: 100px; min-width: 95px;">
+                            <button type="button" id="clearPrtFiltersBtn" class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1 shadow-sm w-100 fw-semibold text-nowrap d-inline-flex align-items-center justify-content-center" title="Filtreleri Sıfırla" style="font-size: 0.76rem;">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i>Sıfırla
+                            </button>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for surec in surecler %}
+                    <tr class="prt-row cursor-pointer" onclick="if(!event.target.closest('button') && !event.target.closest('a')) window.location.href='{% url 'prototip_detay' surec.pk %}';" style="transition: background-color 0.15s ease;">
+                        
+                        <!-- 1. KOD & MÜŞTERİ -->
+                        <td class="ps-4 py-3" data-col="kod_musteri">
+                            <div class="fw-bold text-dark">
+                                <a href="{% url 'prototip_detay' surec.pk %}" class="text-decoration-none text-dark hover-primary">
+                                    {{ surec.kod }}
+                                </a>
+                            </div>
+                            <small class="text-muted d-block">
+                                {{ surec.musteri_adi }}
+                            </small>
+                        </td>
+
+                        <!-- 2. KONU & PARÇA & REVİZYON -->
+                        <td class="py-3" data-col="konu">
+                            <div class="fw-semibold text-dark text-truncate" style="max-width: 260px;" title="{{ surec.ad }}">
+                                {{ surec.ad }}
+                            </div>
+                            <small class="text-muted">
+                                {% if surec.parca_kodu %}
+                                <span class="badge bg-light text-secondary border me-1" style="font-size: 0.70rem;">
+                                    PN: {{ surec.parca_kodu }}
+                                </span>
+                                {% endif %}
+                                <span class="badge bg-info-subtle text-info border border-info-subtle me-1" style="font-size: 0.70rem;">
+                                    {{ surec.revizyon_no }}
+                                </span>
+                                <i class="bi bi-person-badge me-1"></i>{{ surec.sorumlu_proje_sorumlusu }}
+                            </small>
+                        </td>
+
+                        <!-- 3. PROTOTİP TİPİ & FABRİKA -->
+                        <td class="py-3" data-col="tip_fabrika">
+                            <div class="fw-medium text-dark" style="font-size: 0.84rem;">
+                                <span class="badge bg-light text-dark border">{{ surec.get_prototip_tipi_display }}</span>
+                            </div>
+                            <small class="text-muted d-flex align-items-center gap-1 mt-1">
+                                <i class="bi bi-geo-alt"></i>{{ surec.ilgili_fabrika }}
+                            </small>
+                        </td>
+
+                        <!-- 4. GÜNCEL İSTASYON & FAZ -->
+                        <td class="py-3" data-col="istasyon" data-step="{{ surec.guncel_adim_no }}">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-sm {% if surec.durum == 'BASARIYLA_TAMAMLANDI' %}bg-success text-white{% elif surec.durum == 'REVIZYONDA' %}bg-warning text-dark{% elif surec.durum == 'YENI_URUN_SURECINE_AKTARILDI' %}bg-info text-white{% else %}bg-primary text-white{% endif %}" style="width: 28px; height: 28px; font-size: 0.75rem; flex-shrink: 0;">
+                                    {{ surec.guncel_adim_no }}
+                                </div>
+                                <div class="lh-sm text-truncate" style="max-width: 220px;">
+                                    <div class="fw-semibold text-dark text-truncate" style="font-size: 0.82rem;" title="{{ surec.guncel_adim.adim.baslik }}">
+                                        {{ surec.guncel_adim.adim.baslik }}
+                                    </div>
+                                    <small class="text-muted" style="font-size: 0.70rem;">
+                                        {{ surec.guncel_adim.adim.get_faz_display }}
+                                    </small>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- 5. İLERLEME -->
+                        <td class="py-3" data-col="ilerleme" data-percent="{{ surec.tamamlanma_yuzdesi }}">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="progress flex-grow-1" style="height: 7px; background-color: #e2e8f0; border-radius: 10px;">
+                                    <div class="progress-bar {% if surec.tamamlanma_yuzdesi == 100 %}bg-success{% elif surec.durum == 'REVIZYONDA' %}bg-warning{% elif surec.durum == 'YENI_URUN_SURECINE_AKTARILDI' %}bg-info{% else %}bg-primary{% endif %} rounded-pill" role="progressbar" style="width: {{ surec.tamamlanma_yuzdesi }}%;" aria-valuenow="{{ surec.tamamlanma_yuzdesi }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                                <span class="fw-bold {% if surec.tamamlanma_yuzdesi == 100 %}text-success{% elif surec.durum == 'REVIZYONDA' %}text-warning-emphasis{% elif surec.durum == 'YENI_URUN_SURECINE_AKTARILDI' %}text-info{% else %}text-primary{% endif %}" style="font-size: 0.78rem; min-width: 34px;">
+                                    %{{ surec.tamamlanma_yuzdesi }}
+                                </span>
+                            </div>
+                        </td>
+
+                        <!-- 6. DURUM -->
+                        <td class="py-3" data-col="durum">
+                            {% if surec.durum == 'BASARIYLA_TAMAMLANDI' %}
+                                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 fw-semibold" style="font-size: 0.75rem;">
+                                    <i class="bi bi-check-circle-fill me-1"></i>Başarıyla Tamamlandı
+                                </span>
+                            {% elif surec.durum == 'YENI_URUN_SURECINE_AKTARILDI' %}
+                                <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill px-2.5 py-1 fw-semibold" style="font-size: 0.75rem;">
+                                    <i class="bi bi-box-arrow-up-right me-1"></i>Yeni Ürün Sürecinde
+                                </span>
+                            {% elif surec.durum == 'REVIZYONDA' %}
+                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2.5 py-1 fw-semibold" style="font-size: 0.75rem;">
+                                    <i class="bi bi-arrow-repeat me-1"></i>Revizyon Aşamasında
+                                </span>
+                            {% elif surec.durum == 'OLUMSUZ_KAPATILDI' %}
+                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill px-2.5 py-1 fw-semibold" style="font-size: 0.75rem;">
+                                    <i class="bi bi-x-circle-fill me-1"></i>İptal / Olumsuz
+                                </span>
+                            {% else %}
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 fw-semibold" style="font-size: 0.75rem;">
+                                    <i class="bi bi-play-circle-fill me-1"></i>Devam Ediyor
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- 7. Süreci Yönet -->
+                        <td class="text-center text-nowrap px-3">
+                            <a href="{% url 'prototip_detay' surec.pk %}" class="btn btn-outline-primary btn-sm rounded-circle d-inline-flex align-items-center justify-content-center shadow-sm" style="width: 32px; height: 32px;" title="Süreci Yönet">
+                                <i class="bi bi-chevron-right fw-bold"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary opacity-50"></i>
+                            Kayıtlı Prototip Süreci bulunamadı. Yeni bir prototip talebi oluşturabilirsiniz.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- YENİ PROTOTİP SÜRECİ MODALI -->
+<div class="modal fade" id="yeniPrototipModal" tabindex="-1" aria-labelledby="yeniPrototipModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+            <div class="modal-header bg-primary text-white" style="border-radius: 16px 16px 0 0; background: linear-gradient(135deg, #184775 0%, #22609d 100%) !important;">
+                <h5 class="modal-title fw-bold" id="yeniPrototipModalLabel">
+                    <i class="bi bi-boxes me-2"></i>Yeni Prototip Geliştirme Süreci Başlat
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <form action="{% url 'prototip_olustur' %}" method="POST">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <div class="alert alert-info border-0 rounded-3 small py-2 mb-3">
+                        <i class="bi bi-info-circle-fill me-1"></i>
+                        Prototip süreci oluşturulduğunda standart <strong>23 Adımlık Teleset Prototip Akışı</strong> otomatik olarak tanımlanır ve 1. Adım başlatılır.
+                    </div>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted">Prototip Kodu (PRT)</label>
+                            <input type="text" name="kod" class="form-control" placeholder="Örn: PRT-2026-001 (Boşsa otomatik)">
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label small fw-bold text-muted">Prototip Konusu / Başlığı <span class="text-danger">*</span></label>
+                            <input type="text" name="ad" class="form-control" placeholder="Örn: Yeni Nesil Alüminyum Batarya Muhafaza Prototipi" required>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Müşteri / Firma Adı <span class="text-danger">*</span></label>
+                            <input type="text" name="musteri_adi" class="form-control" placeholder="Örn: BSH Ev Aletleri, Electrolux vb." required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold text-muted">Parça / Numune Kodu</label>
+                            <input type="text" name="parca_kodu" class="form-control" placeholder="Örn: TEL-PRT-882">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold text-muted">Revizyon No</label>
+                            <input type="text" name="revizyon_no" class="form-control" value="Rev.01" required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Prototip Tipi</label>
+                            <select name="prototip_tipi" class="form-select">
+                                <option value="YENI_TASARIM">Yeni Tasarım Prototipi</option>
+                                <option value="MALZEME_DENEME">Malzeme / Hammadde Değişikliği Prototipi</option>
+                                <option value="VAVE_MALIYET">Maliyet İyileştirme / VAVE Prototipi</option>
+                                <option value="MUSTERI_TEST">Müşteri Fonksiyonel Test Prototipi</option>
+                                <option value="PROSES_DENEME">İç Proses & Kalıp Doğrulama Prototipi</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Ürün Grubu</label>
+                            <select name="urun_grubu" class="form-select">
+                                <option value="Metal Parca & Sac">Metal Parça & Sac Şekillendirme</option>
+                                <option value="Kondenser & Sogutma">Kondenser & Soğutma</option>
+                                <option value="Kablo Grubu">Kablo Grubu</option>
+                                <option value="Kalıp & Fikstür">Kalıp & Fikstür</option>
+                                <option value="Montaj ve Kaynak">Montaj ve Kaynak</option>
+                                <option value="Plastik Enjeksiyon">Plastik Enjeksiyon</option>
+                                <option value="Batarya & EV Bilesenleri">Batarya & EV Bileşenleri</option>
+                                <option value="Genel / Diger">Genel / Diğer</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">İlgili Fabrika</label>
+                            <select name="ilgili_fabrika" class="form-select">
+                                <option value="Teleset 1 (Manisa)">Teleset 1 (Manisa)</option>
+                                <option value="Teleset 2 (Manisa)">Teleset 2 (Manisa)</option>
+                                <option value="Teleset 3 (Kocaeli)">Teleset 3 (Kocaeli)</option>
+                                <option value="Teleset Otomotiv">Teleset Otomotiv</option>
+                                <option value="Teleset Global">Teleset Global</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Hedef Numune Teslim Tarihi</label>
+                            <input type="date" name="hedef_tamamlanma_tarihi" class="form-control">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Proje Sorumlusu (R - İşi Yürüten)</label>
+                            <input type="text" name="sorumlu_proje_sorumlusu" class="form-control" value="Buse Nur Baltacıoğlu" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Fabrika Müdürü (A - Onay Veren)</label>
+                            <input type="text" name="sorumlu_fabrika_muduru" class="form-control" value="Serdar Acar" required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Satış-Analiz Sorumlusu (C - Danışılan)</label>
+                            <input type="text" name="sorumlu_satis_analiz" class="form-control" value="Hakan Yılmaz" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Kalite Sorumlusu (C - Kalite / ISIR)</label>
+                            <input type="text" name="sorumlu_kalite" class="form-control" value="Ahmet Yurt" required>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted">Prototip Talep Özeti / Teknik Başlangıç Notları</label>
+                            <textarea name="aciklama" rows="2" class="form-control" placeholder="Müşteri teknik şartnamesi, numune adetleri ve özel beklentileri belirtiniz..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light" style="border-radius: 0 0 16px 16px;">
+                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-semibold">
+                        <i class="bi bi-check-circle me-1"></i> Prototip Sürecini Başlat
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- CLIENT-SIDE FİLTRELEME VE ARAMA JAVASCRIPT MOTORU -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const filterKodMusteri = document.getElementById('filterPrtKodMusteri');
+    const filterKonu = document.getElementById('filterPrtKonu');
+    const filterTip = document.getElementById('filterPrtTip');
+    const filterIstasyon = document.getElementById('filterPrtIstasyon');
+    const filterIlerleme = document.getElementById('filterPrtIlerleme');
+    const filterDurum = document.getElementById('filterPrtDurum');
+    const clearBtn = document.getElementById('clearPrtFiltersBtn');
+    const rows = document.querySelectorAll('.prt-row');
+    const countBadge = document.getElementById('prtKayitSayisi');
+
+    function applyFilters() {
+        const valKodMusteri = (filterKodMusteri.value || '').toLowerCase().trim();
+        const valKonu = (filterKonu.value || '').toLowerCase().trim();
+        const valTip = (filterTip.value || '').toLowerCase().trim();
+        const valIstasyon = (filterIstasyon.value || '').trim();
+        const valIlerleme = filterIlerleme.value;
+        const valDurum = (filterDurum.value || '').toLowerCase().trim();
+
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            const txtKodMusteri = (row.querySelector('[data-col="kod_musteri"]')?.textContent || '').toLowerCase();
+            const txtKonu = (row.querySelector('[data-col="konu"]')?.textContent || '').toLowerCase();
+            const txtTip = (row.querySelector('[data-col="tip_fabrika"]')?.textContent || '').toLowerCase();
+            const stepVal = row.querySelector('[data-col="istasyon"]')?.getAttribute('data-step') || '';
+            const percentVal = parseInt(row.querySelector('[data-col="ilerleme"]')?.getAttribute('data-percent') || '0', 10);
+            const txtDurum = (row.querySelector('[data-col="durum"]')?.textContent || '').toLowerCase();
+
+            let match = true;
+
+            if (valKodMusteri && !txtKodMusteri.includes(valKodMusteri)) match = false;
+            if (valKonu && !txtKonu.includes(valKonu)) match = false;
+            if (valTip && !txtTip.includes(valTip)) match = false;
+            if (valIstasyon && stepVal !== valIstasyon) match = false;
+            if (valDurum && !txtDurum.includes(valDurum)) match = false;
+
+            if (valIlerleme) {
+                if (valIlerleme === '0-25' && !(percentVal >= 0 && percentVal <= 25)) match = false;
+                else if (valIlerleme === '26-50' && !(percentVal >= 26 && percentVal <= 50)) match = false;
+                else if (valIlerleme === '51-75' && !(percentVal >= 51 && percentVal <= 75)) match = false;
+                else if (valIlerleme === '76-100' && !(percentVal >= 76 && percentVal <= 100)) match = false;
+            }
+
+            if (match) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        if (countBadge) {
+            countBadge.textContent = visibleCount + ' Kayıt';
+        }
+    }
+
+    [filterKodMusteri, filterKonu].forEach(input => {
+        if (input) input.addEventListener('input', applyFilters);
+    });
+
+    [filterTip, filterIstasyon, filterIlerleme, filterDurum].forEach(select => {
+        if (select) select.addEventListener('change', applyFilters);
+    });
+
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function() {
+            filterKodMusteri.value = '';
+            filterKonu.value = '';
+            filterTip.value = '';
+            filterIstasyon.value = '';
+            filterIlerleme.value = '';
+            filterDurum.value = '';
+            applyFilters();
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,93 @@
+{% load humanize %}
+<div id="adim-{{ k.adim.adim_no }}" class="portal-card mb-3 p-4 shadow-sm 
+    {% if k.durum == 'TAMAMLANDI' %}card-step-completed
+    {% elif k.adim.adim_no == surec.guncel_adim_no %}card-step-active
+    {% elif k.durum == 'PAS_GECILDI' %}card-step-pending opacity-75
+    {% else %}card-step-pending{% endif %}">
+    
+    <div class="d-flex justify-content-between align-items-start mb-2">
+        <div class="d-flex align-items-center">
+            <span class="badge 
+                {% if k.durum == 'TAMAMLANDI' %}bg-success
+                {% elif k.adim.adim_no == surec.guncel_adim_no %}bg-primary
+                {% elif k.durum == 'PAS_GECILDI' %}bg-secondary
+                {% else %}bg-light text-muted border{% endif %} 
+                me-2 px-2.5 py-1.5 fs-6 font-monospace">
+                Adım {{ k.adim.adim_no }}
+            </span>
+            <h6 class="fw-bold text-dark mb-0 fs-6">{{ k.adim.baslik }}</h6>
+        </div>
+        <div>
+            {% if k.durum == 'TAMAMLANDI' %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1"><i class="bi bi-check-circle-fill me-1"></i> Tamamlandı</span>
+            {% elif k.adim.adim_no == surec.guncel_adim_no %}
+                <span class="badge bg-primary text-white rounded-pill px-3 py-1 shadow-sm"><span class="live-pulse me-1"></span> Aktif İstasyon</span>
+            {% elif k.durum == 'PAS_GECILDI' %}
+                <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2 py-1">Pas Geçildi</span>
+            {% else %}
+                <span class="badge bg-light text-muted border rounded-pill px-2 py-1">Bekliyor</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- FAALİYET TANIMI -->
+    <p class="text-secondary small mb-3 lh-base">{{ k.adim.faaliyet_tanimi }}</p>
+
+    <!-- GEÇMİŞ TAMAMLANMA VE KARAR ÖZETİ -->
+    {% if k.durum == 'TAMAMLANDI' or k.karar_sonucu %}
+    <div class="p-3 rounded-3 bg-success-subtle border border-success-subtle text-dark small mb-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <strong><i class="bi bi-check2-circle text-success me-1"></i> Karar / Sonuç:</strong> {{ k.karar_sonucu|default:'Tamamlandı' }}
+                {% if k.dokuman_referansi %} • <span class="text-primary fw-semibold"><i class="bi bi-link-45deg me-1"></i>Doküman / Form: {{ k.dokuman_referansi }}</span>{% endif %}
+                {% if k.tamamlayan %} • <span class="text-muted"><i class="bi bi-person me-1"></i>{{ k.tamamlayan }}</span>{% endif %}
+            </div>
+            {% if k.tamamlanma_tarihi %}<span class="text-muted fw-semibold" style="font-size: 0.75rem;"><i class="bi bi-clock me-1"></i>{{ k.tamamlanma_tarihi|date:"d.m.Y H:i" }}</span>{% endif %}
+        </div>
+        {% if k.notlar %}
+        <div class="mt-2 text-secondary bg-white p-2 rounded-2 border">
+            <strong>Adım Açıklaması / Değerlendirme:</strong> {{ k.notlar }}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- FORM: NOTLAR VE AKSİYONLAR (SADECE GÜNCEL AKTİF İSTASYONDA AÇILIR) -->
+    {% if k.adim.adim_no == surec.guncel_adim_no and k.durum == 'DEVAM_EDIYOR' %}
+    <form action="{% url 'eop_adim_tamamla' surec.pk k.adim.adim_no %}" method="POST">
+        {% csrf_token %}
+        <div class="mt-3 p-3 bg-white border rounded-3 shadow-sm border-primary">
+            <div class="row g-2 mb-3">
+                <div class="col-md-7">
+                    <label class="form-label small fw-bold text-muted mb-1">Bu Adım İçin Açıklama / Tasfiye Notları / Müşteri Geri Bildirimi:</label>
+                    <textarea name="notlar" rows="2" class="form-control form-control-sm" placeholder="Yapılan mutabakat, stok değerlendirmesi veya yürütülen işlemleri yazınız...">{{ k.notlar|default:'' }}</textarea>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label small fw-bold text-muted mb-1">Doküman / E-posta / ERP Referansı:</label>
+                    <input type="text" name="dokuman_referansi" class="form-control form-control-sm" placeholder="Örn: E-mail-Mutabakat / ERP-Kod-Kapatma / Hurda-Tutanak" value="{{ k.dokuman_referansi|default:'' }}">
+                </div>
+            </div>
+
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 pt-2 border-top">
+                <div class="small text-muted">
+                    <i class="bi bi-person-circle text-primary me-1"></i> İşlemi Yapan: <strong>{{ surec.sorumlu_proje_sorumlusu|default:'Buse Nur Baltacıoğlu' }}</strong>
+                    <input type="hidden" name="tamamlayan" value="{{ surec.sorumlu_proje_sorumlusu|default:'Buse Nur Baltacıoğlu' }}">
+                </div>
+
+                <div>
+                    {% if k.adim.adim_no == 6 %}
+                    <button type="submit" class="btn btn-success btn-sm rounded-pill px-4 shadow-sm fw-bold">
+                        <i class="bi bi-check2-all me-1"></i> Süreci Başarıyla Kapat & Arşivle
+                    </button>
+                    {% else %}
+                    <button type="submit" class="btn btn-primary btn-sm rounded-pill px-4 shadow-sm fw-bold">
+                        <i class="bi bi-check-lg me-1"></i> Adımı Tamamla & {{ k.adim.adim_no|add:1 }}. Adıma İlerle
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </form>
+    {% endif %}
+
+</div>

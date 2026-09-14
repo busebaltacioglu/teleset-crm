@@ -1,0 +1,447 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block sayfa_basligi %}{{ surec.kod }} - {{ surec.musteri_adi }}{% endblock %}
+
+{% block content %}
+<style>
+    .step-pill {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.80rem;
+        transition: all 0.2s ease;
+        border: 2px solid transparent;
+        position: relative;
+    }
+    .step-pill.completed { background-color: #22c55e; color: white; border-color: #22c55e; }
+    .step-pill.active {
+        background-color: var(--teleset-blue); color: white;
+        border-color: var(--teleset-blue);
+        box-shadow: 0 0 0 4px rgba(34, 96, 157, 0.25);
+        animation: pulseAnimation 2s infinite;
+    }
+    .step-pill.revision {
+        background-color: #f59e0b; color: white;
+        border-color: #f59e0b;
+        box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.3);
+        animation: pulseAnimation 1.5s infinite;
+    }
+    .step-pill.dof {
+        background-color: #ef4444; color: white;
+        border-color: #ef4444;
+        box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.3);
+        animation: pulseAnimation 1.5s infinite;
+    }
+    .step-pill.pending { background-color: #e2e8f0; color: #64748b; border-color: #e2e8f0; }
+    .step-pill.skipped { background-color: #cbd5e1; color: #94a3b8; text-decoration: line-through; border-color: #cbd5e1; }
+
+    /* KOŞULLU / KARAR KAPISI İSTASYONLARI (KESİKLİ KENARLIK) */
+    .step-pill.is-decision {
+        border: 2px dashed #f59e0b !important;
+    }
+    .step-pill.is-decision.pending {
+        background-color: #fffbeb !important;
+        color: #b45309 !important;
+        border: 2px dashed #f59e0b !important;
+        font-weight: 800;
+    }
+    .step-pill.is-decision.completed {
+        background-color: #22c55e !important;
+        color: white !important;
+        border: 2px dashed #ffffff !important;
+        box-shadow: 0 0 0 2px #16a34a;
+    }
+    .step-pill.is-decision.active {
+        background-color: var(--teleset-blue) !important;
+        color: white !important;
+        border: 2px dashed #ffffff !important;
+        box-shadow: 0 0 0 4px rgba(34, 96, 157, 0.35);
+    }
+    .step-pill.is-decision.revision {
+        background-color: #f59e0b !important;
+        color: white !important;
+        border: 2px dashed #ffffff !important;
+        box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.4);
+    }
+    .step-pill.is-decision.dof {
+        background-color: #ef4444 !important;
+        color: white !important;
+        border: 2px dashed #ffffff !important;
+        box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.4);
+    }
+
+    .card-step-active { border-left: 5px solid var(--teleset-blue) !important; background-color: #ffffff; box-shadow: 0 6px 18px rgba(34, 96, 157, 0.08) !important; }
+    .card-step-revision { border-left: 5px solid #f59e0b !important; background-color: #fffdfa; box-shadow: 0 6px 18px rgba(245, 158, 11, 0.10) !important; }
+    .card-step-dof { border-left: 5px solid #ef4444 !important; background-color: #fef2f2; box-shadow: 0 6px 18px rgba(239, 68, 68, 0.12) !important; }
+    .card-step-completed { border-left: 5px solid #22c55e !important; background-color: #fafdfb; }
+    .card-step-pending { border-left: 5px solid #cbd5e1 !important; opacity: 0.85; }
+
+    .faz-header {
+        background-color: #f1f5f9; border-radius: 10px; padding: 10px 16px;
+        font-weight: 700; font-size: 0.90rem; color: var(--teleset-dark);
+        margin-top: 24px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;
+    }
+</style>
+
+<!-- 1. HERO BAŞLIK VE SÜREÇ KÜNYESİ -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="hero-banner p-4 shadow-sm">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3">
+                <div class="flex-grow-1" style="min-width: 0;">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="badge bg-white text-primary fw-bold font-monospace px-3 py-1.5 fs-6 shadow-sm">{{ surec.kod }}</span>
+                        {% if surec.durum == 'DEVAM_EDIYOR' %}
+                            <span class="badge bg-info text-white px-3 py-1.5 rounded-pill"><i class="bi bi-arrow-repeat me-1"></i> Devam Ediyor</span>
+                        {% elif surec.durum == 'YONETIM_ONAYINDA' %}
+                            <span class="badge bg-primary text-white px-3 py-1.5 rounded-pill"><i class="bi bi-shield-check me-1"></i> Yönetim Onayında</span>
+                        {% elif surec.durum == 'MUSTERIYE_ILETILDI' %}
+                            <span class="badge bg-warning text-dark px-3 py-1.5 rounded-pill shadow-sm"><i class="bi bi-send-check-fill me-1"></i> Müşteriye İletildi</span>
+                        {% elif surec.durum == 'REVIZYONDA' %}
+                            <span class="badge bg-warning text-dark px-3 py-1.5 rounded-pill shadow-sm"><i class="bi bi-arrow-repeat me-1"></i> Revizyon Aşamasında</span>
+                        {% elif surec.durum == 'BASARIYLA_TAMAMLANDI' %}
+                            <span class="badge bg-success text-white px-3 py-1.5 rounded-pill shadow-sm"><i class="bi bi-check-circle-fill me-1"></i> Başarıyla Tamamlandı</span>
+                        {% elif surec.durum == 'OLUMSUZ_KAPATILDI' %}
+                            <span class="badge bg-danger text-white px-3 py-1.5 rounded-pill shadow-sm"><i class="bi bi-x-circle me-1"></i> Olumsuz Kapatıldı</span>
+                        {% endif %}
+                    </div>
+                    <h2 class="fw-bold text-white mb-1">{{ surec.musteri_adi }}</h2>
+                    <p class="text-light opacity-90 mb-2" style="font-size: 1.05rem;">{{ surec.ad }}</p>
+                    <div class="d-flex flex-wrap gap-3 text-light small opacity-90 mt-2">
+                        <span><i class="bi bi-calendar3 text-warning me-1"></i>{{ surec.donem }}</span>
+                        <span><i class="bi bi-building me-1"></i>{{ surec.ilgili_fabrika }}</span>
+                        <span><i class="bi bi-boxes me-1"></i>{{ surec.get_urun_grubu_display }}</span>
+                        <span><i class="bi bi-person-badge-fill me-1"></i>Satış Uzmanı: <strong>{{ surec.sorumlu_satis_uzmani }}</strong></span>
+                        {% if surec.teklif_tutari %}
+                        <span><i class="bi bi-cash-stack text-warning me-1"></i>Teklif Tutarı: <strong>€{{ surec.teklif_tutari|floatformat:2|intcomma }}</strong></span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="flex-shrink-0 align-self-md-start">
+                    <div class="bg-white text-dark p-3 rounded-4 shadow-sm text-end" style="width: 220px; min-width: 220px;">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="small fw-bold text-muted">Süreç İlerlemesi</span>
+                            <span class="badge bg-primary fs-6">%{{ surec.tamamlanma_yuzdesi }}</span>
+                        </div>
+                        <div class="progress mb-2" style="height: 10px; border-radius: 8px;">
+                            <div class="progress-bar {% if surec.durum == 'BASARIYLA_TAMAMLANDI' %}bg-success{% elif surec.durum == 'REVIZYONDA' %}bg-warning{% else %}bg-primary{% endif %}" style="width: {{ surec.tamamlanma_yuzdesi }}%;"></div>
+                        </div>
+                        <div class="small fw-semibold text-secondary">Güncel: <span class="text-primary fw-bold">Adım {{ surec.guncel_adim_no }}/15</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 2. 15 ADIM MINI STEPPER ÇİZELGESİ -->
+<div class="portal-card p-3 shadow-sm mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="small fw-bold text-muted text-uppercase" style="letter-spacing: 0.5px;">
+            <i class="bi bi-signpost-2-fill text-primary me-1"></i> 15 Adım Ürün Teklif İstasyonları
+        </span>
+        <div class="d-flex gap-2">
+            {% if surec.musteri_karti %}
+            <a href="{% url 'kartlar' %}?tab=musteriler&q_m={{ surec.musteri_karti.kisa_ad }}" class="btn btn-outline-primary btn-sm rounded-pill px-3 fw-semibold">
+                <i class="bi bi-person-lines-fill me-1"></i> 360° Müşteri Profili
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="d-flex flex-wrap justify-content-start align-items-center py-2 px-1 gap-2">
+        {% for a in adim_kayitlari %}
+        <a href="#adim-{{ a.adim.adim_no }}" class="text-decoration-none text-center" title="Adım {{ a.adim.adim_no }}: {{ a.adim.baslik }}{% if a.adim.karar_adimi_mi %} (Karar / Koşul Adımı){% endif %}">
+            <div class="step-pill {% if a.adim.karar_adimi_mi %}is-decision{% endif %} 
+                {% if a.durum == 'TAMAMLANDI' %}completed
+                {% elif a.adim.adim_no == surec.guncel_adim_no %}active
+                {% elif a.durum == 'PAS_GECILDI' %}skipped
+                {% else %}pending{% endif %}">
+                {% if a.durum == 'PAS_GECILDI' %}-{% else %}{{ a.adim.adim_no }}{% endif %}
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="row">
+    <!-- SOL: 15 ADIM CHECKLIST (FAZ BAZINDA DİKEY AKIŞ) -->
+    <div class="col-lg-8">
+        {% for faz in fazlar %}
+        <div class="faz-header shadow-sm">
+            <span><i class="bi bi-layers-fill text-primary me-2"></i>{{ faz.baslik }}</span>
+            <span class="badge bg-white text-muted border">{{ faz.adimlar|length }} Adım</span>
+        </div>
+
+        {% for k in faz.adimlar %}
+        <div id="adim-{{ k.adim.adim_no }}" class="portal-card mb-3 p-4 shadow-sm 
+    {% if k.durum == 'TAMAMLANDI' %}card-step-completed
+    {% elif k.adim.adim_no == surec.guncel_adim_no %}card-step-active
+    {% elif k.durum == 'PAS_GECILDI' %}card-step-pending opacity-75
+    {% else %}card-step-pending{% endif %}">
+            
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div class="d-flex align-items-center">
+                    <span class="badge 
+                {% if k.durum == 'TAMAMLANDI' %}bg-success
+                {% elif k.adim.adim_no == surec.guncel_adim_no %}bg-primary
+                {% elif k.durum == 'PAS_GECILDI' %}bg-secondary
+                {% else %}bg-light text-muted border{% endif %} 
+                me-2 px-2.5 py-1.5 fs-6 font-monospace">
+                Adım {{ k.adim.adim_no }}
+            </span>
+                    <h6 class="fw-bold text-dark mb-0 fs-6">{{ k.adim.baslik }}</h6>
+                </div>
+                <div>
+            {% if k.durum == 'TAMAMLANDI' %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1"><i class="bi bi-check-circle-fill me-1"></i> Tamamlandı</span>
+            {% elif k.adim.adim_no == surec.guncel_adim_no %}
+                <span class="badge bg-primary text-white rounded-pill px-3 py-1 shadow-sm"><span class="live-pulse me-1"></span> Aktif İstasyon</span>
+            {% elif k.durum == 'PAS_GECILDI' %}
+                <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2 py-1">Pas Geçildi</span>
+            {% else %}
+                <span class="badge bg-light text-muted border rounded-pill px-2 py-1">Bekliyor</span>
+            {% endif %}
+        </div>
+            </div>
+
+            <p class="text-secondary small mb-3 lh-base">{{ k.adim.faaliyet_tanimi }}</p>
+
+            <!-- FORM: Notlar ve Aksiyonlar -->
+            <form action="{% url 'urun_teklif_adim_aksiyon' surec.pk k.pk %}" method="POST">
+                {% csrf_token %}
+
+                <!-- GEÇMİŞ TAMAMLANMA VE KARAR ÖZETİ (Tamamlandıysa veya Karar verildiyse) -->
+                {% if k.durum == 'TAMAMLANDI' or k.karar_sonucu %}
+                <div class="p-3 rounded-3 {% if 'NOK' in k.karar_sonucu or 'HAYIR' in k.karar_sonucu %}bg-warning-subtle border border-warning-subtle text-dark{% else %}bg-success-subtle border border-success-subtle text-dark{% endif %} small mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>
+                                {% if 'NOK' in k.karar_sonucu or 'HAYIR' in k.karar_sonucu %}
+                                    <i class="bi bi-arrow-return-left text-warning-emphasis me-1"></i>
+                                {% else %}
+                                    <i class="bi bi-check2-circle text-success me-1"></i>
+                                {% endif %}
+                                Karar / Sonuç:
+                            </strong> {{ k.karar_sonucu|default:'Tamamlandı' }} 
+                            {% if k.tamamlayan %} • <span class="text-muted">İşlemi Yapan: <strong>{{ k.tamamlayan }}</strong></span>{% endif %}
+                        </div>
+                        {% if k.tamamlanma_tarihi %}<span class="text-muted fw-semibold" style="font-size: 0.75rem;"><i class="bi bi-clock me-1"></i>{{ k.tamamlanma_tarihi|date:"d.m.Y H:i" }}</span>{% endif %}
+                    </div>
+                    {% if k.notlar %}
+                    <div class="mt-2 text-secondary bg-white p-2 rounded-2 border">
+                        <strong>Adım Açıklaması / Değerlendirme:</strong> {{ k.notlar }}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <!-- AKSİYON VE KARAR ALMA PANELİ -->
+                {% if k.adim.adim_no == surec.guncel_adim_no and k.durum == 'DEVAM_EDIYOR' %}
+                <div class="mt-3 p-3 bg-white border rounded-3 shadow-sm border-primary">
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-8">
+                            <label class="form-label small fw-bold text-muted mb-1">Bu Adım İçin Açıklama / Değerlendirme Notları:</label>
+                            <textarea name="notlar" rows="2" class="form-control form-control-sm" placeholder="Faaliyet gerçekleştirme notları, maliyet analiz çıktıları veya onay gerekçesi...">{{ k.notlar|default:'' }}</textarea>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted mb-1">İşlemi Yapan / Sorumlu:</label>
+                            <input type="text" name="tamamlayan" class="form-control form-control-sm" placeholder="İşlemi Yapan Uzman" value="{{ k.tamamlayan|default:surec.sorumlu_satis_uzmani }}">
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 pt-2 border-top">
+                        <!-- Ara Kaydet / Not Güncelleme Butonu -->
+                        <div>
+                            <button type="submit" name="aksiyon" value="KAYDET" class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-sm fw-semibold">
+                                <i class="bi bi-floppy me-1"></i> İlerlemeyi / Notları Kaydet
+                            </button>
+                        </div>
+
+                        <!-- Adımı Tamamlama & Karar Butonları -->
+                        <div class="d-flex flex-wrap gap-2">
+                            {% if k.adim.adim_no == 3 %}
+                                <!-- Adım 3: Üst Yönetim Onayı (OK -> 4, NOK -> 2) -->
+                                <button type="submit" name="aksiyon" value="OK" class="btn btn-success btn-sm rounded-pill px-3 shadow-sm fw-semibold">
+                                    <i class="bi bi-check-circle-fill me-1"></i> OK - Fiyat Stratejisi Onaylandı (Adım 4)
+                                </button>
+                                <button type="submit" name="aksiyon" value="NOK" class="btn btn-warning btn-sm rounded-pill px-3 shadow-sm fw-semibold">
+                                    <i class="bi bi-arrow-return-left me-1"></i> NOK - Onaylanmadı (Adım 2'ye Dön)
+                                </button>
+
+                            {% elif k.adim.adim_no == 5 %}
+                                <!-- Adım 5: Parametre Kontrolü (OK -> 6, NOK -> 1) -->
+                                <button type="submit" name="aksiyon" value="OK" class="btn btn-success btn-sm rounded-pill px-3 shadow-sm fw-semibold">
+                                    <i class="bi bi-check-circle-fill me-1"></i> OK - Parametreler Uygun (Adım 6 Maliyet Analizi)
+                                </button>
+                                <button type="submit" name="aksiyon" value="NOK" class="btn btn-warning btn-sm rounded-pill px-3 shadow-sm fw-semibold">
+                                    <i class="bi bi-arrow-return-left me-1"></i> NOK - Uygun Değil (Adım 1 Fiyat Stratejisine Dön)
+                                </button>
+
+                            {% elif k.adim.adim_no == 8 %}
+                                <!-- Adım 8: Yönetim Maliyet & Teklif Onayı (OK -> 9, NOK -> 6) -->
+                                <button type="submit" name="aksiyon" value="OK" class="btn btn-success btn-sm rounded-pill px-3 shadow-sm fw-semibold">
+                                    <i class="bi bi-check-circle-fill me-1"></i> OK - Maliyet & Teklif Onaylandı (Adım 9 İletim)
+                                </button>
+                                <button type="submit" name="aksiyon" value="NOK" class="btn btn-warning btn-sm rounded-pill px-3 shadow-sm fw-semibold">
+                                    <i class="bi bi-arrow-return-left me-1"></i> NOK - Maliyet Revizyonu Gerekli (Adım 6'ya Dön)
+                                </button>
+
+                            {% elif k.adim.adim_no == 11 %}
+                                <!-- Adım 11: Güncelleme Kararı (EVET -> 12, HAYIR -> 13) -->
+                                <button type="submit" name="aksiyon" value="EVET" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm fw-semibold">
+                                    <i class="bi bi-pencil-square me-1"></i> EVET - Teklifte Güncelleme Yapılacak (Adım 12)
+                                </button>
+                                <button type="submit" name="aksiyon" value="HAYIR" class="btn btn-success btn-sm rounded-pill px-3 shadow-sm fw-semibold">
+                                    <i class="bi bi-arrow-right-circle me-1"></i> HAYIR - Güncelleme Yok (Doğrudan Adım 13)
+                                </button>
+
+                            {% elif k.adim.adim_no == 15 %}
+                                <!-- Adım 15: Kapanış & Öğrenilmiş Dersler -->
+                                <button type="submit" name="aksiyon" value="KAPAT" class="btn btn-success btn-sm rounded-pill px-4 shadow-sm fw-semibold">
+                                    <i class="bi bi-check2-all me-1"></i> Süreci Başarıyla Kapat & Öğrenilmiş Dersleri Kaydet
+                                </button>
+
+                            {% else %}
+                                <!-- Standart Adımlar (1, 2, 4, 6, 7, 9, 10, 12, 13, 14) -->
+                                <button type="submit" name="aksiyon" value="TAMAMLA" class="btn btn-primary btn-sm rounded-pill px-4 shadow-sm fw-semibold">
+                                    <i class="bi bi-check-lg me-1"></i> Adımı Tamamla ve Sonraki Adıma Geç
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% elif k.durum == 'TAMAMLANDI' %}
+                <!-- Tamamlanmış Adımda Notları Güncelleme Alanı -->
+                <div class="mt-2 text-end">
+                    <button class="btn btn-light btn-sm text-secondary border rounded-pill px-3" type="button" data-bs-toggle="collapse" data-bs-target="#editAdim{{ k.adim.adim_no }}" aria-expanded="false">
+                        <i class="bi bi-pencil-square me-1"></i> Notları Düzenle
+                    </button>
+                </div>
+                <div class="collapse mt-2" id="editAdim{{ k.adim.adim_no }}">
+                    <div class="p-3 bg-light border rounded-3">
+                        <div class="row g-2 mb-2">
+                            <div class="col-md-8">
+                                <label class="form-label small fw-bold text-muted mb-1">Açıklama / Değerlendirmeyi Güncelle:</label>
+                                <textarea name="notlar" rows="2" class="form-control form-control-sm">{{ k.notlar|default:'' }}</textarea>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold text-muted mb-1">İşlemi Yapan:</label>
+                                <input type="text" name="tamamlayan" class="form-control form-control-sm mb-2" value="{{ k.tamamlayan|default:surec.sorumlu_satis_uzmani }}">
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <button type="submit" name="aksiyon" value="GUNCELLE" class="btn btn-primary btn-sm rounded-pill px-3 fw-semibold">
+                                <i class="bi bi-check2 me-1"></i> Güncelle ve Kaydet
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </form>
+
+        </div>
+        {% endfor %}
+
+        {% endfor %}
+    </div>
+
+    <!-- SAĞ: SÜREÇ PARAMETRELERİ & TARİHÇE -->
+    <div class="col-lg-4">
+        <!-- Süreç Parametreleri -->
+        <div class="portal-card p-3 shadow-sm mb-4">
+            <h6 class="fw-bold text-dark mb-3"><i class="bi bi-info-circle-fill text-primary me-2"></i>Teklif Parametreleri</h6>
+            <ul class="list-group list-group-flush small">
+                <li class="list-group-item d-flex justify-content-between px-0 py-2"><span class="text-muted">Teklif Kodu:</span><span class="fw-bold font-monospace">{{ surec.kod }}</span></li>
+                <li class="list-group-item d-flex justify-content-between px-0 py-2"><span class="text-muted">Müşteri Adı:</span><span class="fw-bold text-dark">{{ surec.musteri_adi }}</span></li>
+                <li class="list-group-item d-flex justify-content-between px-0 py-2"><span class="text-muted">Dönem / Yıl:</span><span class="fw-bold text-primary">{{ surec.donem }}</span></li>
+                <li class="list-group-item d-flex justify-content-between px-0 py-2"><span class="text-muted">İlgili Fabrika:</span><span class="fw-bold">{{ surec.ilgili_fabrika }}</span></li>
+                <li class="list-group-item d-flex justify-content-between px-0 py-2"><span class="text-muted">Ürün Grubu:</span><span class="fw-bold text-primary">{{ surec.get_urun_grubu_display }}</span></li>
+                {% if surec.teklif_tutari %}
+                <li class="list-group-item d-flex justify-content-between px-0 py-2"><span class="text-muted">Teklif Tutarı / Ciro:</span><span class="fw-bold text-success font-monospace">€{{ surec.teklif_tutari|floatformat:2|intcomma }}</span></li>
+                {% endif %}
+                <li class="list-group-item d-flex justify-content-between px-0 py-2"><span class="text-muted">Satış Uzmanı:</span><span class="fw-bold">{{ surec.sorumlu_satis_uzmani }}</span></li>
+                <li class="list-group-item d-flex justify-content-between px-0 py-2"><span class="text-muted">Satış Analiz Uzmanı:</span><span class="fw-bold">{{ surec.sorumlu_satis_analiz_uzmani }}</span></li>
+                <li class="list-group-item d-flex justify-content-between px-0 py-2"><span class="text-muted">Satış Yöneticisi:</span><span class="fw-bold">{{ surec.sorumlu_satis_yoneticisi }}</span></li>
+            </ul>
+
+            {% if surec.musteri_karti %}
+            <div class="mt-3 pt-3 border-top">
+                <div class="small fw-bold text-muted mb-1">Portföy Kartı:</div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="fw-semibold text-dark">{{ surec.musteri_karti.kisa_ad }}</span>
+                    <a href="{% url 'kartlar' %}?tab=musteriler&q_m={{ surec.musteri_karti.kisa_ad }}" class="btn btn-sm btn-outline-primary rounded-pill px-2.5 py-0.5" style="font-size: 0.75rem;">
+                        <i class="bi bi-box-arrow-up-right me-1"></i> Kartı Gör
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="mt-3 pt-3 border-top text-end">
+                <form action="{% url 'urun_teklif_sil' surec.pk %}" method="POST" onsubmit="return confirm('Bu Ürün Teklif Sürecini silmek istediğinize emin misiniz?')" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill"><i class="bi bi-trash3 me-1"></i> Sil</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- TEKLİF EKİBİ & RACI SORUMLULUKLARI -->
+        <div class="portal-card p-4 shadow-sm mb-4">
+            <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
+                <i class="bi bi-people-fill text-primary me-2"></i>Teklif Hazırlama Ekibi & RACI
+            </h6>
+            <div class="mb-2.5">
+                <small class="text-muted d-block">Satış Uzmanı (R - İşi Yürüten):</small>
+                <div class="fw-bold text-dark small"><i class="bi bi-person-check-fill text-primary me-1"></i>{{ surec.sorumlu_satis_uzmani|default:'Buse Nur Baltacıoğlu' }}</div>
+            </div>
+            <div class="mb-2.5">
+                <small class="text-muted d-block">Satış Yöneticisi / GM (A - Onay Veren):</small>
+                <div class="fw-bold text-dark small"><i class="bi bi-person-badge-fill text-danger me-1"></i>{{ surec.sorumlu_satis_yoneticisi|default:'Serdar Acar' }}</div>
+            </div>
+            <div class="mb-2.5">
+                <small class="text-muted d-block">Satış Analiz Uzmanı (C - Maliyet / Analiz):</small>
+                <div class="fw-bold text-dark small"><i class="bi bi-person-fill text-warning me-1"></i>{{ surec.sorumlu_satis_analiz_uzmani|default:'Hakan Yılmaz' }}</div>
+            </div>
+            <div class="mb-0">
+                <small class="text-muted d-block">Fabrika & Kalite Müdürü (I - Bilgilendirilen):</small>
+                <div class="fw-bold text-dark small"><i class="bi bi-shield-fill-check text-success me-1"></i>{{ surec.ilgili_fabrika }} (Ahmet Yurt)</div>
+            </div>
+        </div>
+
+        <!-- TARİHÇE VE İŞLEM LOGLARI -->
+        <div class="portal-card p-4 shadow-sm mb-4">
+            <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
+                <i class="bi bi-clock-history text-primary me-2"></i>Süreç Tarihçesi & Loglar
+            </h6>
+            <div style="max-height: 480px; overflow-y: auto;">
+                {% if tarihce %}
+                <div class="timeline ps-2" style="border-left: 2px solid #e2e8f0; margin-left: 6px;">
+                    {% for log in tarihce %}
+                    <div class="mb-3 ps-3 position-relative">
+                        <div class="position-absolute rounded-circle bg-primary shadow-sm" style="width: 10px; height: 10px; left: -21px; top: 4px; border: 2px solid #ffffff;"></div>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="fw-bold text-dark small" style="font-size: 0.82rem;">{{ log.islem }}</span>
+                            <span class="text-muted fw-semibold" style="font-size: 0.70rem;">{{ log.tarih|date:"d.m.Y H:i" }}</span>
+                        </div>
+                        {% if log.detay %}
+                        <div class="text-secondary small lh-sm mb-1" style="font-size: 0.78rem;">{{ log.detay }}</div>
+                        {% endif %}
+                        <div class="text-muted" style="font-size: 0.72rem;">
+                            <i class="bi bi-person-fill text-primary me-1"></i>{{ log.yapan }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-muted small py-3 text-center">Henüz geçmiş işlem kaydı bulunmuyor.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

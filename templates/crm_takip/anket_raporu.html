@@ -1,0 +1,855 @@
+{% extends 'base.html' %}
+
+{% block title %}Müşteri Memnuniyeti | Teleset CRM{% endblock %}
+
+{% block sayfa_basligi %}
+Müşteri Memnuniyeti
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* MİNNİMALİST & FERAH TASARIM STİLLERİ */
+    .minimal-control-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 24px 28px;
+        transition: all 0.2s ease;
+    }
+    .kpi-metric-box {
+        border-radius: 16px;
+        padding: 22px 24px;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+    .kpi-metric-box:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 24px -6px rgba(15, 44, 77, 0.06) !important;
+        border-color: #cbd5e1;
+    }
+    .kpi-score-badge {
+        font-size: 2.35rem;
+        font-weight: 800;
+        line-height: 1.1;
+        letter-spacing: -1px;
+    }
+    .chart-container-box {
+        background: #ffffff;
+        border-radius: 16px;
+        border: 1px solid #e2e8f0;
+        padding: 24px 26px;
+        height: 100%;
+        transition: all 0.2s ease;
+    }
+    .minimal-filter-select {
+        border: 1px solid #e2e8f0;
+        background-color: #f8fafc;
+        border-radius: 10px;
+        font-size: 0.88rem;
+        font-weight: 600;
+        color: #1e293b;
+        padding: 9px 14px;
+        transition: all 0.2s ease;
+    }
+    .minimal-filter-select:focus {
+        background-color: #ffffff;
+        border-color: #184775;
+        box-shadow: 0 0 0 3px rgba(24, 71, 117, 0.1);
+    }
+    .filter-pill-btn {
+        border: 1px solid #e2e8f0;
+        background: #f8fafc;
+        color: #475569;
+        font-size: 0.80rem;
+        font-weight: 600;
+        padding: 6px 14px;
+        border-radius: 24px;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .filter-pill-btn:hover {
+        background: #e2e8f0;
+        color: #0f172a;
+        border-color: #cbd5e1;
+    }
+    .filter-pill-btn.active {
+        background: #184775;
+        border-color: #184775;
+        color: #ffffff;
+        box-shadow: 0 4px 12px rgba(24, 71, 117, 0.2);
+    }
+    .action-btn-clean {
+        border-radius: 10px;
+        font-size: 0.86rem;
+        font-weight: 600;
+        padding: 8px 16px;
+        transition: all 0.2s ease;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+
+    <!-- 1. MİNİMALİST & FERAH KONTROL VE FİLTRE PANELİ (TEK DÜZENLİ KART) -->
+    <div class="minimal-control-card shadow-sm mb-4">
+        <!-- ÜST SATIR: AKSİYONLAR & FİLTRE SEÇİCİLER -->
+        <div class="row align-items-center g-3 pb-3 border-bottom">
+            <!-- SOL: HIZLI İŞLEM BUTONLARI -->
+            <div class="col-lg-5 col-xl-6">
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <a href="{{ excel_url }}" target="_blank" class="btn btn-success action-btn-clean shadow-sm text-white">
+                        <i class="bi bi-file-earmark-excel-fill me-1.5"></i>Excel İndir (.xlsx)
+                    </a>
+                    <button type="button" id="btnKopyala" class="btn btn-outline-primary action-btn-clean bg-white" onclick="kopyalaAnketLinki()">
+                        <i class="bi bi-clipboard-check me-1.5"></i>Anket Linkini Kopyala
+                    </button>
+                    <a href="{{ form_url }}" target="_blank" class="btn btn-outline-secondary action-btn-clean bg-white" title="Formu Yeni Sekmede Aç">
+                        <i class="bi bi-box-arrow-up-right me-1"></i>Anketi Aç
+                    </a>
+                    <span id="kopyalandiBadge" class="badge bg-success text-white py-2 px-2.5 rounded-3 d-none animate__animated animate__fadeIn">
+                        <i class="bi bi-check2 me-1"></i>Kopyalandı!
+                    </span>
+                    <!-- Gizli input kopyalama için -->
+                    <input type="hidden" id="anketLinkInput" value="{{ form_url }}">
+                </div>
+            </div>
+
+            <!-- SAĞ: FİLTRE DROPDOWNLARI -->
+            <div class="col-lg-7 col-xl-6">
+                <div class="d-flex flex-wrap align-items-center justify-content-lg-end gap-2">
+                    <div style="min-width: 210px;">
+                        <select id="selectMusteriGrubu" class="form-select minimal-filter-select" onchange="filtreleriUygula()">
+                            <option value="ALL">Tüm Müşteriler (129 Yanıt)</option>
+                            {% for cg in customer_groups %}
+                            <option value="{{ cg.grup }}">{{ cg.grup }} ({{ cg.adet }} Yanıt - %{{ cg.ortalama }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div style="min-width: 170px;">
+                        <select id="selectFabrika" class="form-select minimal-filter-select" onchange="filtreleriUygula()">
+                            <option value="ALL">Tüm Fabrikalar</option>
+                            {% for f in factories %}
+                            <option value="{{ f }}">{{ f }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="button" class="btn btn-light border action-btn-clean text-secondary px-3" onclick="filtreleriSifirla()" title="Filtreleri Sıfırla">
+                        <i class="bi bi-arrow-counterclockwise"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ALT SATIR: FERAH HIZLI SEÇİM HAPLARI (PILLS) & AKTİF BİLGİ -->
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 pt-3">
+            <div class="d-flex flex-wrap align-items-center gap-1.5">
+                <span class="text-muted small fw-bold me-1.5">Müşteri:</span>
+                <button type="button" class="filter-pill-btn active" data-grup="ALL" onclick="hizliGrupSec('ALL')">Tümü (129)</button>
+                <button type="button" class="filter-pill-btn" data-grup="Vestel Group" onclick="hizliGrupSec('Vestel Group')">Vestel (32)</button>
+                <button type="button" class="filter-pill-btn" data-grup="Arçelik & Beko Group" onclick="hizliGrupSec('Arçelik & Beko Group')">Arçelik & Beko (14)</button>
+                <button type="button" class="filter-pill-btn" data-grup="BSH & Bosch Group" onclick="hizliGrupSec('BSH & Bosch Group')">BSH & Bosch (18)</button>
+                <button type="button" class="filter-pill-btn" data-grup="Klimasan Group" onclick="hizliGrupSec('Klimasan Group')">Klimasan (11)</button>
+                <button type="button" class="filter-pill-btn" data-grup="Odelo Grubu" onclick="hizliGrupSec('Odelo Grubu')">Odelo (3)</button>
+                <button type="button" class="filter-pill-btn" data-grup="Sabaf Grubu" onclick="hizliGrupSec('Sabaf Grubu')">Sabaf (3)</button>
+                <button type="button" class="filter-pill-btn" data-grup="Diğer Müşteriler" onclick="hizliGrupSec('Diğer Müşteriler')">Diğerleri (25)</button>
+            </div>
+            <div>
+                <span id="aktifFiltreRozeti" class="text-muted small fw-semibold">
+                    129 Müşteri Değerlendirmesi
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. DİNAMİK KPI KARTLARI -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl-3">
+            <div class="kpi-metric-box shadow-sm h-100">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-muted small fw-bold text-uppercase" style="letter-spacing: 0.5px;">CSI Memnuniyet Skoru</span>
+                    <div class="rounded-circle bg-primary-subtle text-primary p-2 d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+                        <i class="bi bi-speedometer2 fs-5"></i>
+                    </div>
+                </div>
+                <div id="kpiGenelSkor" class="kpi-score-badge text-primary mb-2">%{{ analytics.genel_skor }}</div>
+                <div class="d-flex align-items-center justify-content-between pt-1 border-top">
+                    <small class="text-muted fw-semibold">Hedef: %75.0</small>
+                    <span id="kpiSkorBadge" class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Başarılı</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-xl-3">
+            <div class="kpi-metric-box shadow-sm h-100">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-muted small fw-bold text-uppercase" style="letter-spacing: 0.5px;">Toplam Katılımcı</span>
+                    <div class="rounded-circle bg-info-subtle text-info p-2 d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+                        <i class="bi bi-people-fill fs-5"></i>
+                    </div>
+                </div>
+                <div id="kpiToplamYanit" class="kpi-score-badge text-info mb-2">{{ analytics.toplam_yanit }}</div>
+                <div class="d-flex align-items-center justify-content-between pt-1 border-top">
+                    <small class="text-muted fw-semibold">Dönem: 2026</small>
+                    <span id="kpiYanitOran" class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1">Aktif</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-xl-3">
+            <div class="kpi-metric-box shadow-sm h-100">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-muted small fw-bold text-uppercase" style="letter-spacing: 0.5px;">Net Tavsiye Endeksi (NPS)</span>
+                    <div class="rounded-circle bg-success-subtle text-success p-2 d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+                        <i class="bi bi-hand-thumbs-up-fill fs-5"></i>
+                    </div>
+                </div>
+                <div id="kpiNpsSkoru" class="kpi-score-badge text-success mb-2">{{ analytics.nps_skoru }}</div>
+                <div class="d-flex align-items-center justify-content-between pt-1 border-top">
+                    <small class="text-success fw-semibold">Net Memnuniyet</small>
+                    <span id="kpiNpsBadge" class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Pozitif</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-xl-3">
+            <div class="kpi-metric-box shadow-sm h-100">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-muted small fw-bold text-uppercase" style="letter-spacing: 0.5px;">En Güçlü Boyut</span>
+                    <div class="rounded-circle bg-warning-subtle text-warning-emphasis p-2 d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+                        <i class="bi bi-trophy-fill fs-5"></i>
+                    </div>
+                </div>
+                <div id="kpiLiderBoyutSkor" class="kpi-score-badge text-dark mb-2">%81.9</div>
+                <div class="d-flex align-items-center justify-content-between pt-1 border-top">
+                    <small id="kpiLiderBoyutAd" class="text-muted text-truncate fw-semibold" style="max-width: 140px;">Problem Çözme</small>
+                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1">Lider</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. GRAFİK BÖLÜMÜ 1: 8 BOYUT ANALİZİ & FABRİKA PERFORMANSI -->
+    <div class="row g-4 mb-4">
+        <!-- SOL: 8 BOYUT ANALİZ GRAFİĞİ -->
+        <div class="col-lg-7">
+            <div class="chart-container-box shadow-sm">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h6 class="fw-bold text-dark mb-1">
+                            <i class="bi bi-bar-chart-steps text-primary me-2"></i>8 Boyutta Memnuniyet Değerlendirmesi
+                        </h6>
+                        <small class="text-muted">Seçilen müşteri ve filtreye göre 8 ana kurumsal kriter ortalamaları</small>
+                    </div>
+                    <span class="badge bg-light text-secondary border small fw-normal">Hedef: %75.0</span>
+                </div>
+                <div style="position: relative; height: 330px;">
+                    <canvas id="boyutlarBarChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- SAĞ: FABRİKA BAZLI MEMNUNİYET GRAFİĞİ -->
+        <div class="col-lg-5">
+            <div class="chart-container-box shadow-sm">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h6 class="fw-bold text-dark mb-1">
+                            <i class="bi bi-buildings text-primary me-2"></i>Fabrika Bazlı Memnuniyet
+                        </h6>
+                        <small class="text-muted">Teleset üretim birimlerinin genel memnuniyet puanları</small>
+                    </div>
+                    <span id="fabrikaYanitSayisi" class="badge bg-primary-subtle text-primary border border-primary-subtle small">5 Fabrika</span>
+                </div>
+                <div style="position: relative; height: 330px;">
+                    <canvas id="fabrikalarBarChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. GRAFİK BÖLÜMÜ 2: MEMNUNİYET KÜMELERİ & 8 BOYUT İLERLEME TABLOSU -->
+    <div class="row g-4 mb-4">
+        <!-- SOL: MEMNUNİYET KÜMELERİ DONUT -->
+        <div class="col-lg-4">
+            <div class="chart-container-box shadow-sm d-flex flex-column justify-content-between">
+                <div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h6 class="fw-bold text-dark mb-1">
+                                <i class="bi bi-pie-chart-fill text-primary me-2"></i>Memnuniyet Kümeleri
+                            </h6>
+                            <small class="text-muted">Müşteri yanıtlarının skor dağılımı</small>
+                        </div>
+                    </div>
+                    <div style="position: relative; height: 210px;">
+                        <canvas id="dagilimDonutChart"></canvas>
+                    </div>
+                </div>
+                <div class="mt-3 pt-3 border-top">
+                    <div class="d-flex justify-content-between small text-muted mb-1.5">
+                        <span><i class="bi bi-circle-fill text-success me-1.5" style="font-size: 8px;"></i>Yüksek (%75+)</span>
+                        <strong id="statYuksek" class="text-dark">68 Yanıt (%53)</strong>
+                    </div>
+                    <div class="d-flex justify-content-between small text-muted mb-1.5">
+                        <span><i class="bi bi-circle-fill text-warning me-1.5" style="font-size: 8px;"></i>Orta (%50-%74)</span>
+                        <strong id="statOrta" class="text-dark">42 Yanıt (%33)</strong>
+                    </div>
+                    <div class="d-flex justify-content-between small text-muted">
+                        <span><i class="bi bi-circle-fill text-danger me-1.5" style="font-size: 8px;"></i>Gelişime Açık (<%50)</span>
+                        <strong id="statGelisim" class="text-dark">19 Yanıt (%14)</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SAĞ: 8 BOYUT İLERLEME TABLOSU -->
+        <div class="col-lg-8">
+            <div class="chart-container-box shadow-sm">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h6 class="fw-bold text-dark mb-1">
+                            <i class="bi bi-table text-primary me-2"></i>Boyut Bazında Puanlama & İlerleme
+                        </h6>
+                        <small class="text-muted">Her değerlendirme boyutunun detaylı gerçekleşen puanı</small>
+                    </div>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle small">
+                        <i class="bi bi-check2-all me-1"></i>Canlı
+                    </span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" style="font-size: 0.88rem;">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 40%;">Boyut</th>
+                                <th style="width: 16%;">Skor</th>
+                                <th style="width: 26%;">İlerleme</th>
+                                <th style="width: 18%;" class="text-end">Durum</th>
+                            </tr>
+                        </thead>
+                        <tbody id="boyutlarTableBody">
+                            {% for b in analytics.boyutlar %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="rounded-circle p-1.5 bg-light text-primary me-2 d-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">
+                                            <i class="bi {{ b.ikon }}"></i>
+                                        </div>
+                                        <span class="fw-semibold text-dark">{{ b.ad }}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="fw-bold text-dark">%{{ b.skor }}</span>
+                                </td>
+                                <td>
+                                    <div class="progress" style="height: 6px; border-radius: 3px; background: #f1f5f9;">
+                                        <div class="progress-bar" role="progressbar" style="width: {{ b.skor }}%; background-color: {{ b.renk }}; border-radius: 3px;"></div>
+                                    </div>
+                                </td>
+                                <td class="text-end">
+                                    {% if b.skor >= 80 %}
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Mükemmel</span>
+                                    {% elif b.skor >= 70 %}
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">İyi</span>
+                                    {% else %}
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">Gelişime Açık</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. SEÇİLİ MÜŞTERİ YANITLARI & AÇIK UÇLU GERİ BİLDİRİMLER -->
+    <div class="chart-container-box shadow-sm mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 border-bottom pb-3 mb-3">
+            <div>
+                <h6 class="fw-bold text-dark mb-1">
+                    <i class="bi bi-chat-left-quote-fill text-primary me-2"></i>Müşteri Geri Bildirimleri & Değerlendirme Kayıtları
+                </h6>
+                <small class="text-muted">Seçilen filtre kapsamında müşterilerin ilettiği güçlü yönler, gelişim alanları ve öneriler</small>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <div class="input-group input-group-sm" style="width: 220px;">
+                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-search"></i></span>
+                    <input type="text" id="feedbackSearchInput" class="form-control bg-light border-start-0" placeholder="Kayıtlarda ara..." onkeyup="tabloArama()">
+                </div>
+                <span id="kayitSayisiBadge" class="badge bg-secondary text-white small px-2.5 py-1.5">129 Kayıt</span>
+            </div>
+        </div>
+
+        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+            <table class="table table-hover align-middle mb-0" id="feedbackTable" style="font-size: 0.85rem;">
+                <thead class="table-light sticky-top">
+                    <tr>
+                        <th style="width: 22%;">Firma / Yetkili</th>
+                        <th style="width: 14%;">Fabrika</th>
+                        <th style="width: 10%;">Genel Skor</th>
+                        <th style="width: 27%;">Güçlü Yanlar</th>
+                        <th style="width: 27%;">Gelişime Açık Yanlar / Öneriler</th>
+                    </tr>
+                </thead>
+                <tbody id="feedbackTableBody">
+                    <!-- JavaScript ile dinamik olarak doldurulacaktır -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+// Backend'den aktarılan temiz veri setleri
+const ANKET_DATA = {{ anket_records_json|safe }};
+const DIMENSIONS_META = {{ dimensions_meta_json|safe }};
+const FACTORIES_LIST = {{ factories_json|safe }};
+
+let chartBoyutlar = null;
+let chartFabrikalar = null;
+let chartDagilim = null;
+
+function kopyalaAnketLinki() {
+    const input = document.getElementById('anketLinkInput');
+    navigator.clipboard.writeText(input.value).then(function() {
+        const badge = document.getElementById('kopyalandiBadge');
+        badge.classList.remove('d-none');
+        setTimeout(function() {
+            badge.classList.add('d-none');
+        }, 3000);
+    }).catch(function(err) {
+        alert('Bağlantı kopyalandı: ' + input.value);
+    });
+}
+
+function hizliGrupSec(grupAd) {
+    document.getElementById('selectMusteriGrubu').value = grupAd;
+    
+    // Pill buton aktiflik güncelleme
+    document.querySelectorAll('.filter-pill-btn').forEach(btn => {
+        if (btn.getAttribute('data-grup') === grupAd) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    
+    filtreleriUygula();
+}
+
+function filtreleriSifirla() {
+    document.getElementById('selectMusteriGrubu').value = 'ALL';
+    document.getElementById('selectFabrika').value = 'ALL';
+    document.getElementById('feedbackSearchInput').value = '';
+    
+    document.querySelectorAll('.filter-pill-btn').forEach(btn => {
+        if (btn.getAttribute('data-grup') === 'ALL') {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    
+    filtreleriUygula();
+}
+
+function filtreleriUygula() {
+    const seciliGrup = document.getElementById('selectMusteriGrubu').value;
+    const seciliFabrika = document.getElementById('selectFabrika').value;
+    
+    // Pill güncelleme
+    document.querySelectorAll('.filter-pill-btn').forEach(btn => {
+        if (btn.getAttribute('data-grup') === seciliGrup) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+
+    // 1. Veri Filtreleme
+    let filtered = ANKET_DATA.filter(r => {
+        let matchGrup = (seciliGrup === 'ALL') || (r.grup === seciliGrup);
+        let matchFabrika = (seciliFabrika === 'ALL') || (r.fabrika === seciliFabrika);
+        return matchGrup && matchFabrika;
+    });
+
+    let count = filtered.length;
+    let dataToUse = count > 0 ? filtered : [];
+
+    // Aktif rozet güncelleme
+    const rozet = document.getElementById('aktifFiltreRozeti');
+    if (seciliGrup === 'ALL' && seciliFabrika === 'ALL') {
+        rozet.innerText = count + ' Müşteri Değerlendirmesi';
+    } else {
+        let grupText = seciliGrup !== 'ALL' ? seciliGrup : 'Tüm Gruplar';
+        let fabText = seciliFabrika !== 'ALL' ? ' • ' + seciliFabrika : '';
+        rozet.innerText = grupText + fabText + ' (' + count + ' Yanıt)';
+    }
+
+    // 2. Metrik Hesaplamaları
+    let totalScore = 0;
+    let highCount = 0;
+    let midCount = 0;
+    let lowCount = 0;
+    let promoters = 0;
+    let detractors = 0;
+
+    dataToUse.forEach(r => {
+        totalScore += r.genel;
+        if (r.genel >= 75) highCount++;
+        else if (r.genel >= 50) midCount++;
+        else lowCount++;
+
+        if (r.genel >= 80) promoters++;
+        else if (r.genel < 60) detractors++;
+    });
+
+    let avgGenel = count > 0 ? (totalScore / count).toFixed(1) : '0.0';
+    let nps = count > 0 ? Math.round(((promoters - detractors) / count) * 100) : 0;
+    let npsStr = nps > 0 ? '+' + nps : '' + nps;
+
+    // KPI Güncellemeleri
+    document.getElementById('kpiGenelSkor').innerText = '%' + avgGenel;
+    document.getElementById('kpiToplamYanit').innerText = count;
+    document.getElementById('kpiNpsSkoru').innerText = npsStr;
+    
+    const kpiBadge = document.getElementById('kpiSkorBadge');
+    if (parseFloat(avgGenel) >= 75) {
+        kpiBadge.className = 'badge bg-success-subtle text-success border border-success-subtle px-2 py-1';
+        kpiBadge.innerText = 'Hedef Üstü';
+    } else if (parseFloat(avgGenel) >= 65) {
+        kpiBadge.className = 'badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1';
+        kpiBadge.innerText = 'İyi Düzey';
+    } else {
+        kpiBadge.className = 'badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1';
+        kpiBadge.innerText = 'Gelişime Açık';
+    }
+
+    // 3. 8 Boyut Hesaplamaları
+    let dimensionScores = [];
+    let leaderScore = -1;
+    let leaderDim = '';
+
+    DIMENSIONS_META.forEach(d => {
+        let sum = 0;
+        dataToUse.forEach(r => {
+            sum += r[d.key] || 0;
+        });
+        let avg = count > 0 ? parseFloat((sum / count).toFixed(1)) : 0;
+        dimensionScores.push({
+            key: d.key,
+            ad: d.ad,
+            skor: avg,
+            ikon: d.ikon,
+            renk: d.renk
+        });
+
+        if (avg > leaderScore) {
+            leaderScore = avg;
+            leaderDim = d.ad.split(' ')[0] + ' ' + (d.ad.split(' ')[1] || '');
+        }
+    });
+
+    document.getElementById('kpiLiderBoyutSkor').innerText = '%' + (leaderScore > 0 ? leaderScore.toFixed(1) : '0.0');
+    document.getElementById('kpiLiderBoyutAd').innerText = leaderDim || 'N/A';
+
+    // 4. Tabloyu Güncelle
+    updateBoyutlarTable(dimensionScores);
+
+    // 5. Fabrika Skorları Hesaplama
+    let fabMap = {};
+    FACTORIES_LIST.forEach(f => { fabMap[f] = []; });
+    dataToUse.forEach(r => {
+        if (fabMap[r.fabrika]) {
+            fabMap[r.fabrika].push(r.genel);
+        }
+    });
+
+    let fabScores = [];
+    FACTORIES_LIST.forEach(f => {
+        let arr = fabMap[f] || [];
+        let avg = arr.length > 0 ? (arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(1) : 0;
+        fabScores.push({
+            ad: f,
+            skor: parseFloat(avg),
+            adet: arr.length
+        });
+    });
+
+    // 6. Dağılım İstatistik Metinleri
+    let pctHigh = count > 0 ? Math.round((highCount / count) * 100) : 0;
+    let pctMid = count > 0 ? Math.round((midCount / count) * 100) : 0;
+    let pctLow = count > 0 ? Math.round((lowCount / count) * 100) : 0;
+
+    document.getElementById('statYuksek').innerText = highCount + ' Yanıt (%' + pctHigh + ')';
+    document.getElementById('statOrta').innerText = midCount + ' Yanıt (%' + pctMid + ')';
+    document.getElementById('statGelisim').innerText = lowCount + ' Yanıt (%' + pctLow + ')';
+
+    // 7. Grafikleri Güncelle
+    updateCharts(dimensionScores, fabScores, highCount, midCount, lowCount);
+
+    // 8. Katılımcı ve Geri Bildirim Tablosunu Güncelle
+    updateFeedbackTable(filtered);
+}
+
+function updateBoyutlarTable(dimensionScores) {
+    const tbody = document.getElementById('boyutlarTableBody');
+    tbody.innerHTML = '';
+    
+    dimensionScores.forEach(b => {
+        let badgeHtml = '';
+        if (b.skor >= 80) {
+            badgeHtml = '<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Mükemmel</span>';
+        } else if (b.skor >= 70) {
+            badgeHtml = '<span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">İyi</span>';
+        } else {
+            badgeHtml = '<span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">Gelişime Açık</span>';
+        }
+
+        let tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>
+                <div class="d-flex align-items-center">
+                    <div class="rounded-circle p-1.5 bg-light text-primary me-2 d-flex align-items-center justify-content-center" style="width: 26px; height: 26px; font-size: 0.80rem;">
+                        <i class="bi ${b.ikon}"></i>
+                    </div>
+                    <span class="fw-semibold text-dark">${b.ad}</span>
+                </div>
+            </td>
+            <td>
+                <span class="fw-bold text-dark">%${b.skor}</span>
+            </td>
+            <td>
+                <div class="progress" style="height: 6px; border-radius: 3px; background: #f1f5f9;">
+                    <div class="progress-bar" role="progressbar" style="width: ${b.skor}%; background-color: ${b.renk}; border-radius: 3px;" aria-valuenow="${b.skor}" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+            </td>
+            <td class="text-end">
+                ${badgeHtml}
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function updateFeedbackTable(records) {
+    const tbody = document.getElementById('feedbackTableBody');
+    tbody.innerHTML = '';
+    document.getElementById('kayitSayisiBadge').innerText = records.length + ' Kayıt';
+
+    if (records.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted"><i class="bi bi-inbox fs-4 d-block mb-1"></i>Filtreye uygun kayıt bulunamadı.</td></tr>';
+        return;
+    }
+
+    records.forEach(r => {
+        let scoreBadgeClass = r.genel >= 80 ? 'bg-success-subtle text-success border border-success-subtle' : (r.genel >= 65 ? 'bg-primary-subtle text-primary border border-primary-subtle' : 'bg-danger-subtle text-danger border border-danger-subtle');
+        let guclu = r.guclu_yan || '<span class="text-muted fst-italic">Belirtilmedi</span>';
+        let zayif = r.zayif_yan || '';
+        let oneri = r.oneri || '';
+        let secondCol = '';
+        if (zayif && oneri) {
+            secondCol = `<div class="mb-1"><strong>Gelişim:</strong> ${zayif}</div><div><strong>Öneri:</strong> ${oneri}</div>`;
+        } else if (zayif) {
+            secondCol = `<div><strong>Gelişim:</strong> ${zayif}</div>`;
+        } else if (oneri) {
+            secondCol = `<div><strong>Öneri:</strong> ${oneri}</div>`;
+        } else {
+            secondCol = '<span class="text-muted fst-italic">Belirtilmedi</span>';
+        }
+
+        let tr = document.createElement('tr');
+        tr.className = 'feedback-row';
+        tr.innerHTML = `
+            <td>
+                <div class="fw-bold text-dark text-truncate" style="max-width: 220px;">${r.firma}</div>
+                <small class="text-muted"><i class="bi bi-person me-1"></i>${r.yetkili} (${r.unvan})</small>
+                <div class="mt-1"><span class="badge bg-light text-secondary border" style="font-size: 0.72rem;">${r.grup}</span></div>
+            </td>
+            <td>
+                <span class="badge bg-light text-dark border">${r.fabrika}</span>
+            </td>
+            <td>
+                <span class="badge ${scoreBadgeClass} fw-bold px-2.5 py-1">%${r.genel}</span>
+            </td>
+            <td class="small text-secondary" style="max-width: 260px;">
+                ${guclu}
+            </td>
+            <td class="small text-secondary" style="max-width: 260px;">
+                ${secondCol}
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function tabloArama() {
+    let q = document.getElementById('feedbackSearchInput').value.toLowerCase();
+    let rows = document.querySelectorAll('.feedback-row');
+    let visible = 0;
+    rows.forEach(r => {
+        let text = r.innerText.toLowerCase();
+        if (text.includes(q)) {
+            r.style.display = '';
+            visible++;
+        } else {
+            r.style.display = 'none';
+        }
+    });
+    document.getElementById('kayitSayisiBadge').innerText = visible + ' Kayıt';
+}
+
+function updateCharts(dimensionScores, fabScores, highCount, midCount, lowCount) {
+    // 1. BOYUTLAR BAR CHART
+    if (chartBoyutlar) {
+        chartBoyutlar.data.labels = dimensionScores.map(b => b.ad);
+        chartBoyutlar.data.datasets[0].data = dimensionScores.map(b => b.skor);
+        chartBoyutlar.data.datasets[0].backgroundColor = dimensionScores.map(b => b.renk);
+        chartBoyutlar.update();
+    }
+
+    // 2. FABRİKALAR BAR CHART
+    if (chartFabrikalar) {
+        chartFabrikalar.data.labels = fabScores.map(f => f.ad.replace(/\s*\([^)]*\)/g, ''));
+        chartFabrikalar.data.datasets[0].data = fabScores.map(f => f.skor);
+        chartFabrikalar.update();
+    }
+
+    // 3. DAĞILIM DONUT CHART
+    if (chartDagilim) {
+        chartDagilim.data.datasets[0].data = [highCount, midCount, lowCount];
+        chartDagilim.update();
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    // Chart 1: Boyutlar Horizontal Bar
+    const ctxBoyutlar = document.getElementById('boyutlarBarChart');
+    if (ctxBoyutlar) {
+        chartBoyutlar = new Chart(ctxBoyutlar, {
+            type: 'bar',
+            data: {
+                labels: DIMENSIONS_META.map(d => d.ad),
+                datasets: [{
+                    label: 'Memnuniyet Skoru (%)',
+                    data: [81.9, 80.4, 80.1, 79.5, 79.2, 79.0, 76.6, 26.1],
+                    backgroundColor: ['#0ea5e9', '#22609d', '#10b981', '#6366f1', '#8b5cf6', '#f59e0b', '#14b8a6', '#ef4444'],
+                    borderRadius: 6,
+                    borderSkipped: false,
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) { return ' Gerçekleşen: %' + ctx.raw; }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        min: 0,
+                        max: 100,
+                        grid: { color: '#f8fafc' },
+                        ticks: { callback: function(val) { return '%' + val; } }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { font: { weight: '600', size: 11 } }
+                    }
+                }
+            }
+        });
+    }
+
+    // Chart 2: Fabrikalar Bar Chart
+    const ctxFabrikalar = document.getElementById('fabrikalarBarChart');
+    if (ctxFabrikalar) {
+        chartFabrikalar = new Chart(ctxFabrikalar, {
+            type: 'bar',
+            data: {
+                labels: FACTORIES_LIST.map(f => f.replace(/\s*\([^)]*\)/g, '')),
+                datasets: [{
+                    label: 'Fabrika Skoru (%)',
+                    data: [87.5, 82.8, 80.1, 75.3, 71.0],
+                    backgroundColor: ['#10b981', '#0ea5e9', '#6366f1', '#f59e0b', '#22609d'],
+                    borderRadius: 6,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) { return ' Memnuniyet: %' + ctx.raw; }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        min: 0,
+                        max: 100,
+                        grid: { color: '#f8fafc' },
+                        ticks: { callback: function(val) { return '%' + val; } }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { weight: '600', size: 11 } }
+                    }
+                }
+            }
+        });
+    }
+
+    // Chart 3: Memnuniyet Kümeleri Donut
+    const ctxDagilim = document.getElementById('dagilimDonutChart');
+    if (ctxDagilim) {
+        chartDagilim = new Chart(ctxDagilim, {
+            type: 'doughnut',
+            data: {
+                labels: ['Yüksek (%75+)', 'Orta (%50-%74)', 'Gelişime Açık (<%50)'],
+                datasets: [{
+                    data: [68, 42, 19],
+                    backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
+                    borderWidth: 2,
+                    borderColor: '#ffffff',
+                    hoverOffset: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } }
+                },
+                cutout: '72%'
+            }
+        });
+    }
+
+    // İlk açılışta filtreleri ve tabloları çalıştır
+    filtreleriUygula();
+});
+</script>
+{% endblock %}

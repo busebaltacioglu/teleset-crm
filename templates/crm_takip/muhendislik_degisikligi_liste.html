@@ -1,0 +1,507 @@
+{% extends "base.html" %}
+
+{% block title %}Mühendislik Değişikliği Süreci (34 Adım - ECO) | Teleset CRM{% endblock %}
+
+{% block sayfa_basligi %}Mühendislik Değişikliği Süreci (ECO / ECM){% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <!-- 1. ÜST METRİK KARTLARI -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl-3">
+            <div class="portal-card p-3 shadow-sm d-flex align-items-center">
+                <div class="rounded-circle p-3 bg-primary-subtle text-primary me-3 d-flex align-items-center justify-content-center" style="width: 54px; height: 54px;">
+                    <i class="bi bi-wrench-adjustable-circle fs-4"></i>
+                </div>
+                <div>
+                    <span class="text-muted small fw-bold text-uppercase" style="letter-spacing: 0.5px;">Toplam ECO Değişikliği</span>
+                    <h3 class="fw-bold mb-0 text-dark">{{ toplam_surec }}</h3>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-sm-6 col-xl-3">
+            <div class="portal-card p-3 shadow-sm d-flex align-items-center">
+                <div class="rounded-circle p-3 bg-info-subtle text-info me-3 d-flex align-items-center justify-content-center" style="width: 54px; height: 54px;">
+                    <i class="bi bi-hourglass-split fs-4"></i>
+                </div>
+                <div>
+                    <span class="text-muted small fw-bold text-uppercase" style="letter-spacing: 0.5px;">Aktif Devam Eden</span>
+                    <h3 class="fw-bold mb-0 text-info">{{ aktif_surec }}</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-xl-3">
+            <div class="portal-card p-3 shadow-sm d-flex align-items-center">
+                <div class="rounded-circle p-3 bg-warning-subtle text-warning-emphasis me-3 d-flex align-items-center justify-content-center" style="width: 54px; height: 54px;">
+                    <i class="bi bi-arrow-repeat fs-4"></i>
+                </div>
+                <div>
+                    <span class="text-muted small fw-bold text-uppercase" style="letter-spacing: 0.5px;">Revizyon Aşamasında</span>
+                    <h3 class="fw-bold mb-0 text-warning-emphasis">{{ revizyon_surec }}</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-xl-3">
+            <div class="portal-card p-3 shadow-sm d-flex align-items-center">
+                <div class="rounded-circle p-3 bg-success-subtle text-success me-3 d-flex align-items-center justify-content-center" style="width: 54px; height: 54px;">
+                    <i class="bi bi-check-circle-fill fs-4"></i>
+                </div>
+                <div>
+                    <span class="text-muted small fw-bold text-uppercase" style="letter-spacing: 0.5px;">Seri Üretime Alınan</span>
+                    <h3 class="fw-bold mb-0 text-success">{{ tamamlanan_surec }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. ÜST EYLEM & ÖZET ÇUBUĞU -->
+    <div class="portal-card p-3 shadow-sm mb-4 bg-white d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2">
+        <div class="d-flex align-items-center gap-2">
+            <h6 class="fw-bold mb-0 text-dark">
+                <i class="bi bi-diagram-3 text-primary me-2"></i>Mühendislik Değişikliği Süreç Listesi (34 Adım)
+            </h6>
+            <span id="ecoKayitSayisi" class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1">
+                {{ surecler|length }} Kayıt
+            </span>
+        </div>
+
+        <div>
+            <button class="btn btn-primary rounded-pill btn-sm px-3 shadow-sm fw-semibold" data-bs-toggle="modal" data-bs-target="#yeniEcoModal">
+                <i class="bi bi-plus-lg me-1"></i> Yeni Değişiklik Talebi (ECO) Başlat
+            </button>
+        </div>
+    </div>
+
+    <!-- SÜREÇ LİSTESİ TABLOSU -->
+    <div class="portal-card shadow-sm bg-white overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="font-size: 0.90rem;">
+                <thead class="table-light">
+                    <!-- ENTEGRE SÜTUN & FİLTRELEME BAŞLIK SATIRI -->
+                    <tr class="table-filter-row bg-light">
+                        <th class="ps-4 py-3">
+                            <input type="text" id="filterEcoKodMusteri" class="form-control form-control-sm table-eco-filter shadow-sm" placeholder="ECO Kodu & Müşteri..." style="font-size: 0.78rem; border-radius: 6px;">
+                        </th>
+                        <th class="py-3">
+                            <input type="text" id="filterEcoKonu" class="form-control form-control-sm table-eco-filter shadow-sm" placeholder="Konu / Parça Kodu..." style="font-size: 0.78rem; border-radius: 6px;">
+                        </th>
+                        <th class="py-3">
+                            <select id="filterEcoNeden" class="form-select form-select-sm table-eco-filter shadow-sm" style="font-size: 0.78rem; border-radius: 6px;">
+                                <option value="">Değişiklik Nedeni (Tümü)</option>
+                                <option value="Müşteri Revizyon Talebi">Müşteri Revizyon Talebi</option>
+                                <option value="Maliyet İyileştirme & VAVE">Maliyet İyileştirme & VAVE</option>
+                                <option value="Kalite & DÖF Kaynaklı">Kalite & DÖF Kaynaklı</option>
+                                <option value="Hammadde / Tedarikçi">Hammadde / Tedarikçi Değişimi</option>
+                                <option value="İç Proses & Makine">İç Proses & Makine</option>
+                                <option value="Standart / Mevzuat">Standart / Mevzuat</option>
+                            </select>
+                        </th>
+                        <th class="py-3">
+                            <select id="filterEcoIstasyon" class="form-select form-select-sm table-eco-filter shadow-sm" style="font-size: 0.78rem; border-radius: 6px;">
+                                <option value="">Güncel İstasyon (Tümü)</option>
+                                <optgroup label="Faz 1: Değerlendirme & Müşteri Onayı">
+                                    <option value="1">1. Değişiklik Talebi Girişi</option>
+                                    <option value="4">4. Teknik & Proses Değerlendirmesi</option>
+                                    <option value="7">7. Müşteri Fiyat & Süre Bildirimi</option>
+                                    <option value="11">11. Yeni Ürün Kapsam Değerlendirmesi</option>
+                                </optgroup>
+                                <optgroup label="Faz 2: Hazırlık & Numune Üretimi">
+                                    <option value="12">12. Proje Takımı Bilgilendirme</option>
+                                    <option value="13">13. ERP Geçici BOM Oluşturma</option>
+                                    <option value="17">17. Numune Üretim Talebi & İş Emri</option>
+                                </optgroup>
+                                <optgroup label="Faz 3: ISIR & Ön Seri Üretim">
+                                    <option value="19">19. Numune Kalite Kontrolü</option>
+                                    <option value="20">20. ISIR Ölçüm Kararı</option>
+                                    <option value="22">22. Müşteri Numune Onayı</option>
+                                    <option value="23">23. Ön Seri Talebi Kontrolü</option>
+                                    <option value="27">27. Ön Seri Müşteri Onayı</option>
+                                </optgroup>
+                                <optgroup label="Faz 4: Seri Üretime Geçiş & Kapanış">
+                                    <option value="28">28. Mamul Stok Kodu & Seri BOM</option>
+                                    <option value="31">31. Seri Üretim Siparişi & Planlama</option>
+                                    <option value="34">34. Süreç Tamamlama & Kapanış</option>
+                                </optgroup>
+                            </select>
+                        </th>
+                        <th class="py-3" style="min-width: 120px;">
+                            <select id="filterEcoIlerleme" class="form-select form-select-sm table-eco-filter shadow-sm" style="font-size: 0.78rem; border-radius: 6px;">
+                                <option value="">İlerleme (Tümü)</option>
+                                <option value="0-25">%0 - %25</option>
+                                <option value="26-50">%26 - %50</option>
+                                <option value="51-75">%51 - %75</option>
+                                <option value="76-100">%76 - %100</option>
+                            </select>
+                        </th>
+                        <th class="py-3">
+                            <select id="filterEcoDurum" class="form-select form-select-sm table-eco-filter shadow-sm" style="font-size: 0.78rem; border-radius: 6px;">
+                                <option value="">Durum (Tümü)</option>
+                                <option value="Devam Ediyor">Devam Ediyor</option>
+                                <option value="Revizyon">Revizyonda</option>
+                                <option value="Yeni Ürün">Yeni Ürün Sürecine Aktarıldı</option>
+                                <option value="Başarıyla">Başarıyla Seri Üretime Alındı</option>
+                                <option value="Olumsuz">İptal / Olumsuz Kapatıldı</option>
+                            </select>
+                        </th>
+                        <th class="text-center py-3 px-2" style="width: 100px; min-width: 95px;">
+                            <button type="button" id="clearEcoFiltersBtn" class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1 shadow-sm w-100 fw-semibold text-nowrap d-inline-flex align-items-center justify-content-center" title="Filtreleri Sıfırla" style="font-size: 0.76rem;">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i>Sıfırla
+                            </button>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for surec in surecler %}
+                    <tr class="eco-row cursor-pointer" onclick="if(!event.target.closest('button') && !event.target.closest('a')) window.location.href='{% url 'muhendislik_degisikligi_detay' surec.pk %}';" style="transition: background-color 0.15s ease;">
+                        
+                        <!-- 1. KOD & MÜŞTERİ -->
+                        <td class="ps-4 py-3" data-col="kod_musteri">
+                            <div class="fw-bold text-dark">
+                                <a href="{% url 'muhendislik_degisikligi_detay' surec.pk %}" class="text-decoration-none text-dark hover-primary">
+                                    {{ surec.kod }}
+                                </a>
+                            </div>
+                            <small class="text-muted d-block">
+                                {{ surec.musteri_adi }}
+                            </small>
+                        </td>
+
+                        <!-- 2. KONU & PARÇA & REVİZYON -->
+                        <td class="py-3" data-col="konu">
+                            <div class="fw-semibold text-dark text-truncate" style="max-width: 260px;" title="{{ surec.ad }}">
+                                {{ surec.ad }}
+                            </div>
+                            <small class="text-muted">
+                                {% if surec.parca_kodu %}
+                                <span class="badge bg-light text-secondary border me-1" style="font-size: 0.70rem;">
+                                    PN: {{ surec.parca_kodu }}
+                                </span>
+                                {% endif %}
+                                <span class="badge bg-info-subtle text-info border border-info-subtle me-1" style="font-size: 0.70rem;">
+                                    {{ surec.revizyon_no }}
+                                </span>
+                                <i class="bi bi-person-badge me-1"></i>{{ surec.sorumlu_proje_sorumlusu }}
+                            </small>
+                        </td>
+
+                        <!-- 3. DEĞİŞİKLİK NEDENİ & FABRİKA -->
+                        <td class="py-3" data-col="neden_fabrika">
+                            <div class="fw-medium text-dark" style="font-size: 0.84rem;">
+                                <span class="badge bg-light text-dark border">{{ surec.get_degisiklik_nedeni_display }}</span>
+                            </div>
+                            <small class="text-muted d-flex align-items-center gap-1 mt-1">
+                                <i class="bi bi-geo-alt"></i>{{ surec.ilgili_fabrika }}
+                            </small>
+                        </td>
+
+                        <!-- 4. GÜNCEL İSTASYON & FAZ -->
+                        <td class="py-3" data-col="istasyon" data-step="{{ surec.guncel_adim_no }}">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-sm {% if surec.durum == 'BASARIYLA_TAMAMLANDI' %}bg-success text-white{% elif surec.durum == 'REVIZYONDA' %}bg-warning text-dark{% elif surec.durum == 'YENI_URUN_SURECINE_AKTARILDI' %}bg-info text-white{% else %}bg-primary text-white{% endif %}" style="width: 28px; height: 28px; font-size: 0.75rem; flex-shrink: 0;">
+                                    {{ surec.guncel_adim_no }}
+                                </div>
+                                <div class="lh-sm text-truncate" style="max-width: 220px;">
+                                    <div class="fw-semibold text-dark text-truncate" style="font-size: 0.82rem;" title="{{ surec.guncel_adim.adim.baslik }}">
+                                        {{ surec.guncel_adim.adim.baslik }}
+                                    </div>
+                                    <small class="text-muted" style="font-size: 0.70rem;">
+                                        {{ surec.guncel_adim.adim.get_faz_display }}
+                                    </small>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- 5. İLERLEME -->
+                        <td class="py-3" data-col="ilerleme" data-percent="{{ surec.tamamlanma_yuzdesi }}">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="progress flex-grow-1" style="height: 7px; background-color: #e2e8f0; border-radius: 10px;">
+                                    <div class="progress-bar {% if surec.tamamlanma_yuzdesi == 100 %}bg-success{% elif surec.durum == 'REVIZYONDA' %}bg-warning{% elif surec.durum == 'YENI_URUN_SURECINE_AKTARILDI' %}bg-info{% else %}bg-primary{% endif %} rounded-pill" role="progressbar" style="width: {{ surec.tamamlanma_yuzdesi }}%;" aria-valuenow="{{ surec.tamamlanma_yuzdesi }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                                <span class="fw-bold {% if surec.tamamlanma_yuzdesi == 100 %}text-success{% elif surec.durum == 'REVIZYONDA' %}text-warning-emphasis{% elif surec.durum == 'YENI_URUN_SURECINE_AKTARILDI' %}text-info{% else %}text-primary{% endif %}" style="font-size: 0.78rem; min-width: 34px;">
+                                    %{{ surec.tamamlanma_yuzdesi }}
+                                </span>
+                            </div>
+                        </td>
+
+                        <!-- 6. DURUM -->
+                        <td class="py-3" data-col="durum">
+                            {% if surec.durum == 'BASARIYLA_TAMAMLANDI' %}
+                                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 fw-semibold" style="font-size: 0.75rem;">
+                                    <i class="bi bi-check-circle-fill me-1"></i>Seri Üretime Alındı
+                                </span>
+                            {% elif surec.durum == 'YENI_URUN_SURECINE_AKTARILDI' %}
+                                <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill px-2.5 py-1 fw-semibold" style="font-size: 0.75rem;">
+                                    <i class="bi bi-box-arrow-up-right me-1"></i>Yeni Ürün Sürecinde
+                                </span>
+                            {% elif surec.durum == 'REVIZYONDA' %}
+                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2.5 py-1 fw-semibold" style="font-size: 0.75rem;">
+                                    <i class="bi bi-arrow-repeat me-1"></i>Revizyon Aşamasında
+                                </span>
+                            {% elif surec.durum == 'OLUMSUZ_KAPATILDI' %}
+                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill px-2.5 py-1 fw-semibold" style="font-size: 0.75rem;">
+                                    <i class="bi bi-x-circle-fill me-1"></i>İptal / Olumsuz
+                                </span>
+                            {% else %}
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 fw-semibold" style="font-size: 0.75rem;">
+                                    <i class="bi bi-play-circle-fill me-1"></i>Devam Ediyor
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- 7. Süreci Yönet -->
+                        <td class="text-center text-nowrap px-3">
+                            <a href="{% url 'muhendislik_degisikligi_detay' surec.pk %}" class="btn btn-outline-primary btn-sm rounded-circle d-inline-flex align-items-center justify-content-center shadow-sm" style="width: 32px; height: 32px;" title="Süreci Yönet">
+                                <i class="bi bi-chevron-right fw-bold"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr id="emptyTableRow">
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary"></i>
+                            Henüz kayıtlı bir Mühendislik Değişikliği (ECO) süreci bulunmuyor.
+                            <div class="mt-2">
+                                <button class="btn btn-sm btn-primary rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#yeniEcoModal">
+                                    <i class="bi bi-plus-lg me-1"></i> İlk Değişiklik Talebini Oluştur
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    <!-- Filtreleme Sonucu Boş Satırı -->
+                    <tr id="noFilterMatchRow" style="display: none;">
+                        <td colspan="7" class="text-center py-4 text-muted bg-light">
+                            <i class="bi bi-funnel text-secondary fs-4 d-block mb-1"></i>
+                            Seçtiğiniz filtre kriterlerine uygun mühendislik değişikliği kaydı bulunamadı.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- YENİ MÜHENDİSLİK DEĞİŞİKLİĞİ (ECO) BAŞLATMA MODALI -->
+<div class="modal fade" id="yeniEcoModal" tabindex="-1" aria-labelledby="yeniEcoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <form action="{% url 'muhendislik_degisikligi_olustur' %}" method="POST">
+                {% csrf_token %}
+                <div class="modal-header bg-primary text-white rounded-top-4 px-4 py-3">
+                    <h5 class="modal-title fw-bold" id="yeniEcoModalLabel">
+                        <i class="bi bi-wrench-adjustable me-2"></i>Yeni Mühendislik Değişikliği Talebi (ECO / ECM)
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
+                </div>
+                
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        
+                        <!-- 1. DEĞİŞİKLİK BAŞLIĞI / KONUSU -->
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-dark">Değişiklik Konusu / Başlığı <span class="text-danger">*</span></label>
+                            <input type="text" name="ad" class="form-control" placeholder="Örn: Kondenser Boru Çapı Optimizasyonu ve Et Kalınlığı Değişimi" required>
+                        </div>
+
+                        <!-- 2. MÜŞTERİ SEÇİMİ -->
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-dark">Müşteri / Firma Adı <span class="text-danger">*</span></label>
+                            <input type="text" name="musteri_adi" list="musteriListesiDatalist" class="form-control" placeholder="Örn: Arçelik A.Ş. veya Vestel Beyaz Eşya" required>
+                            <datalist id="musteriListesiDatalist">
+                                {% for m in musteri_kartlari %}
+                                <option value="{{ m.ad }}">{{ m.kisa_ad }} ({{ m.sektor }})</option>
+                                {% endfor %}
+                            </datalist>
+                        </div>
+
+                        <!-- 3. PARÇA KODU & REVİZYON NO -->
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold text-dark">Parça Kodu / No</label>
+                            <input type="text" name="parca_kodu" class="form-control" placeholder="Örn: TLS-CND-8842">
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold text-dark">Revizyon No</label>
+                            <input type="text" name="revizyon_no" class="form-control" value="Rev.01" placeholder="Rev.01">
+                        </div>
+
+                        <!-- 4. DEĞİŞİKLİK NEDENİ -->
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-dark">Değişiklik Nedeni <span class="text-danger">*</span></label>
+                            <select name="degisiklik_nedeni" class="form-select" required>
+                                <option value="MUSTERI_TALEBI" selected>Müşteri Revizyon Talebi</option>
+                                <option value="MALIYET_IYILESTIRME">Maliyet İyileştirme & VAVE</option>
+                                <option value="KALITE_IYILESTIRME">Kalite & DÖF Kaynaklı İyileştirme</option>
+                                <option value="HAMMADDE_TEDARIK">Hammadde / Tedarikçi Değişikliği</option>
+                                <option value="IC_PROSES">İç Proses & Makine Parkuru İyileştirme</option>
+                                <option value="STANDART_MEVZUAT">Standart / Mevzuat Değişikliği</option>
+                            </select>
+                        </div>
+
+                        <!-- 5. ÜRÜN GRUBU & FABRİKA -->
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold text-dark">Ürün Grubu</label>
+                            <select name="urun_grubu" class="form-select">
+                                <option value="Metal Parca & Sac" selected>Metal Parça & Sac</option>
+                                <option value="Kondenser & Sogutma">Kondenser & Soğutma</option>
+                                <option value="Kablo Grubu">Kablo Grubu</option>
+                                <option value="Kalip, Fikstur & Aparat">Kalıp, Fikstür & Aparat</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold text-dark">İlgili Fabrika</label>
+                            <select name="ilgili_fabrika" class="form-select">
+                                <option value="Teleset 1 (Manisa)" selected>Teleset 1 (Manisa)</option>
+                                <option value="Teleset 2 (Manisa)">Teleset 2 (Manisa)</option>
+                                <option value="Teleset 3 (Manisa)">Teleset 3 (Manisa)</option>
+                                <option value="Teleset (Kocaeli)">Teleset (Kocaeli)</option>
+                            </select>
+                        </div>
+
+                        <!-- 6. HEDEF TARİH & DEĞİŞİKLİK KODU -->
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-dark">Hedef Tamamlanma Tarihi</label>
+                            <input type="date" name="hedef_tamamlanma_tarihi" class="form-control">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-dark">Özel ECO Kodu (Opsiyonel)</label>
+                            <input type="text" name="kod" class="form-control" placeholder="Boş bırakılırsa otomatik ECO-2026-xxx üretilir">
+                        </div>
+
+                        <!-- 7. PROJE EKİBİ & RACI SORUMLULARI -->
+                        <div class="col-12 mt-3">
+                            <div class="p-3 rounded-3 bg-light border">
+                                <h6 class="fw-bold text-dark mb-2 small text-uppercase" style="letter-spacing: 0.5px;">
+                                    <i class="bi bi-people-fill text-primary me-1"></i>ECO Proje Ekibi & RACI Sorumluları
+                                </h6>
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <label class="form-label small text-muted mb-1">Proje Sorumlusu (R - İşi Yürüten):</label>
+                                        <input type="text" name="sorumlu_proje_sorumlusu" class="form-control form-control-sm" value="Buse Nur Baltacıoğlu">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small text-muted mb-1">Fabrika Müdürü (A - Onay Veren):</label>
+                                        <input type="text" name="sorumlu_fabrika_muduru" class="form-control form-control-sm" value="Serdar Acar">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small text-muted mb-1">Satış-Analiz Sorumlusu (C - Danışılan):</label>
+                                        <input type="text" name="sorumlu_satis_analiz" class="form-control form-control-sm" value="Hakan Yılmaz">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small text-muted mb-1">Kalite Sorumlusu (C - Kalite / ISIR):</label>
+                                        <input type="text" name="sorumlu_kalite" class="form-control form-control-sm" value="Ahmet Yurt">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 8. AÇIKLAMA / BAŞLANGIÇ NOTLARI -->
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-dark">Değişiklik Gerekçesi / Başlangıç Notları</label>
+                            <textarea name="aciklama" rows="2" class="form-control" placeholder="Müşteri talebi, teknik detaylar, revizyon kapsamı ve beklenen faydaları açıklayınız..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer bg-light rounded-bottom-4 px-4 py-3">
+                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-semibold shadow-sm">
+                        <i class="bi bi-check-lg me-1"></i> 34 Adımlık Süreci Başlat
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- İSTEMCİ TARAFLI DİNAMİK FİLTRELEME VE ARAMA SCRIPTI -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const filterKodMusteri = document.getElementById('filterEcoKodMusteri');
+    const filterKonu = document.getElementById('filterEcoKonu');
+    const filterNeden = document.getElementById('filterEcoNeden');
+    const filterIstasyon = document.getElementById('filterEcoIstasyon');
+    const filterIlerleme = document.getElementById('filterEcoIlerleme');
+    const filterDurum = document.getElementById('filterEcoDurum');
+    const clearFiltersBtn = document.getElementById('clearEcoFiltersBtn');
+    const rows = document.querySelectorAll('.eco-row');
+    const countBadge = document.getElementById('ecoKayitSayisi');
+    const noMatchRow = document.getElementById('noFilterMatchRow');
+
+    function applyEcoFilters() {
+        const valKodMusteri = filterKodMusteri ? filterKodMusteri.value.trim().toLowerCase() : '';
+        const valKonu = filterKonu ? filterKonu.value.trim().toLowerCase() : '';
+        const valNeden = filterNeden ? filterNeden.value.trim().toLowerCase() : '';
+        const valIstasyon = filterIstasyon ? filterIstasyon.value.trim() : '';
+        const valIlerleme = filterIlerleme ? filterIlerleme.value.trim() : '';
+        const valDurum = filterDurum ? filterDurum.value.trim().toLowerCase() : '';
+
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            const textKodMusteri = (row.querySelector('[data-col="kod_musteri"]')?.innerText || '').toLowerCase();
+            const textKonu = (row.querySelector('[data-col="konu"]')?.innerText || '').toLowerCase();
+            const textNeden = (row.querySelector('[data-col="neden_fabrika"]')?.innerText || '').toLowerCase();
+            const stepNum = row.querySelector('[data-col="istasyon"]')?.getAttribute('data-step') || '';
+            const percentVal = parseInt(row.querySelector('[data-col="ilerleme"]')?.getAttribute('data-percent') || '0', 10);
+            const textDurum = (row.querySelector('[data-col="durum"]')?.innerText || '').toLowerCase();
+
+            let match = true;
+
+            if (valKodMusteri && !textKodMusteri.includes(valKodMusteri)) match = false;
+            if (valKonu && !textKonu.includes(valKonu)) match = false;
+            if (valNeden && !textNeden.includes(valNeden)) match = false;
+            if (valIstasyon && stepNum !== valIstasyon) match = false;
+
+            if (valIlerleme) {
+                if (valIlerleme === '0-25' && (percentVal < 0 || percentVal > 25)) match = false;
+                else if (valIlerleme === '26-50' && (percentVal < 26 || percentVal > 50)) match = false;
+                else if (valIlerleme === '51-75' && (percentVal < 51 || percentVal > 75)) match = false;
+                else if (valIlerleme === '76-100' && (percentVal < 76 || percentVal > 100)) match = false;
+            }
+
+            if (valDurum) {
+                if (valDurum === 'devam ediyor' && !textDurum.includes('devam ediyor')) match = false;
+                else if (valDurum === 'revizyon' && !textDurum.includes('revizyon')) match = false;
+                else if (valDurum === 'yeni ürün' && !textDurum.includes('yeni ürün')) match = false;
+                else if (valDurum === 'başarıyla' && !textDurum.includes('seri üretime')) match = false;
+                else if (valDurum === 'olumsuz' && !textDurum.includes('iptal') && !textDurum.includes('olumsuz')) match = false;
+            }
+
+            if (match) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        if (countBadge) {
+            countBadge.innerText = `${visibleCount} Kayıt`;
+        }
+
+        if (noMatchRow) {
+            noMatchRow.style.display = (visibleCount === 0 && rows.length > 0) ? '' : 'none';
+        }
+    }
+
+    const filters = document.querySelectorAll('.table-eco-filter');
+    filters.forEach(filter => {
+        filter.addEventListener('input', applyEcoFilters);
+        filter.addEventListener('change', applyEcoFilters);
+    });
+
+    if (clearFiltersBtn) {
+        clearFiltersBtn.addEventListener('click', function () {
+            filters.forEach(f => f.value = '');
+            applyEcoFilters();
+        });
+    }
+});
+</script>
+{% endblock %}

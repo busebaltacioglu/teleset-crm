@@ -1,0 +1,303 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block sayfa_basligi %}Pazarlama Süreci{% endblock %}
+
+{% block content %}
+<!-- 1. ÜST METRİK KARTLARI -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="portal-card p-3 shadow-sm d-flex align-items-center">
+            <div class="rounded-circle p-3 bg-primary-subtle text-primary me-3 d-flex align-items-center justify-content-center" style="width: 54px; height: 54px;">
+                <i class="bi bi-folder2-open fs-4"></i>
+            </div>
+            <div>
+                <span class="text-muted small fw-bold text-uppercase" style="letter-spacing: 0.5px;">Toplam Fırsat</span>
+                <h3 class="fw-bold mb-0 text-dark">{{ toplam_proje }}</h3>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-sm-6 col-xl-3">
+        <div class="portal-card p-3 shadow-sm d-flex align-items-center">
+            <div class="rounded-circle p-3 bg-info-subtle text-info me-3 d-flex align-items-center justify-content-center" style="width: 54px; height: 54px;">
+                <i class="bi bi-hourglass-split fs-4"></i>
+            </div>
+            <div>
+                <span class="text-muted small fw-bold text-uppercase" style="letter-spacing: 0.5px;">Devam Eden Süreç</span>
+                <h3 class="fw-bold mb-0 text-info">{{ aktif_proje }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+        <div class="portal-card p-3 shadow-sm d-flex align-items-center">
+            <div class="rounded-circle p-3 bg-success-subtle text-success me-3 d-flex align-items-center justify-content-center" style="width: 54px; height: 54px;">
+                <i class="bi bi-trophy-fill fs-4"></i>
+            </div>
+            <div>
+                <span class="text-muted small fw-bold text-uppercase" style="letter-spacing: 0.5px;">Teklife Aktarılan</span>
+                <h3 class="fw-bold mb-0 text-success">{{ teklif_proje }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+        <div class="portal-card p-3 shadow-sm d-flex align-items-center">
+            <div class="rounded-circle p-3 bg-secondary-subtle text-secondary me-3 d-flex align-items-center justify-content-center" style="width: 54px; height: 54px;">
+                <i class="bi bi-check2-all fs-4"></i>
+            </div>
+            <div>
+                <span class="text-muted small fw-bold text-uppercase" style="letter-spacing: 0.5px;">Sonuçlanan / Kapanan</span>
+                <h3 class="fw-bold mb-0 text-secondary">{{ kapanan_proje }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 2. ÜST EYLEM & ÖZET ÇUBUĞU -->
+<div class="portal-card p-3 shadow-sm mb-4 bg-white d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2">
+    <div class="d-flex align-items-center gap-2">
+        <h6 class="fw-bold mb-0 text-dark">
+            <i class="bi bi-list-task text-primary me-2"></i>Pazarlama Süreçleri & Fırsatlar
+        </h6>
+        <span id="kayitSayisi" class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1">
+            {{ projeler|length }} Kayıt
+        </span>
+    </div>
+
+    <div>
+        <button class="btn btn-primary rounded-pill btn-sm px-3 shadow-sm fw-semibold" data-bs-toggle="modal" data-bs-target="#yeniProjeModal">
+            <i class="bi bi-plus-lg me-1"></i> Yeni Fırsat Ekle
+        </button>
+    </div>
+</div>
+
+<!-- 3. SÜREÇ LİSTESİ TABLOSU -->
+<div class="portal-card shadow-sm bg-white overflow-hidden">
+    {% if projeler %}
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0" style="font-size: 0.90rem;">
+            <thead class="table-light">
+                <!-- ENTEGRE SÜTUN & FİLTRELEME BAŞLIK SATIRI -->
+                <tr class="table-filter-row bg-light">
+                    <th class="ps-4 py-3">
+                        <input type="text" id="filterKodMusteri" class="form-control form-control-sm table-col-filter shadow-sm" placeholder="Süreç Kodu & Müşteri..." style="font-size: 0.78rem; border-radius: 6px;">
+                    </th>
+                    <th class="py-3">
+                        <input type="text" id="filterKonu" class="form-control form-control-sm table-col-filter shadow-sm" placeholder="Süreç Konusu / Ürün..." style="font-size: 0.78rem; border-radius: 6px;">
+                    </th>
+                    <th class="py-3">
+                        <input type="text" id="filterUlkeFabrika" class="form-control form-control-sm table-col-filter shadow-sm" placeholder="Hedef Ülke & Fabrika..." style="font-size: 0.78rem; border-radius: 6px;">
+                    </th>
+                    <th class="py-3">
+                        <select id="filterIstasyon" class="form-select form-select-sm table-col-filter shadow-sm" style="font-size: 0.78rem; border-radius: 6px;">
+                            <option value="">Güncel İstasyon (Tümü)</option>
+                            <option value="1">1. Girdiler</option>
+                            <option value="2">2. Pazar Analizi</option>
+                            <option value="3">3. Detaylı Analiz</option>
+                            <option value="4">4. Plan & Bütçe</option>
+                            <option value="5">5. Değerlendirme</option>
+                            <option value="6">6. Bütçe Onayı</option>
+                            <option value="7">7. İlk Temas</option>
+                            <option value="8">8. Müşteri Talepleri</option>
+                            <option value="9">9. Karşılanabilirlik</option>
+                            <option value="10">10. Bildirim</option>
+                            <option value="11">11. Ön Mutabakat</option>
+                            <option value="12">12. Tedarikçi Değ.?</option>
+                            <option value="13">13. Tedarikçi Denetimi</option>
+                            <option value="14">14. Onay Sonucu</option>
+                            <option value="15">15. Kapatma</option>
+                        </select>
+                    </th>
+                    <th class="py-3" style="min-width: 130px;">
+                        <select id="filterIlerleme" class="form-select form-select-sm table-col-filter shadow-sm" style="font-size: 0.78rem; border-radius: 6px;">
+                            <option value="">İlerleme (Tümü)</option>
+                            <option value="0-25">%0 - %25</option>
+                            <option value="26-50">%26 - %50</option>
+                            <option value="51-75">%51 - %75</option>
+                            <option value="76-100">%76 - %100</option>
+                        </select>
+                    </th>
+                    <th class="py-3">
+                        <select id="filterDurum" class="form-select form-select-sm table-col-filter shadow-sm" style="font-size: 0.78rem; border-radius: 6px;">
+                            <option value="">Durum (Tümü)</option>
+                            <option value="Devam Ediyor">Devam Ediyor</option>
+                            <option value="Teklif Sürecinde">Teklif Sürecinde</option>
+                            <option value="Tamamlandı">Tamamlandı</option>
+                            <option value="Olumsuz Kapandı">Olumsuz Kapandı</option>
+                        </select>
+                    </th>
+                    <th class="text-center py-3 px-2" style="width: 100px; min-width: 95px;">
+                        <button type="button" id="clearFiltersBtn" class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1 shadow-sm w-100 fw-semibold text-nowrap d-inline-flex align-items-center justify-content-center" title="Filtreleri Sıfırla" style="font-size: 0.76rem;">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i>Sıfırla
+                        </button>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in projeler %}
+                <tr class="surec-row"
+                    data-kod-musteri="{{ p.kod }} {{ p.musteri_adi }}"
+                    data-konu="{{ p.ad }} {{ p.get_urun_grubu_display }}"
+                    data-ulke-fabrika="{{ p.hedef_ulke }} {{ p.ilgili_fabrika }}"
+                    data-istasyon-no="{{ p.guncel_adim_no }}"
+                    data-ilerleme="{{ p.tamamlanma_yuzdesi }}"
+                    data-durum="{% if p.durum == 'DEVAM_EDIYOR' %}Devam Ediyor{% elif p.durum == 'TEKLIF_SURECINDE' %}Teklif Sürecinde{% elif p.durum == 'BASARIYLA_KAPATILDI' %}Tamamlandı{% elif p.durum == 'OLUMSUZ_KAPATILDI' %}Olumsuz Kapandı{% else %}{{ p.get_durum_display }}{% endif %}">
+                    <td class="ps-4">
+                        <div class="fw-bold text-dark">{{ p.kod }}</div>
+                        <div class="text-muted small">
+                            {{ p.musteri_adi }}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="fw-semibold text-dark">{{ p.ad }}</div>
+                        <span class="badge bg-light text-secondary border px-1.5 py-0.5 mt-1" style="font-size: 0.70rem;">
+                            <i class="bi bi-box-seam me-1"></i>{{ p.get_urun_grubu_display }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="badge bg-light text-dark border">{{ p.hedef_ulke }}</div>
+                        <div class="small text-muted mt-1">{{ p.ilgili_fabrika }}</div>
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center" style="width: 24px; height: 24px; font-size: 0.75rem;">
+                                {{ p.guncel_adim_no }}
+                            </span>
+                            <span class="small fw-semibold text-dark text-truncate" style="max-width: 220px;" title="{{ p.guncel_adim.adim.baslik|default:'Süreç Devam Ediyor' }}">
+                                {{ p.guncel_adim.adim.baslik|default:"Süreç Devam Ediyor" }}
+                            </span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="progress flex-grow-1" style="height: 7px; border-radius: 4px;">
+                                <div class="progress-bar {% if p.durum == 'TEKLIF_SURECINDE' or p.durum == 'BASARIYLA_KAPATILDI' %}bg-success{% elif p.durum == 'OLUMSUZ_KAPATILDI' %}bg-danger{% else %}bg-primary{% endif %}" 
+                                     role="progressbar" 
+                                     style="width: {{ p.tamamlanma_yuzdesi }}%;"></div>
+                            </div>
+                            <span class="small fw-bold text-muted">%{{ p.tamamlanma_yuzdesi }}</span>
+                        </div>
+                    </td>
+                    <td>
+                        {% if p.durum == 'DEVAM_EDIYOR' %}
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1">
+                                <span class="live-pulse me-1"></span>Devam Ediyor
+                            </span>
+                        {% elif p.durum == 'TEKLIF_SURECINDE' %}
+                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1">
+                                <i class="bi bi-arrow-right-circle-fill me-1"></i>Teklif Sürecinde
+                            </span>
+                        {% elif p.durum == 'BASARIYLA_KAPATILDI' %}
+                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1">
+                                <i class="bi bi-check2-all me-1"></i>Tamamlandı
+                            </span>
+                        {% elif p.durum == 'OLUMSUZ_KAPATILDI' %}
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3 py-1">
+                                <i class="bi bi-x-circle me-1"></i>Olumsuz Kapandı
+                            </span>
+                        {% else %}
+                            <span class="badge bg-secondary rounded-pill px-3 py-1">{{ p.get_durum_display }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center text-nowrap px-3">
+                        <a href="{% url 'proje_detay' p.pk %}" class="btn btn-outline-primary btn-sm rounded-circle d-inline-flex align-items-center justify-content-center shadow-sm" style="width: 32px; height: 32px;" title="Süreci Yönet">
+                            <i class="bi bi-chevron-right fw-bold"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+                <tr id="tableNoResults" style="display: none;">
+                    <td colspan="7" class="text-center py-5 text-muted">
+                        <i class="bi bi-search fs-2 d-block mb-2 text-secondary"></i>
+                        Uyguladığınız sütun filtrelerine uygun Pazarlama Süreci bulunamadı.
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5 text-muted">
+        <i class="bi bi-folder-x fs-1 d-block mb-2 text-secondary"></i>
+        Henüz kayıtlı Pazarlama Süreci bulunamadı.
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const filterKodMusteri = document.getElementById('filterKodMusteri');
+    const filterKonu = document.getElementById('filterKonu');
+    const filterUlkeFabrika = document.getElementById('filterUlkeFabrika');
+    const filterIstasyon = document.getElementById('filterIstasyon');
+    const filterIlerleme = document.getElementById('filterIlerleme');
+    const filterDurum = document.getElementById('filterDurum');
+    const clearBtn = document.getElementById('clearFiltersBtn');
+    const countBadge = document.getElementById('kayitSayisi');
+    const noResultsRow = document.getElementById('tableNoResults');
+    const rows = document.querySelectorAll('.surec-row');
+
+    function applyFilters() {
+        const valKodMusteri = (filterKodMusteri?.value || '').trim().toLowerCase();
+        const valKonu = (filterKonu?.value || '').trim().toLowerCase();
+        const valUlkeFabrika = (filterUlkeFabrika?.value || '').trim().toLowerCase();
+        const valIstasyon = (filterIstasyon?.value || '').trim();
+        const valIlerleme = (filterIlerleme?.value || '').trim();
+        const valDurum = (filterDurum?.value || '').trim().toLowerCase();
+
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            const kodMusteri = (row.getAttribute('data-kod-musteri') || '').toLowerCase();
+            const konu = (row.getAttribute('data-konu') || '').toLowerCase();
+            const ulkeFabrika = (row.getAttribute('data-ulke-fabrika') || '').toLowerCase();
+            const istasyonNo = row.getAttribute('data-istasyon-no') || '';
+            const ilerleme = parseInt(row.getAttribute('data-ilerleme') || '0', 10);
+            const durum = (row.getAttribute('data-durum') || '').toLowerCase();
+
+            let match = true;
+
+            if (valKodMusteri && !kodMusteri.includes(valKodMusteri)) match = false;
+            if (valKonu && !konu.includes(valKonu)) match = false;
+            if (valUlkeFabrika && !ulkeFabrika.includes(valUlkeFabrika)) match = false;
+            if (valIstasyon && istasyonNo !== valIstasyon) match = false;
+            if (valDurum && !durum.includes(valDurum)) match = false;
+
+            if (valIlerleme) {
+                const parts = valIlerleme.split('-');
+                const min = parseInt(parts[0], 10);
+                const max = parseInt(parts[1], 10);
+                if (ilerleme < min || ilerleme > max) match = false;
+            }
+
+            if (match) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        if (noResultsRow) {
+            noResultsRow.style.display = (visibleCount === 0 && rows.length > 0) ? '' : 'none';
+        }
+        if (countBadge) {
+            countBadge.textContent = `${visibleCount} Kayıt Gösteriliyor`;
+        }
+    }
+
+    document.querySelectorAll('.table-col-filter').forEach(input => {
+        input.addEventListener('input', applyFilters);
+        input.addEventListener('change', applyFilters);
+    });
+
+    clearBtn?.addEventListener('click', function () {
+        document.querySelectorAll('.table-col-filter').forEach(input => {
+            input.value = '';
+        });
+        applyFilters();
+    });
+});
+</script>
+{% endblock %}

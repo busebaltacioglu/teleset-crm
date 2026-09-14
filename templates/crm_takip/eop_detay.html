@@ -1,0 +1,232 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block sayfa_basligi %}{{ surec.kod }} - {{ surec.musteri_adi }}{% endblock %}
+
+{% block content %}
+<style>
+    .step-pill {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.80rem;
+        transition: all 0.2s ease;
+        border: 2px solid transparent;
+        position: relative;
+    }
+    .step-pill.completed { background-color: #22c55e; color: white; border-color: #22c55e; }
+    .step-pill.active {
+        background-color: var(--teleset-blue); color: white;
+        border-color: var(--teleset-blue);
+        box-shadow: 0 0 0 4px rgba(34, 96, 157, 0.25);
+        animation: pulseAnimation 2s infinite;
+    }
+    .step-pill.pending { background-color: #e2e8f0; color: #64748b; border-color: #e2e8f0; }
+    .step-pill.skipped { background-color: #cbd5e1; color: #94a3b8; text-decoration: line-through; border-color: #cbd5e1; }
+
+    /* KOŞULLU / KARAR KAPISI İSTASYONLARI (KESİKLİ KENARLIK) */
+    .step-pill.is-decision {
+        border: 2px dashed #f59e0b !important;
+    }
+    .step-pill.is-decision.pending {
+        background-color: #fffbeb !important;
+        color: #b45309 !important;
+        border: 2px dashed #f59e0b !important;
+        font-weight: 800;
+    }
+    .step-pill.is-decision.completed {
+        background-color: #22c55e !important;
+        color: white !important;
+        border: 2px dashed #ffffff !important;
+        box-shadow: 0 0 0 2px #16a34a;
+    }
+    .step-pill.is-decision.active {
+        background-color: var(--teleset-blue) !important;
+        color: white !important;
+        border: 2px dashed #ffffff !important;
+        box-shadow: 0 0 0 4px rgba(34, 96, 157, 0.35);
+    }
+
+    .card-step-active { border-left: 5px solid var(--teleset-blue) !important; background-color: #ffffff; box-shadow: 0 6px 18px rgba(34, 96, 157, 0.08) !important; }
+    .card-step-completed { border-left: 5px solid #22c55e !important; background-color: #fafdfb; }
+    .card-step-pending { border-left: 5px solid #cbd5e1 !important; opacity: 0.85; }
+
+    .faz-header {
+        background-color: #f1f5f9; border-radius: 10px; padding: 10px 16px;
+        font-weight: 700; font-size: 0.90rem; color: var(--teleset-dark);
+        margin-top: 24px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;
+    }
+</style>
+
+<!-- 1. HERO BAŞLIK VE SÜREÇ KÜNYESİ -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="hero-banner p-4 shadow-sm">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3">
+                <div class="flex-grow-1" style="min-width: 0;">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="badge bg-white text-primary fw-bold font-monospace px-3 py-1.5 fs-6 shadow-sm">{{ surec.kod }}</span>
+                        {% if surec.durum == 'DEVAM_EDIYOR' %}
+                            <span class="badge bg-info text-white px-3 py-1.5 rounded-pill"><i class="bi bi-arrow-repeat me-1"></i> EOP Bildirimi & Analiz</span>
+                        {% elif surec.durum == 'STOK_TASFIYESINDE' %}
+                            <span class="badge bg-warning text-dark px-3 py-1.5 rounded-pill shadow-sm"><i class="bi bi-boxes me-1"></i> Stok Tasfiyesi Aşamasında</span>
+                        {% elif surec.durum == 'VARLIK_DEVRI_TAMAMLANDI' %}
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1.5 rounded-pill shadow-sm"><i class="bi bi-gear-fill me-1"></i> Üretim Varlıkları Tasfiyesi Tamamlandı</span>
+                        {% elif surec.durum == 'BASARIYLA_KAPATILDI' %}
+                            <span class="badge bg-success text-white px-3 py-1.5 rounded-pill shadow-sm"><i class="bi bi-check-circle-fill me-1"></i> Başarıyla Tamamlandı & Kapatıldı</span>
+                        {% elif surec.durum == 'IPTAL_EDILDI' %}
+                            <span class="badge bg-secondary text-white px-3 py-1.5 rounded-pill shadow-sm"><i class="bi bi-x-circle me-1"></i> İptal Edildi</span>
+                        {% endif %}
+                    </div>
+                    <h2 class="fw-bold text-white mb-1">{{ surec.musteri_adi }}</h2>
+                    <p class="text-light opacity-90 mb-2" style="font-size: 1.05rem;">{{ surec.urun_adi }} ({{ surec.urun_kodu }})</p>
+                    <div class="d-flex flex-wrap gap-3 text-light small opacity-90 mt-2">
+                        <span><i class="bi bi-box-seam text-warning me-1"></i>Ürün Grubu: <strong>{{ surec.get_urun_grubu_display }}</strong></span>
+                        <span><i class="bi bi-building me-1"></i>{{ surec.ilgili_fabrika }}</span>
+                        <span><i class="bi bi-calendar-check me-1"></i>EOP Bildirim: {{ surec.eop_bildirim_tarihi|date:"d.m.Y" }}</span>
+                        {% if surec.seri_uretim_bitis_tarihi %}
+                        <span><i class="bi bi-calendar-x text-warning me-1"></i>Seri Üretim Bitiş: <strong>{{ surec.seri_uretim_bitis_tarihi|date:"d.m.Y" }}</strong></span>
+                        {% endif %}
+                        <span><i class="bi bi-tools text-warning me-1"></i>Yedek Parça Süresi: <strong>{{ surec.yedek_parca_servis_suresi_yil }} Yıl</strong></span>
+                        <span><i class="bi bi-person-badge me-1"></i>Proje Sorumlusu: <strong>{{ surec.sorumlu_proje_sorumlusu }}</strong></span>
+                    </div>
+                </div>
+                <div class="flex-shrink-0 align-self-md-start">
+                    <div class="bg-white text-dark p-3 rounded-4 shadow-sm text-end" style="width: 220px; min-width: 220px;">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="small fw-bold text-muted">Süreç İlerlemesi</span>
+                            <span class="badge bg-primary fs-6">%{{ surec.tamamlanma_yuzdesi }}</span>
+                        </div>
+                        <div class="progress mb-2" style="height: 10px; border-radius: 8px;">
+                            <div class="progress-bar {% if surec.durum == 'BASARIYLA_KAPATILDI' %}bg-success{% elif surec.durum == 'STOK_TASFIYESINDE' %}bg-warning{% elif surec.durum == 'VARLIK_DEVRI_TAMAMLANDI' %}bg-info{% else %}bg-primary{% endif %}" style="width: {{ surec.tamamlanma_yuzdesi }}%;"></div>
+                        </div>
+                        <div class="small fw-semibold text-secondary">Güncel: <span class="text-primary fw-bold">Adım {{ surec.guncel_adim_no }}/6</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 2. 6 ADIM MINI STEPPER ÇİZELGESİ -->
+<div class="portal-card p-3 shadow-sm mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="small fw-bold text-muted text-uppercase" style="letter-spacing: 0.5px;">
+            <i class="bi bi-signpost-2-fill text-primary me-1"></i> 6 Adım Ürün Seri Üretim Sonlandırma Süreci İstasyonları
+        </span>
+        <div class="d-flex gap-2">
+            {% if surec.musteri_karti %}
+            <a href="{% url 'kartlar' %}?tab=musteriler&q_m={{ surec.musteri_karti.kisa_ad }}" class="btn btn-outline-primary btn-sm rounded-pill px-3 fw-semibold">
+                <i class="bi bi-person-lines-fill me-1"></i> 360° Müşteri Profili
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="d-flex flex-wrap justify-content-start align-items-center py-2 px-1 gap-2">
+        {% for a in adimlar %}
+        <a href="#adim-{{ a.adim.adim_no }}" class="text-decoration-none text-center" title="Adım {{ a.adim.adim_no }}: {{ a.adim.baslik }}{% if a.adim.karar_adimi_mi %} (Karar / Koşul Adımı){% endif %}">
+            <div class="step-pill {% if a.adim.karar_adimi_mi %}is-decision{% endif %} 
+                {% if a.durum == 'TAMAMLANDI' %}completed
+                {% elif a.adim.adim_no == surec.guncel_adim_no %}active
+                {% elif a.durum == 'PAS_GECILDI' %}skipped
+                {% else %}pending{% endif %}">
+                {% if a.durum == 'PAS_GECILDI' %}-{% else %}{{ a.adim.adim_no }}{% endif %}
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="row">
+    <!-- SOL: 6 ADIM CHECKLIST (FAZ BAZINDA DİKEY AKIŞ) -->
+    <div class="col-lg-8">
+        {% for faz in fazlar %}
+        <div class="faz-header shadow-sm">
+            <span><i class="bi bi-layers-fill text-primary me-2"></i>{{ faz.baslik }}</span>
+            <span class="badge bg-white text-muted border">{{ faz.adimlar|length }} Adım</span>
+        </div>
+
+        {% for k in faz.adimlar %}
+            {% include 'crm_takip/includes/eop_adim_karti.html' %}
+        {% endfor %}
+
+        {% endfor %}
+    </div>
+
+    <!-- SAĞ: PROJE EKİBİ & TARİHÇE -->
+    <div class="col-lg-4">
+        <!-- PROJE EKİBİ VE SÜREÇ BİLGİSİ KARTI -->
+        <div class="portal-card p-4 shadow-sm mb-4">
+            <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
+                <i class="bi bi-people-fill text-primary me-2"></i>EOP Sorumluları
+            </h6>
+            
+            <div class="mb-3">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="small text-muted"><i class="bi bi-person-fill text-primary me-1"></i>Proje Sorumlusu:</span>
+                    <span class="small fw-bold text-dark">{{ surec.sorumlu_proje_sorumlusu }}</span>
+                </div>
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="small text-muted"><i class="bi bi-person-fill text-primary me-1"></i>Fabrika Müdürü:</span>
+                    <span class="small fw-bold text-dark">{{ surec.sorumlu_fabrika_muduru }}</span>
+                </div>
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="small text-muted"><i class="bi bi-person-fill text-primary me-1"></i>Satış-Analiz Sorumlusu:</span>
+                    <span class="small fw-bold text-dark">{{ surec.sorumlu_satis_analiz }}</span>
+                </div>
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="small text-muted"><i class="bi bi-person-fill text-primary me-1"></i>Planlama Sorumlusu:</span>
+                    <span class="small fw-bold text-dark">{{ surec.sorumlu_planlama }}</span>
+                </div>
+                <div class="d-flex align-items-center justify-content-between">
+                    <span class="small text-muted"><i class="bi bi-person-fill text-primary me-1"></i>Üretim Sorumlusu:</span>
+                    <span class="small fw-bold text-dark">{{ surec.sorumlu_uretim }}</span>
+                </div>
+            </div>
+
+            {% if surec.aciklama %}
+            <div class="p-3 bg-light rounded-3 border small text-secondary">
+                <strong class="text-dark d-block mb-1"><i class="bi bi-info-circle text-primary me-1"></i>EOP Açıklaması:</strong>
+                {{ surec.aciklama }}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- TARİHÇE VE İŞLEM LOGLARI -->
+        <div class="portal-card p-4 shadow-sm mb-4">
+            <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
+                <i class="bi bi-clock-history text-primary me-2"></i>Süreç Tarihçesi & Loglar
+            </h6>
+            <div style="max-height: 480px; overflow-y: auto;">
+                {% if tarihce %}
+                <div class="timeline ps-2" style="border-left: 2px solid #e2e8f0; margin-left: 6px;">
+                    {% for log in tarihce %}
+                    <div class="mb-3 ps-3 position-relative">
+                        <div class="position-absolute rounded-circle bg-primary shadow-sm" style="width: 10px; height: 10px; left: -21px; top: 4px; border: 2px solid #ffffff;"></div>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="fw-bold text-dark small" style="font-size: 0.82rem;">{{ log.islem }}</span>
+                            <span class="text-muted fw-semibold" style="font-size: 0.70rem;">{{ log.tarih|date:"d.m.Y H:i" }}</span>
+                        </div>
+                        {% if log.detay %}
+                        <div class="text-secondary small lh-sm mb-1" style="font-size: 0.78rem;">{{ log.detay }}</div>
+                        {% endif %}
+                        <div class="text-muted" style="font-size: 0.72rem;">
+                            <i class="bi bi-person-fill text-primary me-1"></i>{{ log.yapan }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-muted small py-3 text-center">Henüz geçmiş işlem kaydı bulunmuyor.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
