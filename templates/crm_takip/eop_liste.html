@@ -91,7 +91,7 @@
                         <th class="py-3">
                             <select id="filterEopUrunGrubu" class="form-select form-select-sm table-eop-filter shadow-sm" style="font-size: 0.78rem; border-radius: 6px;">
                                 <option value="">Ürün Grubu (Tümü)</option>
-                                <option value="Kondenser">Kondenser</option>
+                                <option value="Kondanser">Kondanser</option>
                                 <option value="Kablo Grubu">Kablo Grubu</option>
                                 <option value="Metal Parca & Sac">Metal Parça & Sac</option>
                                 <option value="Kalıp">Kalıp</option>
@@ -293,23 +293,30 @@
                         </div>
                         <div class="col-12">
                             <label class="form-label small fw-bold text-muted">Ürün Tanımı / Proje Adı:</label>
-                            <input type="text" name="urun_adi" class="form-control form-control-sm" placeholder="Örn: 420L No-Frost Kondenser Seri Üretim Kapanışı" required>
+                            <input type="text" name="urun_adi" class="form-control form-control-sm" placeholder="Örn: 420L No-Frost Kondanser Seri Üretim Kapanışı" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-muted">Ürün Grubu:</label>
                             <select name="urun_grubu" class="form-select form-select-sm">
-                                <option value="Kondenser">Kondenser</option>
+                                <option value="Kondanser">Kondanser</option>
                                 <option value="Kablo Grubu">Kablo Grubu</option>
                                 <option value="Metal Parca & Sac">Metal Parça & Sac</option>
                                 <option value="Kalıp">Kalıp</option>
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold text-muted">İlgili Fabrika:</label>
+                            <label class="form-label small fw-bold text-muted">Ana Departman / Fabrika:</label>
                             <select name="ilgili_fabrika" class="form-select form-select-sm">
-                                <option value="Teleset 1 (Manisa)">Teleset 1 (Manisa)</option>
-                                <option value="Teleset 2 (Manisa)">Teleset 2 (Manisa)</option>
-                                <option value="Teleset 3 (Çerkezköy)">Teleset 3 (Çerkezköy)</option>
+                                {% for sirket in intranet_sirketler %}
+                                <option value="{{ sirket }}" {% if sirket == 'PRESHANE' %}selected{% endif %}>{{ sirket }}</option>
+                                {% empty %}
+                                <option value="PRESHANE" selected>PRESHANE</option>
+                                <option value="KONDANSER">KONDANSER</option>
+                                <option value="KABLOGR">KABLOGR</option>
+                                <option value="KALIPHANE">KALIPHANE</option>
+                                <option value="CERKEZKOY">CERKEZKOY</option>
+                                <option value="MANISA ORTAK">MANISA ORTAK</option>
+                                {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-6">

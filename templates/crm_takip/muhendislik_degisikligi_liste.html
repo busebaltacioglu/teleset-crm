@@ -303,7 +303,7 @@
                         <!-- 1. DEĞİŞİKLİK BAŞLIĞI / KONUSU -->
                         <div class="col-12">
                             <label class="form-label small fw-bold text-dark">Değişiklik Konusu / Başlığı <span class="text-danger">*</span></label>
-                            <input type="text" name="ad" class="form-control" placeholder="Örn: Kondenser Boru Çapı Optimizasyonu ve Et Kalınlığı Değişimi" required>
+                            <input type="text" name="ad" class="form-control" placeholder="Örn: Kondanser Boru Çapı Optimizasyonu ve Et Kalınlığı Değişimi" required>
                         </div>
 
                         <!-- 2. MÜŞTERİ SEÇİMİ -->
@@ -346,19 +346,25 @@
                             <label class="form-label small fw-bold text-dark">Ürün Grubu</label>
                             <select name="urun_grubu" class="form-select">
                                 <option value="Metal Parca & Sac" selected>Metal Parça & Sac</option>
-                                <option value="Kondenser & Sogutma">Kondenser & Soğutma</option>
+                                <option value="Kondanser & Sogutma">Kondanser & Soğutma</option>
                                 <option value="Kablo Grubu">Kablo Grubu</option>
                                 <option value="Kalip, Fikstur & Aparat">Kalıp, Fikstür & Aparat</option>
                             </select>
                         </div>
 
                         <div class="col-md-3">
-                            <label class="form-label small fw-bold text-dark">İlgili Fabrika</label>
+                            <label class="form-label small fw-bold text-dark">Ana Departman / Fabrika</label>
                             <select name="ilgili_fabrika" class="form-select">
-                                <option value="Teleset 1 (Manisa)" selected>Teleset 1 (Manisa)</option>
-                                <option value="Teleset 2 (Manisa)">Teleset 2 (Manisa)</option>
-                                <option value="Teleset 3 (Manisa)">Teleset 3 (Manisa)</option>
-                                <option value="Teleset (Kocaeli)">Teleset (Kocaeli)</option>
+                                {% for s in intranet_sirketler %}
+                                <option value="{{ s }}" {% if s == 'PRESHANE' %}selected{% endif %}>{{ s }}</option>
+                                {% empty %}
+                                <option value="PRESHANE" selected>PRESHANE</option>
+                                <option value="KONDANSER">KONDANSER</option>
+                                <option value="KABLOGR">KABLOGR</option>
+                                <option value="KALIPHANE">KALIPHANE</option>
+                                <option value="CERKEZKOY">CERKEZKOY</option>
+                                <option value="MANISA ORTAK">MANISA ORTAK</option>
+                                {% endfor %}
                             </select>
                         </div>
 
@@ -370,7 +376,7 @@
 
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-dark">Özel ECO Kodu (Opsiyonel)</label>
-                            <input type="text" name="kod" class="form-control" placeholder="Boş bırakılırsa otomatik ECO-2026-xxx üretilir">
+                            <input type="text" name="kod" class="form-control" placeholder="Örn: ECO26000001">
                         </div>
 
                         <!-- 7. PROJE EKİBİ & RACI SORUMLULARI -->
@@ -382,19 +388,43 @@
                                 <div class="row g-2">
                                     <div class="col-md-6">
                                         <label class="form-label small text-muted mb-1">Proje Sorumlusu (R - İşi Yürüten):</label>
-                                        <input type="text" name="sorumlu_proje_sorumlusu" class="form-control form-control-sm" value="Buse Nur Baltacıoğlu">
+                                        <select name="sorumlu_proje_sorumlusu" class="form-select form-select-sm" required>
+                                            {% for p in proje_liderleri %}
+                                            <option value="{{ p.ad_soyad }}" {% if p.ad_soyad == 'BUSE NUR BALTACIOĞLU' %}selected{% endif %}>
+                                                {{ p.ad_soyad }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label small text-muted mb-1">Fabrika Müdürü (A - Onay Veren):</label>
-                                        <input type="text" name="sorumlu_fabrika_muduru" class="form-control form-control-sm" value="Serdar Acar">
+                                        <select name="sorumlu_fabrika_muduru" class="form-select form-select-sm" required>
+                                            {% for p in satis_mudurleri %}
+                                            <option value="{{ p.ad_soyad }}" {% if p.ad_soyad == 'ONUR TUNCER' or forloop.first %}selected{% endif %}>
+                                                {{ p.ad_soyad }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label small text-muted mb-1">Satış-Analiz Sorumlusu (C - Danışılan):</label>
-                                        <input type="text" name="sorumlu_satis_analiz" class="form-control form-control-sm" value="Hakan Yılmaz">
+                                        <select name="sorumlu_satis_analiz" class="form-select form-select-sm" required>
+                                            {% for p in pazarlama_uzmanlari %}
+                                            <option value="{{ p.ad_soyad }}" {% if p.ad_soyad == 'MUHARREM FURKAN TARHAN' or forloop.first %}selected{% endif %}>
+                                                {{ p.ad_soyad }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label small text-muted mb-1">Kalite Sorumlusu (C - Kalite / ISIR):</label>
-                                        <input type="text" name="sorumlu_kalite" class="form-control form-control-sm" value="Ahmet Yurt">
+                                        <select name="sorumlu_kalite" class="form-select form-select-sm" required>
+                                            {% for p in proje_liderleri %}
+                                            <option value="{{ p.ad_soyad }}" {% if p.ad_soyad == 'METİN YAVAŞ' %}selected{% endif %}>
+                                                {{ p.ad_soyad }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
                                     </div>
                                 </div>
                             </div>

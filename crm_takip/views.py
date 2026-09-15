@@ -10,6 +10,8 @@ from .models import (
     ProjeGecmisLog, 
     HedefPazarKanvas,
     MusteriKarti,
+    MusteriTesisi,
+    MusteriEtkilesimZamanTuneli,
     UrunGrubuKarti,
     MusteriIliskileriAdimTanimi,
     MusteriIliskileriSureci,
@@ -39,10 +41,15 @@ from .models import (
     EOPSureci,
     EOPAdimKaydi,
     EOPGecmisLog,
-    FaaliyetKaydi
+    FaaliyetKaydi,
+    AnaProje,
+    SistemKodSayaci
 )
+from .services.intranet_service import get_intranet_sirketler, get_proje_liderleri
+from .services.inckey_service import inckey_uret, siradaki_inckey_goruntule
 import calendar
 import datetime
+import json
 from django.utils.dateparse import parse_date
 
 
@@ -117,8 +124,16 @@ def kartlar_view(request):
             Q(ad__icontains=q_musteri) |
             Q(kisa_ad__icontains=q_musteri) |
             Q(ulke__icontains=q_musteri) |
-            Q(kod__icontains=q_musteri)
+            Q(sehir__icontains=q_musteri) |
+            Q(kod__icontains=q_musteri) |
+            Q(strateji__icontains=q_musteri)
         )
+
+    # İstatistikler ve Rozet Sayıları
+    toplam_musteri_sayisi = MusteriKarti.objects.count()
+    tier1_sayisi = MusteriKarti.objects.filter(tier__icontains='Tier 1').count()
+    tier2_sayisi = MusteriKarti.objects.filter(tier__icontains='Tier 2').count()
+    tier3_sayisi = MusteriKarti.objects.filter(tier__icontains='Tier 3').count()
 
     # 2. Ülkeler Filtreleme
     kanvaslar = HedefPazarKanvas.objects.all()
@@ -154,6 +169,10 @@ def kartlar_view(request):
     context = {
         'aktif_sekme': aktif_sekme,
         'musteriler': musteriler,
+        'toplam_musteri_sayisi': toplam_musteri_sayisi,
+        'tier1_sayisi': tier1_sayisi,
+        'tier2_sayisi': tier2_sayisi,
+        'tier3_sayisi': tier3_sayisi,
         'tier_filtre': tier_filtre,
         'q_m': q_musteri,
         'kanvaslar': kanvaslar,
@@ -164,6 +183,126 @@ def kartlar_view(request):
         'toplam_musteri_ciro': toplam_musteri_ciro,
     }
     return render(request, 'crm_takip/kartlar.html', context)
+
+
+def musteri_360_view(request, pk):
+    """
+    360° Tek Müşteri Görünümü (SVOC) ve Tesis / Lokasyon Bazlı Yönetim Paneli
+    """
+    musteri = get_object_or_404(MusteriKarti, pk=pk)
+    tesisler = musteri.tesisler.all()
+    
+    # Otomatik default tesis oluşturma (eğer henüz tanımlanmamışsa)
+    if not tesisler.exists():
+        MusteriTesisi.objects.create(
+            musteri=musteri,
+            sira=1,
+            tesis_adi="Tüm Tesisler (Grup Özeti)",
+            lokasyon=f"{musteri.sehir or ''}, {musteri.ulke}".strip(', '),
+            kod=f"{musteri.kisa_ad}-ALL",
+            clv_m=f"{musteri.clv_m_str} M€",
+            churn_skoru="0.05",
+            churn_durumu="Düşük Risk",
+            yillik_ciro_str=f"€ {musteri.yillik_ciro_m_str}M",
+            ciro_alt_bilgi="Aktif Portföy",
+            cuzdan_payi_yuzde=musteri.cuzdan_payi_yuzde,
+            cuzdan_alt_bilgi="Sac & Kablo Grubu",
+            destek_sayisi=9,
+            npi_proje_sayisi=musteri.aktif_proje_sayisi,
+            teklif_sayisi=9,
+            sevkiyat_sayisi=9,
+            kam_satis_lideri=musteri.kam_satis_lideri,
+            kam_muhendislik_lideri=musteri.kam_muhendislik_lideri,
+            kam_kalite_lideri=musteri.kam_kalite_lideri,
+            yetkili_adi=f"{musteri.kisa_ad} Satınalma Lideri",
+            yetkili_unvan="Global Satınalma Direktörü",
+            yetkili_email=f"contact@{musteri.kisa_ad.lower().replace(' ', '')}.com",
+            son_etkilesim="Dün 14:30 - Yeni SIMPAC 400T Kalıp İncelemesi"
+        )
+        tesisler = musteri.tesisler.all()
+
+    # Zaman Tüneli Etkileşimleri
+    etkilesimler = musteri.etkilesimler.all()
+    if not etkilesimler.exists():
+        MusteriEtkilesimZamanTuneli.objects.create(
+            musteri=musteri,
+            kod="SAT-EK-005",
+            baslik=f"SAT-EK-005 {musteri.kisa_ad} Resmi Fiyat Teklifi Hazırlandı",
+            aciklama=f"{musteri.kisa_ad} üretim hatları için 120.000 adetlik yıllık teklif eBA onayına iletildi.",
+            sorumlu=musteri.kam_satis_lideri,
+            tarih=timezone.now().date(),
+            donem_ay_yil="EYLÜL 2026 (SON ETKİLEŞİMLER)",
+            ikon="bi-file-earmark-text-fill",
+            ikon_bg="bg-warning text-white"
+        )
+        MusteriEtkilesimZamanTuneli.objects.create(
+            musteri=musteri,
+            kod="PMG-EK-002",
+            baslik="PMG-EK-002 DFM Kalıp Fizibilite Onayı",
+            aciklama="SIMPAC 400 Ton Pres kalıp büküm toleransları ±0.1mm onaylandı.",
+            sorumlu=musteri.kam_muhendislik_lideri,
+            tarih=timezone.now().date(),
+            donem_ay_yil="EYLÜL 2026 (SON ETKİLEŞİMLER)",
+            ikon="bi-gear-wide-connected",
+            ikon_bg="bg-primary text-white"
+        )
+        etkilesimler = musteri.etkilesimler.all()
+
+    # Dönem bazında gruplama (EYLÜL 2026, AĞUSTOS 2026 vb.)
+    donem_gruplari = {}
+    for etk in etkilesimler:
+        donem = etk.donem_ay_yil
+        if donem not in donem_gruplari:
+            donem_gruplari[donem] = []
+        donem_gruplari[donem].append(etk)
+
+    # Tesisler JSON verisi (Client-side dinamik geçiş için)
+    tesisler_data = []
+    for t in tesisler:
+        tesisler_data.append({
+            'id': t.id,
+            'tesis_adi': t.tesis_adi,
+            'lokasyon': t.lokasyon,
+            'kod': t.kod or '',
+            'clv_m': t.clv_m,
+            'churn_skoru': t.churn_skoru,
+            'churn_durumu': t.churn_durumu,
+            'yillik_ciro_str': t.yillik_ciro_str,
+            'ciro_alt_bilgi': t.ciro_alt_bilgi,
+            'cuzdan_payi_yuzde': t.cuzdan_payi_yuzde,
+            'cuzdan_alt_bilgi': t.cuzdan_alt_bilgi,
+            'destek_sayisi': t.destek_sayisi,
+            'npi_proje_sayisi': t.npi_proje_sayisi,
+            'teklif_sayisi': t.teklif_sayisi,
+            'sevkiyat_sayisi': t.sevkiyat_sayisi,
+            'kam_satis_lideri': t.kam_satis_lideri,
+            'kam_muhendislik_lideri': t.kam_muhendislik_lideri,
+            'kam_kalite_lideri': t.kam_kalite_lideri,
+            'yetkili_adi': t.yetkili_adi,
+            'yetkili_unvan': t.yetkili_unvan,
+            'yetkili_email': t.yetkili_email,
+            'yetkili_telefon': t.yetkili_telefon or '',
+            'son_etkilesim': t.son_etkilesim
+        })
+
+    # Diğer Müşteriler (hızlı geçiş menüsü için)
+    diger_musteriler = MusteriKarti.objects.exclude(pk=musteri.pk)
+
+    # İlgili Süreçler
+    pazarlama_projeleri = PazarlamaProjesi.objects.filter(
+        Q(musteri_karti=musteri) | Q(musteri_adi__icontains=musteri.kisa_ad)
+    )
+
+    context = {
+        'musteri': musteri,
+        'tesisler': tesisler,
+        'ilk_tesis': tesisler.first(),
+        'donem_gruplari': donem_gruplari,
+        'tesisler_json': json.dumps(tesisler_data, ensure_ascii=False),
+        'diger_musteriler': diger_musteriler,
+        'pazarlama_projeleri': pazarlama_projeleri,
+    }
+    return render(request, 'crm_takip/musteri_360_detay.html', context)
 
 
 def kanvas_listesi(request):
@@ -180,9 +319,9 @@ def proje_olustur(request):
         musteri_adi = request.POST.get('musteri_adi', '').strip()
         hedef_ulke = request.POST.get('hedef_ulke', '').strip()
         urun_grubu = request.POST.get('urun_grubu', 'Metal Parca & Sac')
-        ilgili_fabrika = request.POST.get('ilgili_fabrika', 'Teleset 1 (Manisa)')
-        sorumlu_pazarlama_uzmani = request.POST.get('sorumlu_pazarlama_uzmani', 'Pazarlama Uzmanı').strip()
-        sorumlu_satis_muduru = request.POST.get('sorumlu_satis_muduru', 'Satış ve Pazarlama Müdürü').strip()
+        ilgili_fabrika = request.POST.get('ilgili_fabrika', 'PRESHANE')
+        sorumlu_pazarlama_uzmani = request.POST.get('sorumlu_pazarlama_uzmani', 'BUSE NUR BALTACIOĞLU').strip()
+        sorumlu_satis_muduru = request.POST.get('sorumlu_satis_muduru', 'ONUR TUNCER').strip()
         tahmini_butce = request.POST.get('tahmini_butce') or None
         beklenen_ciro = request.POST.get('beklenen_ciro') or None
         aciklama = request.POST.get('aciklama', '').strip()
@@ -753,9 +892,9 @@ def musteri_iliskileri_olustur(request):
         ad = request.POST.get('ad', '').strip()
         musteri_adi = request.POST.get('musteri_adi', '').strip()
         donem = request.POST.get('donem', '2026 Yıllık').strip()
-        ilgili_fabrika = request.POST.get('ilgili_fabrika', 'Teleset 1 (Manisa)')
-        sorumlu_eys = request.POST.get('sorumlu_eys', 'Buse Nur Baltacıoğlu')
-        sorumlu_surec_sahibi = request.POST.get('sorumlu_surec_sahibi', 'Süreç Sahibi / İyileştirme Ekibi')
+        ilgili_fabrika = request.POST.get('ilgili_fabrika', 'PRESHANE')
+        sorumlu_eys = request.POST.get('sorumlu_eys', 'BUSE NUR BALTACIOĞLU')
+        sorumlu_surec_sahibi = request.POST.get('sorumlu_surec_sahibi', 'ONUR TUNCER')
         memnuniyet_puani = request.POST.get('memnuniyet_puani')
         aciklama = request.POST.get('aciklama', '').strip()
 
@@ -1094,11 +1233,11 @@ def urun_teklif_olustur(request):
         ad = request.POST.get('ad', '').strip()
         musteri_adi = request.POST.get('musteri_adi', '').strip()
         donem = request.POST.get('donem', '2026 Yıllık').strip()
-        ilgili_fabrika = request.POST.get('ilgili_fabrika', 'Teleset 1 (Manisa)')
+        ilgili_fabrika = request.POST.get('ilgili_fabrika', 'PRESHANE')
         urun_grubu = request.POST.get('urun_grubu', 'Metal Parca & Sac')
-        sorumlu_satis_analiz_uzmani = request.POST.get('sorumlu_satis_analiz_uzmani', 'Satış Analiz Uzmanı')
-        sorumlu_satis_uzmani = request.POST.get('sorumlu_satis_uzmani', 'Buse Nur Baltacıoğlu')
-        sorumlu_satis_yoneticisi = request.POST.get('sorumlu_satis_yoneticisi', 'Satış Yöneticisi')
+        sorumlu_satis_analiz_uzmani = request.POST.get('sorumlu_satis_analiz_uzmani', 'METİN YAVAŞ')
+        sorumlu_satis_uzmani = request.POST.get('sorumlu_satis_uzmani', 'BUSE NUR BALTACIOĞLU')
+        sorumlu_satis_yoneticisi = request.POST.get('sorumlu_satis_yoneticisi', 'ONUR TUNCER')
         teklif_tutari_val = request.POST.get('teklif_tutari') or request.POST.get('beklenen_ciro')
         aciklama = request.POST.get('aciklama', '').strip()
 
@@ -1537,15 +1676,15 @@ def sozlesme_sureci_olustur(request):
         musteri_adi = request.POST.get('musteri_adi', '').strip()
         sozlesme_tipi = request.POST.get('sozlesme_tipi', 'SATIS')
         donem = request.POST.get('donem', '2026 Yıllık').strip()
-        ilgili_fabrika = request.POST.get('ilgili_fabrika', 'Teleset 1 (Manisa)')
+        ilgili_fabrika = request.POST.get('ilgili_fabrika', 'PRESHANE')
         
         baslangic_tarihi = request.POST.get('baslangic_tarihi') or None
         bitis_tarihi = request.POST.get('bitis_tarihi') or None
 
-        sorumlu_satis_uzmani = request.POST.get('sorumlu_satis_uzmani', 'Buse Nur Baltacıoğlu')
-        sorumlu_satis_yoneticisi = request.POST.get('sorumlu_satis_yoneticisi', 'Satış Yöneticisi')
-        sorumlu_fabrika_muduru = request.POST.get('sorumlu_fabrika_muduru', 'Fabrika Müdürü')
-        sorumlu_hukuk = request.POST.get('sorumlu_hukuk', 'Şirket Hukuk Müşaviri')
+        sorumlu_satis_uzmani = request.POST.get('sorumlu_satis_uzmani', 'BUSE NUR BALTACIOĞLU')
+        sorumlu_satis_yoneticisi = request.POST.get('sorumlu_satis_yoneticisi', 'ONUR TUNCER')
+        sorumlu_fabrika_muduru = request.POST.get('sorumlu_fabrika_muduru', 'MUHARREM FURKAN TARHAN')
+        sorumlu_hukuk = request.POST.get('sorumlu_hukuk', 'Hukuk Müşaviri')
         aciklama = request.POST.get('aciklama', '').strip()
 
         year = timezone.now().year
@@ -1987,15 +2126,15 @@ def yeni_urun_olustur(request):
         musteri_id = request.POST.get('musteri_karti')
         urun_grubu = request.POST.get('urun_grubu', 'Kondenser & Sogutma')
         urun_grubu_id = request.POST.get('urun_grubu_karti')
-        ilgili_fabrika = request.POST.get('ilgili_fabrika', 'Teleset 1 (Manisa)')
+        ilgili_fabrika = request.POST.get('ilgili_fabrika', 'PRESHANE')
         parca_kodu = request.POST.get('parca_kodu', '').strip()
         hedef_seri_uretim_tarihi = request.POST.get('hedef_seri_uretim_tarihi') or None
         yillik_hedef_adet = request.POST.get('yillik_hedef_adet') or None
         
-        sorumlu_proje_lideri = request.POST.get('sorumlu_proje_lideri', 'Proje Sorumlusu')
-        sorumlu_fabrika_muduru = request.POST.get('sorumlu_fabrika_muduru', 'Fabrika Müdürü')
-        sorumlu_satis_analiz = request.POST.get('sorumlu_satis_analiz', 'Satış-Analiz Sorumlusu')
-        sorumlu_kalite = request.POST.get('sorumlu_kalite', 'Kalite Sorumlusu')
+        sorumlu_proje_lideri = request.POST.get('sorumlu_proje_lideri', 'BUSE NUR BALTACIOĞLU')
+        sorumlu_fabrika_muduru = request.POST.get('sorumlu_fabrika_muduru', 'ONUR TUNCER')
+        sorumlu_satis_analiz = request.POST.get('sorumlu_satis_analiz', 'METİN YAVAŞ')
+        sorumlu_kalite = request.POST.get('sorumlu_kalite', 'MUHARREM FURKAN TARHAN')
         aciklama = request.POST.get('aciklama', '').strip()
 
         if not kod:
@@ -2631,13 +2770,13 @@ def muhendislik_degisikligi_olustur(request):
         revizyon_no = request.POST.get('revizyon_no', 'Rev.01').strip()
         degisiklik_nedeni = request.POST.get('degisiklik_nedeni', 'MUSTERI_TALEBI')
         urun_grubu = request.POST.get('urun_grubu', 'Metal Parca & Sac')
-        ilgili_fabrika = request.POST.get('ilgili_fabrika', 'Teleset 1 (Manisa)')
+        ilgili_fabrika = request.POST.get('ilgili_fabrika', 'PRESHANE')
         hedef_tamamlanma_tarihi = request.POST.get('hedef_tamamlanma_tarihi') or None
 
-        sorumlu_proje_sorumlusu = request.POST.get('sorumlu_proje_sorumlusu', 'Buse Nur Baltacıoğlu').strip()
-        sorumlu_fabrika_muduru = request.POST.get('sorumlu_fabrika_muduru', 'Serdar Acar').strip()
-        sorumlu_satis_analiz = request.POST.get('sorumlu_satis_analiz', 'Hakan Yılmaz').strip()
-        sorumlu_kalite = request.POST.get('sorumlu_kalite', 'Ahmet Yurt').strip()
+        sorumlu_proje_sorumlusu = request.POST.get('sorumlu_proje_sorumlusu', 'BUSE NUR BALTACIOĞLU').strip()
+        sorumlu_fabrika_muduru = request.POST.get('sorumlu_fabrika_muduru', 'ONUR TUNCER').strip()
+        sorumlu_satis_analiz = request.POST.get('sorumlu_satis_analiz', 'METİN YAVAŞ').strip()
+        sorumlu_kalite = request.POST.get('sorumlu_kalite', 'MUHARREM FURKAN TARHAN').strip()
 
         aciklama = request.POST.get('aciklama', '').strip()
 
@@ -3094,13 +3233,13 @@ def prototip_olustur(request):
         revizyon_no = request.POST.get('revizyon_no', 'Rev.01').strip()
         prototip_tipi = request.POST.get('prototip_tipi', 'YENI_TASARIM')
         urun_grubu = request.POST.get('urun_grubu', 'Metal Parca & Sac')
-        ilgili_fabrika = request.POST.get('ilgili_fabrika', 'Teleset 1 (Manisa)')
+        ilgili_fabrika = request.POST.get('ilgili_fabrika', 'PRESHANE')
         hedef_tamamlanma_tarihi = request.POST.get('hedef_tamamlanma_tarihi') or None
 
-        sorumlu_proje_sorumlusu = request.POST.get('sorumlu_proje_sorumlusu', 'Buse Nur Baltacıoğlu').strip()
-        sorumlu_fabrika_muduru = request.POST.get('sorumlu_fabrika_muduru', 'Serdar Acar').strip()
-        sorumlu_satis_analiz = request.POST.get('sorumlu_satis_analiz', 'Hakan Yılmaz').strip()
-        sorumlu_kalite = request.POST.get('sorumlu_kalite', 'Ahmet Yurt').strip()
+        sorumlu_proje_sorumlusu = request.POST.get('sorumlu_proje_sorumlusu', 'BUSE NUR BALTACIOĞLU').strip()
+        sorumlu_fabrika_muduru = request.POST.get('sorumlu_fabrika_muduru', 'ONUR TUNCER').strip()
+        sorumlu_satis_analiz = request.POST.get('sorumlu_satis_analiz', 'METİN YAVAŞ').strip()
+        sorumlu_kalite = request.POST.get('sorumlu_kalite', 'MUHARREM FURKAN TARHAN').strip()
 
         aciklama = request.POST.get('aciklama', '').strip()
 
@@ -3533,7 +3672,7 @@ def eop_yeni_view(request):
         musteri_adi = request.POST.get('musteri_adi', '').strip()
         musteri_id = request.POST.get('musteri_id')
         urun_grubu = request.POST.get('urun_grubu', 'Kondenser')
-        fabrika = request.POST.get('ilgili_fabrika', 'Teleset 1 (Manisa)')
+        fabrika = request.POST.get('ilgili_fabrika', 'PRESHANE')
         yedek_parca_yil = request.POST.get('yedek_parca_servis_suresi_yil', 10)
         aciklama = request.POST.get('aciklama', '').strip()
 
@@ -3573,7 +3712,7 @@ def eop_yeni_view(request):
             surec=surec,
             islem="EOP Süreci Başlatıldı",
             detay=f"'{surec.kod}' kodlu Ürün Seri Üretim Sonlandırma Süreci sisteme kaydedildi ve 1. Adım aktif edildi.",
-            yapan="Buse Nur Baltacıoğlu"
+            yapan="BUSE NUR BALTACIOĞLU"
         )
 
         messages.success(request, f"'{surec.kod}' kodlu EOP Süreci başarıyla başlatıldı!")
@@ -3730,50 +3869,80 @@ def anket_raporu_view(request):
 PERSONEL_LISTESI = [
     {
         'id': 'buse',
-        'ad': 'Buse Nur Baltacıoğlu',
-        'unvan': 'Pazarlama & İş Geliştirme Yöneticisi',
+        'ad': 'BUSE NUR BALTACIOĞLU',
+        'unvan': 'YAZILIM DESTEK PERSONELİ',
+        'departman': 'GENEL MÜDÜRLÜK',
         'rol_kodu': 'PAZARLAMA',
         'renk': '#22609d',
         'avatar_text': 'BN',
     },
     {
-        'id': 'ahmet',
-        'ad': 'Ahmet Yılmaz',
-        'unvan': 'Satış & Teklif Yöneticisi',
+        'id': 'yigit',
+        'ad': 'YİĞİT EFE BİLİR',
+        'unvan': 'İŞ ÇÖZÜMLERİ MÜHENDİSİ',
+        'departman': 'GENEL MÜDÜRLÜK',
         'rol_kodu': 'SATIS',
         'renk': '#0ea5e9',
-        'avatar_text': 'AY',
+        'avatar_text': 'YB',
     },
     {
-        'id': 'canan',
-        'ad': 'Canan Kaya',
-        'unvan': 'Yeni Ürün & Ar-Ge Mühendisi',
-        'rol_kodu': 'ARGE',
+        'id': 'onur',
+        'ad': 'ONUR TUNCER',
+        'unvan': 'BİLGİ TEKNOLOJİLERİ MÜDÜRÜ',
+        'departman': 'BİLGİ İŞLEM',
+        'rol_kodu': 'YONETIM',
         'renk': '#8b5cf6',
-        'avatar_text': 'CK',
+        'avatar_text': 'OT',
     },
     {
-        'id': 'mehmet',
-        'ad': 'Mehmet Demir',
-        'unvan': 'Mühendislik & Kalite Yöneticisi',
+        'id': 'furkan',
+        'ad': 'MUHARREM FURKAN TARHAN',
+        'unvan': 'YAZILIM DESTEK SORUMLUSU',
+        'departman': 'GENEL MÜDÜRLÜK',
+        'rol_kodu': 'ARGE',
+        'renk': '#f59e0b',
+        'avatar_text': 'FT',
+    },
+    {
+        'id': 'metin',
+        'ad': 'METİN YAVAŞ',
+        'unvan': 'BAKIM ŞEFİ',
+        'departman': 'BAKIM',
         'rol_kodu': 'KALITE',
         'renk': '#10b981',
-        'avatar_text': 'MD',
+        'avatar_text': 'MY',
+    },
+    {
+        'id': 'gizem',
+        'ad': 'GİZEM ERBAYAT BOĞAN',
+        'unvan': 'SİSTEM UZMANI',
+        'departman': 'BİLGİ İŞLEM',
+        'rol_kodu': 'PLANLAMA',
+        'renk': '#ec4899',
+        'avatar_text': 'GB',
     },
 ]
 
 
 def ana_sayfa_view(request):
     """
-    Kullanıcı Kişisel Çalışma Alanı & Ajandası
-    (Herkes yalnızca kendi seyahat, toplantı, fuar ve destek taleplerini görür;
-     Ajanda & Takvim ve Liste görünümleri)
+    Ana Sayfa - Çift Görünümlü Komuta Merkezi:
+    1. Sekme: Ajandam & Faaliyetlerim (Kişisel takvim, seyahat, toplantı, fuar, destek)
+    2. Sekme: Proje & İş Akış Takipçisi (Fabrika > Cari > Proje > 8 Süreçlik Uçtan Uca Hat)
     """
     if request.user.is_authenticated and (request.user.first_name or request.user.last_name):
         aktif_kullanici = f"{request.user.first_name} {request.user.last_name}".strip()
     else:
         aktif_kullanici = "Buse Nur Baltacıoğlu"
 
+    # Aktif Ana Sekme (ajanda veya is_akisi)
+    tab = request.GET.get('tab', 'ajanda')
+    if any(k in request.GET for k in ['fabrika', 'musteri_id', 'proje_id', 'rol']):
+        tab = 'is_akisi'
+
+    # -------------------------------------------------------------
+    # 1. SEKME: AJANDAM & FAALİYETLERİM VERİLERİ
+    # -------------------------------------------------------------
     secili_tur = request.GET.get('tur', '')
     secili_durum = request.GET.get('durum', '')
     secili_gorunum = request.GET.get('view', 'takvim')
@@ -3790,7 +3959,6 @@ def ana_sayfa_view(request):
     except (ValueError, TypeError):
         secili_ay = bugun.month
 
-    # Kullanıcının yalnızca kendi faaliyetleri
     faaliyetler = FaaliyetKaydi.objects.filter(sorumlu_kisi=aktif_kullanici).select_related('musteri')
 
     if secili_tur:
@@ -3807,7 +3975,6 @@ def ana_sayfa_view(request):
             Q(aciklama__icontains=arama_q)
         )
 
-    # Kategori Sayaçları (Kullanıcının kendi faaliyetleri üzerinden)
     kullanici_tum = FaaliyetKaydi.objects.filter(sorumlu_kisi=aktif_kullanici)
     kategori_sayilari = {
         'toplam': kullanici_tum.count(),
@@ -3817,7 +3984,6 @@ def ana_sayfa_view(request):
         'destek': kullanici_tum.filter(tur='DESTEK').count(),
     }
 
-    # Takvim Verisi Üretimi (Ayın Günleri ve Faaliyetler)
     cal = calendar.Calendar(firstweekday=0)
     try:
         month_days = cal.monthdatescalendar(secili_yil, secili_ay)
@@ -3846,7 +4012,6 @@ def ana_sayfa_view(request):
         sonraki_ay = secili_ay + 1
         sonraki_yil = secili_yil
 
-    # Gün Seçimi
     secili_gun_str = request.GET.get('gun', '')
     try:
         secili_gun_int = int(secili_gun_str) if secili_gun_str else (bugun.day if secili_yil == bugun.year and secili_ay == bugun.month else 1)
@@ -3859,19 +4024,16 @@ def ana_sayfa_view(request):
         secili_gun_int = 1
         secili_gun_tarih = datetime.date(secili_yil, secili_ay, 1)
 
-    # Seçili günün faaliyetleri
     gun_faaliyetleri = faaliyetler.filter(
         baslangic_tarihi__lte=secili_gun_tarih,
         bitis_tarihi__gte=secili_gun_tarih
     ).order_by('saat_araligi', 'durum')
 
-    # Seçili ayın tüm faaliyetleri
     aylik_faaliyetler = faaliyetler.filter(
         baslangic_tarihi__year=secili_yil,
         baslangic_tarihi__month=secili_ay
     ).order_by('baslangic_tarihi', 'saat_araligi')
 
-    # Takvim Izgarası
     takvim_haftalari = []
     for week in month_days:
         hafta_gunleri = []
@@ -3894,9 +4056,106 @@ def ana_sayfa_view(request):
             })
         takvim_haftalari.append(hafta_gunleri)
 
+    # -------------------------------------------------------------
+    # 2. SEKME: PROJE & İŞ AKIŞ TAKİPÇİSİ (UÇTAN UCA 8 SÜREÇ)
+    # -------------------------------------------------------------
+    fabrika_listesi = [f[0] for f in AnaProje.FABRIKA_CHOICES]
+    secili_fabrika = request.GET.get('fabrika', '')
+    secili_musteri_id = request.GET.get('musteri_id', '')
+    secili_proje_id = request.GET.get('proje_id', '')
+    secili_rol = request.GET.get('rol', 'ALL')
+    q_proje = request.GET.get('q_proje', '').strip()
+
+    ana_projeler_qs = AnaProje.objects.all().select_related(
+        'musteri', 'tesis',
+        'musteri_iliskileri_sureci', 'pazarlama_sureci', 'urun_teklif_sureci',
+        'sozlesme_sureci', 'prototip_sureci', 'yeni_urun_sureci',
+        'muhendislik_degisikligi_sureci', 'eop_sureci'
+    ).prefetch_related('prototip_iterasyonlari', 'eco_iterasyonlari').order_by('id')
+
+    if secili_fabrika:
+        ana_projeler_qs = ana_projeler_qs.filter(
+            Q(bolum__icontains=secili_fabrika) | Q(fabrika__icontains=secili_fabrika)
+        )
+
+    if secili_musteri_id:
+        try:
+            ana_projeler_qs = ana_projeler_qs.filter(musteri_id=int(secili_musteri_id))
+        except ValueError:
+            pass
+
+    if q_proje:
+        ana_projeler_qs = ana_projeler_qs.filter(
+            Q(proje_kodu__icontains=q_proje) |
+            Q(proje_adi__icontains=q_proje) |
+            Q(parca_kodu__icontains=q_proje) |
+            Q(parca_adi__icontains=q_proje) |
+            Q(bolum__icontains=q_proje) |
+            Q(musteri__ad__icontains=q_proje) |
+            Q(musteri__kisa_ad__icontains=q_proje) |
+            Q(aciklama_notu__icontains=q_proje)
+        )
+
+    # Seçili Ana Proje
+    secili_proje = None
+    if secili_proje_id:
+        try:
+            secili_proje = AnaProje.objects.filter(id=int(secili_proje_id)).first()
+        except ValueError:
+            secili_proje = None
+
+    if not secili_proje:
+        secili_proje = ana_projeler_qs.first() or AnaProje.objects.first()
+
+    # 8 Süreç Listesi
+    surecler_listesi = []
+    bekleyen_aksiyonlar = []
+    prototip_iterasyonlari = []
+    eco_revizyonlari = []
+
+    if secili_proje:
+        surecler_listesi = secili_proje.get_surecler_listesi()
+        if secili_rol and secili_rol != 'ALL':
+            for s in surecler_listesi:
+                s['rol_eslesiyor'] = (s['rol'].lower() == secili_rol.lower())
+        else:
+            for s in surecler_listesi:
+                s['rol_eslesiyor'] = True
+
+        bekleyen_aksiyonlar = secili_proje.get_bekleyen_aksiyonlar(rol=secili_rol)
+        prototip_iterasyonlari = secili_proje.get_prototip_iterasyonlari()
+        eco_revizyonlari = secili_proje.get_eco_revizyonlari()
+
+    tum_ana_projeler = AnaProje.objects.all().select_related('musteri').order_by('id')
     musteriler = MusteriKarti.objects.all().order_by('kisa_ad')
 
+    # Portföy Metrikleri (60 Proje Dağılımı)
+    toplam_proje_sayisi = AnaProje.objects.count()
+    tamamlanan_proje_sayisi = AnaProje.objects.filter(genel_ilerleme_yuzdesi=100).count()
+    devam_eden_proje_sayisi = AnaProje.objects.filter(genel_ilerleme_yuzdesi__lt=100).count()
+    kaliphane_pres_sayisi = AnaProje.objects.filter(Q(bolum__icontains='Kalıp') | Q(bolum__icontains='Pres')).count()
+    kondanser_sayisi = AnaProje.objects.filter(bolum__icontains='Kondanser').count()
+    kablo_sayisi = AnaProje.objects.filter(bolum__icontains='Kablo').count()
+
+    # Bölüm Listesi
+    bolumler_listesi = [
+        ('Kalıphane', 'Kalıphane'),
+        ('Preshane + Kalıphane', 'Preshane + Kalıphane'),
+        ('Preshane', 'Preshane'),
+        ('Kondanser', 'Kondanser'),
+        ('Kablo Gruplama', 'Kablo Gruplama'),
+    ]
+
+    # Teleset_Intranet SQL Server Verileri & IncKey
+    intranet_sirketler = get_intranet_sirketler()
+    proje_liderleri = get_proje_liderleri()
+    siradaki_proje_kodu = siradaki_inckey_goruntule('PRJ')
+
     context = {
+        # Sekme kontrolü
+        'tab': tab,
+        
+        # 1. Sekme Ajanda
         'faaliyetler': faaliyetler,
         'aktif_kullanici': aktif_kullanici,
         'kategori_sayilari': kategori_sayilari,
@@ -3918,9 +4177,125 @@ def ana_sayfa_view(request):
         'takvim_haftalari': takvim_haftalari,
         'musteriler': musteriler,
         'bugun': bugun,
-        'baslik': 'Kişisel Çalışma Alanı & Ajandam',
+
+        # 2. Sekme Uçtan Uca Proje & İş Akış Takipçisi
+        'fabrika_listesi': fabrika_listesi,
+        'bolumler_listesi': bolumler_listesi,
+        'intranet_sirketler': intranet_sirketler,
+        'proje_liderleri': proje_liderleri,
+        'siradaki_proje_kodu': siradaki_proje_kodu,
+        'secili_fabrika': secili_fabrika,
+        'secili_musteri_id': secili_musteri_id,
+        'secili_proje_id': secili_proje.id if secili_proje else '',
+        'secili_proje': secili_proje,
+        'secili_rol': secili_rol,
+        'q_proje': q_proje,
+        'surecler_listesi': surecler_listesi,
+        'tum_ana_projeler': tum_ana_projeler,
+        'ana_projeler_qs': ana_projeler_qs,
+        'bekleyen_aksiyonlar': bekleyen_aksiyonlar,
+        'prototip_iterasyonlari': prototip_iterasyonlari,
+        'eco_revizyonlari': eco_revizyonlari,
+        'toplam_proje_sayisi': toplam_proje_sayisi,
+        'tamamlanan_proje_sayisi': tamamlanan_proje_sayisi,
+        'devam_eden_proje_sayisi': devam_eden_proje_sayisi,
+        'kaliphane_pres_sayisi': kaliphane_pres_sayisi,
+        'kondanser_sayisi': kondanser_sayisi,
+        'kablo_sayisi': kablo_sayisi,
     }
     return render(request, 'crm_takip/ana_sayfa.html', context)
+
+
+def ana_proje_ekle_view(request):
+    """
+    Yeni Uçtan Uca Ana Proje Oluşturma (IncKey ve Intranet Personel Entegrasyonlu)
+    """
+    if request.method == 'POST':
+        proje_kodu = request.POST.get('proje_kodu', '').strip()
+        proje_adi = request.POST.get('proje_adi', '').strip()
+        parca_kodu = request.POST.get('parca_kodu', '').strip()
+        fabrika = request.POST.get('fabrika', '').strip()
+        musteri_id = request.POST.get('musteri_id')
+        sorumlu_lider = request.POST.get('sorumlu_lider', 'BUSE NUR BALTACIOĞLU').strip()
+        aktif_surec_adi = request.POST.get('aktif_surec_adi', 'Yeni Ürün Devreye Alma Süreci')
+        aktif_rol = request.POST.get('aktif_rol', 'Projeci / Kalıp')
+        hedef_butce = request.POST.get('hedef_butce', '125000').strip()
+        yillik_hacim = request.POST.get('yillik_hacim_adet', '50000').strip()
+
+        if not proje_kodu or 'PRJ' not in proje_kodu:
+            proje_kodu = inckey_uret('PRJ')
+
+        musteri = MusteriKarti.objects.filter(id=musteri_id).first() if musteri_id else None
+
+        proje = AnaProje.objects.create(
+            proje_kodu=proje_kodu,
+            proje_adi=proje_adi,
+            parca_kodu=parca_kodu or 'PARCA-001',
+            fabrika=fabrika or 'PRESHANE',
+            musteri=musteri or MusteriKarti.objects.first(),
+            sorumlu_lider=sorumlu_lider,
+            aktif_surec_adi=aktif_surec_adi,
+            aktif_rol=aktif_rol,
+            aktif_surec_no=6,
+            hedef_butce=float(hedef_butce) if hedef_butce else 125000.00,
+            yillik_hacim_adet=int(yillik_hacim) if yillik_hacim else 50000,
+            genel_ilerleme_yuzdesi=75,
+        )
+        return redirect(f"/?tab=is_akisi&proje_id={proje.id}")
+
+    return redirect("/?tab=is_akisi")
+
+
+def ana_proje_senkronize_view(request, pk):
+    """
+    Ana Proje Dijital İplik Veri Senkronizasyonu (Teklif -> APQP & Sözleşme)
+    """
+    proje = get_object_or_404(AnaProje, pk=pk)
+    proje.teklif_verilerini_senkronize_et()
+    return redirect(f"/?tab=is_akisi&proje_id={proje.id}&sync=ok")
+
+
+def ana_proje_iterasyon_ekle_view(request, pk):
+    """
+    Ana Projeye Yeni Döngüsel İterasyon (ECO Revizyonu veya Prototip Turu) Ekleme
+    """
+    proje = get_object_or_404(AnaProje, pk=pk)
+    if request.method == 'POST':
+        iterasyon_tipi = request.POST.get('iterasyon_tipi', 'ECO')
+        revizyon_no = request.POST.get('revizyon_no', 'Rev.02')
+        aciklama = request.POST.get('aciklama', '')
+        
+        if iterasyon_tipi == 'ECO':
+            eco_count = proje.eco_iterasyonlari.count() + 1
+            MuhendislikDegisikligiSureci.objects.create(
+                ana_proje=proje,
+                kod=f"ECO-{proje.proje_kodu}-{eco_count:02d}",
+                ad=f"{proje.proje_adi} - Mühendislik Revizyonu",
+                musteri_adi=proje.musteri.ad if proje.musteri else '',
+                musteri_karti=proje.musteri,
+                parca_kodu=proje.parca_kodu,
+                revizyon_no=revizyon_no,
+                degisiklik_nedeni='MUSTERI_TALEBI',
+                ilgili_fabrika=proje.fabrika,
+                sorumlu_proje_sorumlusu=proje.sorumlu_lider,
+                aciklama=aciklama or 'Müşteri talebi doğrultusunda başlatılan döngüsel mühendislik değişikliği.',
+            )
+        elif iterasyon_tipi == 'PROTOTIP':
+            prt_count = proje.prototip_iterasyonlari.count() + 1
+            PrototipSureci.objects.create(
+                ana_proje=proje,
+                kod=f"PRT-{proje.proje_kodu}-{prt_count:02d}",
+                ad=f"{proje.proje_adi} - Prototip Denemesi",
+                musteri_adi=proje.musteri.ad if proje.musteri else '',
+                musteri_karti=proje.musteri,
+                parca_kodu=proje.parca_kodu,
+                revizyon_no=revizyon_no,
+                prototip_tipi='PROSES_DENEME',
+                ilgili_fabrika=proje.fabrika,
+                sorumlu_proje_sorumlusu=proje.sorumlu_lider,
+                aciklama=aciklama or 'Kalıp doğrulama ve numune basımı için başlatılan döngüsel prototip iterasyonu.',
+            )
+    return redirect(f"/?tab=is_akisi&proje_id={proje.id}")
 
 
 def faaliyet_olustur_view(request):

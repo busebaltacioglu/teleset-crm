@@ -1387,6 +1387,383 @@ class AnaSayfaVeFaaliyetlerTests(TestCase):
         self.assertFalse(FaaliyetKaydi.objects.filter(pk=pk).exists())
 
 
+class MusteriKartlariVe360Tests(TestCase):
+    """
+    Minimalist Müşteri Kartları & 360° Müşteri Profili (Tesis Geçişli) Testleri
+    """
+    def setUp(self):
+        self.client = Client()
+        from crm_takip.models import MusteriKarti, MusteriTesisi, MusteriEtkilesimZamanTuneli
+        
+        self.musteri = MusteriKarti.objects.create(
+            kod="FRM-01",
+            kisa_ad="BSH",
+            ad="BSH Ev Aletleri San. ve Tic. A.Ş.",
+            ulke="Almanya / Türkiye",
+            sehir="Çerkezköy / Münih",
+            tier="Tier 1 - KAM",
+            strateji="Protect",
+            yillik_ciro_eur=12180000.00,
+            cuzdan_payi_yuzde=58,
+            aktif_proje_sayisi=28,
+            kam_satis_lideri="Buse Nur BALTACIOĞLU",
+            kam_muhendislik_lideri="Ahmet AK (Kalıp & Projeci Md.)",
+            kam_kalite_lideri="Mehmet YILMAZ (Kalite Mühendisi)",
+            sozlesme_durumu="STG-TL-001 (Aktif)",
+            churn_riski="0.05 (Düşük Risk)"
+        )
+        
+        self.tesis_grup = MusteriTesisi.objects.create(
+            musteri=self.musteri,
+            sira=1,
+            tesis_adi="Tüm Tesisler - Grup Özeti",
+            lokasyon="Çerkezköy / Münih, Türkiye / Almanya",
+            kod="BSH-ALL",
+            clv_m="45.8 M€",
+            churn_skoru="0.05",
+            churn_durumu="Düşük Risk",
+            yillik_ciro_str="€ 12.18M",
+            cuzdan_payi_yuzde=58,
+            destek_sayisi=9,
+            npi_proje_sayisi=28,
+            teklif_sayisi=9,
+            sevkiyat_sayisi=9
+        )
+        
+        self.tesis_manisa = MusteriTesisi.objects.create(
+            musteri=self.musteri,
+            sira=2,
+            tesis_adi="Bosch Manisa Fabrikası",
+            lokasyon="Manisa OSB, Türkiye",
+            kod="BOSCH-MANISA",
+            clv_m="18.2 M€",
+            churn_skoru="0.04",
+            churn_durumu="Düşük Risk",
+            yillik_ciro_str="€ 4.60M",
+            cuzdan_payi_yuzde=62,
+            destek_sayisi=3,
+            npi_proje_sayisi=12,
+            teklif_sayisi=4,
+            sevkiyat_sayisi=4
+        )
+        
+        self.etkilesim = MusteriEtkilesimZamanTuneli.objects.create(
+            musteri=self.musteri,
+            kod="SAT-EK-005",
+            baslik="SAT-EK-005 Resmi Fiyat Teklifi Hazırlandı",
+            aciklama="Fırın Yan Gövde Sacı için 120.000 adetlik yıllık teklif eBA onayına iletildi.",
+            sorumlu="Buse Nur BALTACIOĞLU",
+            donem_ay_yil="EYLÜL 2026 SON ETKİLEŞİMLER"
+        )
+
+    def test_kartlar_view_get(self):
+        """Müşteri portföy kartları sayfasının başarıyla açıldığını test eder"""
+        response = self.client.get(reverse('kartlar'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'BSH')
+        self.assertContains(response, 'Müşteri Portföyü ve Cari Hesaplar')
+        self.assertContains(response, '360° Profil')
+
+    def test_kartlar_view_tier_filtre(self):
+        """Tier filtrelemesinin çalıştığını test eder"""
+        response = self.client.get(reverse('kartlar') + '?tab=musteriler&tier=Tier 1')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'BSH')
+
+    def test_kartlar_view_arama(self):
+        """Arama kutusunun çalıştığını test eder"""
+        response = self.client.get(reverse('kartlar') + '?tab=musteriler&q_m=BSH')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'BSH')
+        
+        response_empty = self.client.get(reverse('kartlar') + '?tab=musteriler&q_m=BulunmayanFirmaXYZ')
+        self.assertEqual(response_empty.status_code, 200)
+        self.assertContains(response_empty, 'Arama kriterlerinize uygun müşteri kaydı bulunamadı.')
+
+    def test_musteri_360_view_get(self):
+        """360° Müşteri profili sayfasının doğru verilerle render edildiğini test eder"""
+        response = self.client.get(reverse('musteri_360_detay', args=[self.musteri.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'BSH')
+        self.assertContains(response, '360° Müşteri Profili')
+        self.assertContains(response, 'Tüm Tesisler - Grup Özeti')
+        self.assertContains(response, 'Bosch Manisa Fabrikası')
+        self.assertContains(response, 'Aktivite ve Süreç Zaman Tüneli')
+        self.assertContains(response, 'YAŞAM BOYU DEĞER')
+        self.assertContains(response, 'TERK SKORU')
+        self.assertContains(response, 'CÜZDAN PAYI')
+        self.assertContains(response, 'YILLIK CİRO')
+        self.assertContains(response, 'SAT-EK-005 Resmi Fiyat Teklifi Hazırlandı')
+
+    def test_musteri_360_view_404(self):
+        """Olmayan bir müşteri ID'si için 404 dönüldüğünü test eder"""
+        response = self.client.get(reverse('musteri_360_detay', args=[999999]))
+        self.assertEqual(response.status_code, 404)
+
+
+class UctanUcaIsAkisiTests(TestCase):
+    def setUp(self):
+        from crm_takip.models import MusteriKarti, AnaProje
+        self.client = Client()
+        self.musteri = MusteriKarti.objects.create(
+            kod="M-001",
+            kisa_ad="BSH",
+            ad="BSH Ev Aletleri San. ve Tic. A.Ş."
+        )
+        self.proje = AnaProje.objects.create(
+            proje_kodu="PRJ-101",
+            proje_adi="Fırın Yan Gövde Sacı (SIMPAC 400T)",
+            parca_kodu="SAC-FRN-001",
+            fabrika="Preshane & Kalıphane",
+            musteri=self.musteri,
+            sorumlu_lider="Buse Nur Baltacıoğlu",
+            aktif_surec_no=6,
+            aktif_surec_adi="Yeni Ürün Devreye Alma Süreci",
+            aktif_adim_no=18,
+            aktif_adim_basligi="T0 Kalıp Denemesi ve İlk Numune Basımı",
+            aktif_rol="Projeci / Kalıp",
+            genel_ilerleme_yuzdesi=65
+        )
+
+    def test_anaproje_surecler_listesi(self):
+        """AnaProje 8 sürecin her birini doğru durum ve ilerleme ile döndürmelidir"""
+        surecler = self.proje.get_surecler_listesi()
+        self.assertEqual(len(surecler), 8)
+        
+        # 1-5 süreçler tamamlanmış olmalı
+        for i in range(5):
+            self.assertEqual(surecler[i]['durum_kod'], 'TAMAMLANDI')
+            self.assertEqual(surecler[i]['ilerleme'], 100)
+            
+        # 6. süreç aktif olmalı (6/8 = %75)
+        self.assertEqual(surecler[5]['durum_kod'], 'DEVAM_EDIYOR')
+        self.assertEqual(surecler[5]['ilerleme'], 75)
+        self.assertTrue(surecler[5]['is_active'])
+        
+        # 7-8 süreçler beklemede olmalı
+        self.assertEqual(surecler[6]['durum_kod'], 'BEKLEMEDE')
+        self.assertEqual(surecler[7]['durum_kod'], 'BEKLEMEDE')
+
+    def test_ana_sayfa_is_akisi_tab(self):
+        """Proje & İş Akış Takipçisi sekmesinin başarıyla render edildiğini test eder"""
+        response = self.client.get(reverse('ana_sayfa') + '?tab=is_akisi')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Takip')
+        self.assertContains(response, 'Fırın Yan Gövde Sacı')
+        self.assertContains(response, 'Preshane')
+        self.assertContains(response, 'Yeni Ürün Devreye Alma Süreci')
+        self.assertContains(response, 'Filtrele')
+
+    def test_ana_sayfa_rol_filtresi(self):
+        """Rol bazlı filtrelemenin çalıştığını test eder"""
+        response = self.client.get(reverse('ana_sayfa') + '?tab=is_akisi&rol=Projeci / Kalıp')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Projeci / Kalıp')
+
+    def test_ana_proje_ekle_view(self):
+        """Yeni Ana Proje oluşturma endpoint'inin çalıştığını test eder"""
+        response = self.client.post(reverse('ana_proje_ekle'), {
+            'proje_kodu': 'PRJ-200',
+            'proje_adi': 'Yeni Test Projesi',
+            'parca_kodu': 'PARCA-TEST-01',
+            'fabrika': 'Teleset 1 (Manisa)',
+            'musteri_id': self.musteri.id,
+            'sorumlu_lider': 'Buse Nur Baltacıoğlu',
+            'aktif_surec_adi': 'Yeni Ürün Devreye Alma Süreci',
+            'aktif_rol': 'Projeci / Kalıp',
+        })
+        self.assertEqual(response.status_code, 302)
+        
+        from crm_takip.models import AnaProje
+        yeni = AnaProje.objects.filter(proje_kodu='PRJ-200').first()
+        self.assertIsNotNone(yeni)
+        self.assertEqual(yeni.proje_adi, 'Yeni Test Projesi')
+
+    def test_anaproje_dijital_iplik_senkronizasyonu(self):
+        """Tekliften APQP ve Sözleşmeye dijital iplik veri mirası aktarımını test eder"""
+        from crm_takip.models import UrunTeklifSureci, SozlesmeSureci, YeniUrunDevreyeAlmaSureci
+        teklif = UrunTeklifSureci.objects.create(
+            kod="TEK-2026-TEST",
+            ad="Test Teklifi",
+            musteri_adi=self.musteri.ad,
+            musteri_karti=self.musteri,
+            teklif_tutari=175000.00
+        )
+        sozlesme = SozlesmeSureci.objects.create(
+            kod="SZL-2026-TEST",
+            ad="Test Sözleşmesi",
+            musteri_adi=self.musteri.ad
+        )
+        yeni_urun = YeniUrunDevreyeAlmaSureci.objects.create(
+            kod="APQP-2026-TEST",
+            ad="Test APQP Projesi",
+            musteri_adi=self.musteri.ad
+        )
+        self.proje.urun_teklif_sureci = teklif
+        self.proje.sozlesme_sureci = sozlesme
+        self.proje.yeni_urun_sureci = yeni_urun
+        self.proje.save()
+
+        guncellenenler = self.proje.teklif_verilerini_senkronize_et()
+        self.assertIn('hedef_butce', guncellenenler)
+        self.assertEqual(self.proje.hedef_butce, 175000.00)
+        self.assertTrue(self.proje.dijital_iplik_senkronize_mi)
+
+        # Sözleşme ve APQP müşteri kartı senkronize olmalı
+        sozlesme.refresh_from_db()
+        yeni_urun.refresh_from_db()
+        self.assertEqual(sozlesme.musteri_karti, self.musteri)
+        self.assertEqual(yeni_urun.musteri_karti, self.musteri)
+
+    def test_anaproje_dongusel_iterasyonlar(self):
+        """Ana Projeye bağlı birden çok Prototip ve ECO iterasyonunu test eder"""
+        from crm_takip.models import PrototipSureci, MuhendislikDegisikligiSureci
+        prt1 = PrototipSureci.objects.create(
+            ana_proje=self.proje,
+            kod="PRT-TEST-01",
+            ad="T0 Kalıp Denemesi",
+            musteri_adi=self.musteri.ad,
+            revizyon_no="Rev.01 (T0)"
+        )
+        prt2 = PrototipSureci.objects.create(
+            ana_proje=self.proje,
+            kod="PRT-TEST-02",
+            ad="T1 Doğrulama Denemesi",
+            musteri_adi=self.musteri.ad,
+            revizyon_no="Rev.02 (T1)"
+        )
+        eco1 = MuhendislikDegisikligiSureci.objects.create(
+            ana_proje=self.proje,
+            kod="ECO-TEST-01",
+            ad="Sac Kalınlık Revizyonu",
+            musteri_adi=self.musteri.ad,
+            revizyon_no="Rev.A"
+        )
+
+        iterasyonlar = self.proje.get_prototip_iterasyonlari()
+        self.assertEqual(len(iterasyonlar), 2)
+        
+        eco_revizyonlar = self.proje.get_eco_revizyonlari()
+        self.assertEqual(len(eco_revizyonlar), 1)
+        self.assertEqual(eco_revizyonlar[0].revizyon_no, "Rev.A")
+
+    def test_anaproje_bekleyen_aksiyonlar(self):
+        """Aktif adımların ve termin risklerinin bekleyen aksiyonlar olarak döndürüldüğünü test eder"""
+        aksiyonlar = self.proje.get_bekleyen_aksiyonlar()
+        self.assertTrue(len(aksiyonlar) >= 1)
+        self.assertEqual(aksiyonlar[0]['surec_kodu'], 'S6')
+        self.assertEqual(aksiyonlar[0]['oncelik'], 'Kritik Yol')
+        self.assertIn('Termin Yaklaşıyor', aksiyonlar[0]['termin_durumu'])
+
+        # Rol filtresi testi
+        kalip_aksiyonlari = self.proje.get_bekleyen_aksiyonlar(rol='Projeci / Kalıp')
+        self.assertEqual(len(kalip_aksiyonlari), 1)
+
+        pazarlama_aksiyonlari = self.proje.get_bekleyen_aksiyonlar(rol='Satış & Pazarlama')
+        self.assertEqual(len(pazarlama_aksiyonlari), 0)
+
+    def test_ana_proje_senkronize_view(self):
+        """Senkronizasyon view endpoint'inin çalıştığını ve yönlendirdiğini test eder"""
+        response = self.client.get(reverse('ana_proje_senkronize', args=[self.proje.id]))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('sync=ok', response.url)
+
+    def test_ana_proje_iterasyon_ekle_view(self):
+        """Döngüsel iterasyon ekleme view endpoint'ini test eder"""
+        response = self.client.post(reverse('ana_proje_iterasyon_ekle', args=[self.proje.id]), {
+            'iterasyon_tipi': 'ECO',
+            'revizyon_no': 'Rev.C',
+            'aciklama': 'Test mühendislik değişikliği'
+        })
+        self.assertEqual(response.status_code, 302)
+        from crm_takip.models import MuhendislikDegisikligiSureci
+        eco = MuhendislikDegisikligiSureci.objects.filter(ana_proje=self.proje, revizyon_no='Rev.C').first()
+        self.assertIsNotNone(eco)
+        self.assertEqual(eco.revizyon_no, 'Rev.C')
+
+
+class IntranetVeIncKeyEntegrasyonTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        from crm_takip.models import MusteriKarti
+        self.musteri = MusteriKarti.objects.create(
+            kod="M-099",
+            kisa_ad="Bosch",
+            ad="Bosch Thermotechnology"
+        )
+
+    def test_inckey_uret_ve_preview(self):
+        """IncKey algoritmasının sıralı kod üretimini ve önizlemesini test eder"""
+        from crm_takip.services.inckey_service import inckey_uret, siradaki_inckey_goruntule
+        import datetime
+        yil = datetime.date.today().year
+
+        preview1 = siradaki_inckey_goruntule('PRJ')
+        self.assertEqual(preview1, f"PRJ-{yil}-101")
+
+        kod1 = inckey_uret('PRJ')
+        self.assertEqual(kod1, f"PRJ-{yil}-101")
+
+        preview2 = siradaki_inckey_goruntule('PRJ')
+        self.assertEqual(preview2, f"PRJ-{yil}-102")
+
+        kod2 = inckey_uret('PRJ')
+        self.assertEqual(kod2, f"PRJ-{yil}-102")
+
+        kod_rev = inckey_uret('PRJ', revizyon=1)
+        self.assertEqual(kod_rev, f"PRJ-{yil}-103-1")
+
+    def test_intranet_service_fonksiyonlari(self):
+        """Intranet servisinin ana departman ve personel listelerini doğru filtrelerle döndürdüğünü test eder"""
+        from crm_takip.services.intranet_service import get_intranet_sirketler, get_proje_liderleri
+        sirketler = get_intranet_sirketler()
+        self.assertTrue(len(sirketler) > 0)
+        self.assertIsInstance(sirketler, list)
+
+        # Hariç tutulması gereken ana departman ve şirket kontrolleri
+        for yasak in ['EV HİZMETLERİ', 'KARPEK AMBALAJ', 'KARPEK HUZUR', 'ZEKİ', 'KARPEK', 'YÖNETİM KURULU', 'YONETIM KURULU']:
+            self.assertNotIn(yasak, sirketler)
+
+        liderler = get_proje_liderleri()
+        self.assertTrue(len(liderler) > 0)
+        self.assertIsInstance(liderler, list)
+        self.assertIn('ad_soyad', liderler[0])
+        for l in liderler:
+            self.assertNotIn('KARPEK', l.get('sirket', '').upper())
+            self.assertNotIn('ZEK', l.get('sirket', '').upper())
+            self.assertNotIn('EV H', l.get('sirket', '').upper())
+
+    def test_ana_proje_ekle_inckey_ve_intranet_ile(self):
+        """4 bloklu modal üzerinden yeni proje açıldığında IncKey ve Intranet alanlarının doğru kaydedildiğini test eder"""
+        from crm_takip.models import AnaProje
+        response = self.client.post(reverse('ana_proje_ekle'), {
+            'proje_adi': 'Yeni Nesil Bulaşık Makinesi Yan Panel',
+            'musteri_id': self.musteri.id,
+            'fabrika': 'PRESHANE',
+            'parca_kodu': 'BOSCH-DW-2026',
+            'hedef_butce': '320000',
+            'yillik_hacim_adet': '150000',
+            'sorumlu_lider': 'Buse Nur Baltacıoğlu',
+            'aktif_rol': 'Proje Yöneticisi',
+            'aktif_surec_adi': 'Yeni Ürün Devreye Alma Süreci'
+        })
+        self.assertEqual(response.status_code, 302)
+
+        proje = AnaProje.objects.filter(parca_kodu='BOSCH-DW-2026').first()
+        self.assertIsNotNone(proje)
+        self.assertTrue(proje.proje_kodu.startswith('PRJ-'))
+        self.assertEqual(proje.musteri, self.musteri)
+        self.assertEqual(proje.fabrika, 'PRESHANE')
+        self.assertEqual(proje.hedef_butce, 320000.00)
+        self.assertEqual(proje.yillik_hacim_adet, 150000)
+        self.assertEqual(proje.sorumlu_lider, 'Buse Nur Baltacıoğlu')
+
+
+
+
+
+
+
 
 
 

@@ -1,0 +1,666 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block sayfa_basligi %}{{ musteri.kisa_ad }} • 360° Müşteri Profili{% endblock %}
+
+{% block extra_css %}
+<style>
+    .facility-tab-btn {
+        transition: all 0.2s ease;
+        font-size: 0.82rem;
+        font-weight: 600;
+        border-radius: 20px;
+        padding: 5px 14px;
+        white-space: nowrap;
+    }
+    .facility-tab-btn.active {
+        background-color: #2563eb !important;
+        color: #ffffff !important;
+        border-color: #2563eb !important;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+    }
+    .facility-tab-btn:not(.active) {
+        background-color: #ffffff;
+        color: #475569;
+        border: 1px solid #e2e8f0;
+    }
+    .facility-tab-btn:not(.active):hover {
+        background-color: #f1f5f9;
+        color: #1e293b;
+        border-color: #cbd5e1;
+    }
+
+    .timeline-card {
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        background: #ffffff;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .timeline-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+    }
+
+    .metric-box {
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        background: #ffffff;
+        padding: 14px;
+        transition: all 0.2s ease;
+    }
+    .metric-box:hover {
+        box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+    }
+
+    .chart-box {
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        background: #ffffff;
+        padding: 16px;
+    }
+
+    .bar-col {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+    }
+    .bar-fill {
+        width: 100%;
+        max-width: 24px;
+        border-radius: 4px 4px 0 0;
+        transition: height 0.4s ease, background-color 0.2s ease;
+    }
+    .bar-fill:hover {
+        opacity: 0.85;
+    }
+    .dual-bars {
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        gap: 3px;
+        width: 100%;
+        height: 75px;
+    }
+    .dual-bar-item {
+        width: 10px;
+        border-radius: 3px 3px 0 0;
+        transition: height 0.4s ease;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ========================================================================= -->
+<!-- ÜST NAVİGASYON, BAŞLIK VE TESİS GEÇİŞ ÇUBUĞU                              -->
+<!-- ========================================================================= -->
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+    
+    <!-- Sol: Geri Dönüş ve Müşteri Başlığı -->
+    <div class="d-flex flex-wrap align-items-center gap-2">
+        <a href="{% url 'kartlar' %}?tab=musteriler" class="btn btn-outline-secondary btn-sm rounded-pill px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1 bg-white shadow-sm" style="font-size: 0.82rem;">
+            <i class="bi bi-arrow-left"></i> Müşteri Listesine Dön
+        </a>
+        <span class="text-muted">|</span>
+        <h5 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+            <span>{{ musteri.kisa_ad }}</span>
+            <span class="text-muted fw-normal">•</span>
+            <span>360° Müşteri Profili</span>
+        </h5>
+    </div>
+
+    <!-- Sağ: AI Keşif & Teklif Hazırla Butonları -->
+    <div class="d-flex align-items-center gap-2">
+        <button type="button" class="btn btn-outline-primary btn-sm rounded-3 px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-1.5 bg-white shadow-sm" data-bs-toggle="modal" data-bs-target="#aiDiscoveryModal">
+            <i class="bi bi-stars text-primary"></i> AI ile Müşteri Keşfi
+        </button>
+        <a href="{% url 'urun_teklif_olustur' %}?musteri={{ musteri.kisa_ad }}" class="btn btn-primary btn-sm rounded-3 px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-1.5 shadow-sm" style="background-color: #2563eb; border-color: #2563eb;">
+            <i class="bi bi-plus-lg"></i> Yeni Teklif Hazırla
+        </a>
+    </div>
+
+</div>
+
+<!-- TESİS GEÇİŞ SEKMELERİ -->
+<div class="card border rounded-4 shadow-sm bg-white p-3 px-3.5 mb-4">
+    <div class="d-flex align-items-center gap-2 overflow-x-auto py-1 px-1">
+        <span class="text-muted small fw-bold text-uppercase me-2 d-none d-md-inline-block ps-1" style="font-size: 0.72rem; letter-spacing: 0.5px;">
+            <i class="bi bi-geo-alt-fill text-danger me-1"></i>Tesis ve Fabrika:
+        </span>
+        {% for t in tesisler %}
+        <button type="button" class="btn facility-tab-btn {% if forloop.first %}active{% endif %}" onclick="switchFacility({{ t.id }}, this)">
+            {% if forloop.first %}
+            <i class="bi bi-grid-fill me-1"></i>
+            {% else %}
+            <i class="bi bi-building me-1"></i>
+            {% endif %}
+            {{ t.tesis_adi }}
+        </button>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- 3 SÜTUNLU EXECUTIVE 360° MÜŞTERİ PANELİ                                   -->
+<!-- ========================================================================= -->
+<div class="row g-3">
+    
+    <!-- --------------------------------------------------------------------- -->
+    <!-- 1. SOL SÜTUN: Müşteri Kimliği, Sözleşme, KAM Takımı, Müşteri Yetkilisi -->
+    <!-- --------------------------------------------------------------------- -->
+    <div class="col-lg-3 col-md-5">
+        <div class="card border rounded-4 shadow-sm bg-white p-3 h-100">
+            
+            <!-- Başlık ve Temel Bilgiler (Mavi kutucuksuz minimalist) -->
+            <div class="pb-3 border-bottom">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="badge bg-light text-secondary border font-monospace">{{ musteri.kod }}</span>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle">{{ musteri.tier }}</span>
+                </div>
+                <h5 class="fw-bold text-dark mb-1" style="font-size: 1.05rem;">{{ musteri.ad }}</h5>
+                <div class="text-muted small mb-1" id="disp-lokasyon">
+                    <i class="bi bi-geo-alt-fill text-danger me-0.5"></i>{{ ilk_tesis.lokasyon }}
+                </div>
+                <div class="text-muted" style="font-size: 0.74rem;" id="disp-son-etkilesim">
+                    Son Etkileşim: {{ ilk_tesis.son_etkilesim }}
+                </div>
+
+                <!-- Hızlı İletişim Butonları -->
+                <div class="d-flex justify-content-start gap-2 mt-2.5">
+                    <a href="mailto:{{ ilk_tesis.yetkili_email }}" class="btn btn-sm btn-light border rounded-circle p-2 text-primary" title="E-Posta Gönder" id="disp-email-link">
+                        <i class="bi bi-envelope"></i>
+                    </a>
+                    <a href="tel:+902360000000" class="btn btn-sm btn-light border rounded-circle p-2 text-success" title="Telefon ile Ara">
+                        <i class="bi bi-telephone"></i>
+                    </a>
+                    <a href="https://google.com" target="_blank" class="btn btn-sm btn-light border rounded-circle p-2 text-info" title="Web Sitesi">
+                        <i class="bi bi-globe"></i>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Temel Bilgiler Tablosu -->
+            <div class="py-3 border-bottom">
+                <div class="d-flex justify-content-between align-items-center py-1 small">
+                    <span class="text-muted">Müşteri ID:</span>
+                    <span class="fw-bold text-dark font-monospace">{{ musteri.kod }}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center py-1 small">
+                    <span class="text-muted">Segment:</span>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-0.5" style="font-size: 0.70rem;">
+                        {{ musteri.tier }}
+                    </span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center py-1 small">
+                    <span class="text-muted">Strateji:</span>
+                    <span class="fw-semibold text-primary d-inline-flex align-items-center gap-1">
+                        <i class="bi bi-shield-shaded"></i> {{ musteri.strateji }}
+                    </span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center py-1 small">
+                    <span class="text-muted">Sözleşme:</span>
+                    <span class="fw-semibold text-success">{{ musteri.sozlesme_durumu }}</span>
+                </div>
+            </div>
+
+            <!-- KAM HESAP TAKIMI -->
+            <div class="py-3 border-bottom">
+                <div class="d-flex align-items-center gap-1.5 mb-2 text-primary fw-bold small text-uppercase" style="letter-spacing: 0.4px;">
+                    <i class="bi bi-people-fill"></i> KAM HESAP TAKIMI
+                </div>
+                <ul class="list-unstyled mb-0 small text-dark d-flex flex-column gap-1.5" style="font-size: 0.80rem;">
+                    <li class="d-flex align-items-start gap-1">
+                        <span class="text-muted">• Satış Lead:</span>
+                        <span class="fw-semibold ms-auto" id="disp-kam-satis">{{ ilk_tesis.kam_satis_lideri }}</span>
+                    </li>
+                    <li class="d-flex align-items-start gap-1">
+                        <span class="text-muted">• Kalıp ve Projeci:</span>
+                        <span class="fw-semibold ms-auto" id="disp-kam-muh">{{ ilk_tesis.kam_muhendislik_lideri }}</span>
+                    </li>
+                    <li class="d-flex align-items-start gap-1">
+                        <span class="text-muted">• Kalite Lead:</span>
+                        <span class="fw-semibold ms-auto" id="disp-kam-kalite">{{ ilk_tesis.kam_kalite_lideri }}</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- MÜŞTERİ YETKİLİLERİ -->
+            <div class="pt-3">
+                <div class="d-flex align-items-center gap-1.5 mb-2 text-dark fw-bold small text-uppercase" style="letter-spacing: 0.4px;">
+                    <i class="bi bi-person-badge-fill text-secondary"></i> MÜŞTERİ YETKİLİLERİ
+                </div>
+                <div class="bg-light p-2.5 rounded-3 border">
+                    <div class="fw-bold text-dark" style="font-size: 0.85rem;" id="disp-yetkili-adi">{{ ilk_tesis.yetkili_adi }}</div>
+                    <div class="text-muted small" style="font-size: 0.75rem;" id="disp-yetkili-unvan">{{ ilk_tesis.yetkili_unvan }}</div>
+                    <a href="mailto:{{ ilk_tesis.yetkili_email }}" class="text-primary small text-decoration-none d-block mt-1 text-truncate" style="font-size: 0.75rem;" id="disp-yetkili-email">
+                        {{ ilk_tesis.yetkili_email }}
+                    </a>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- --------------------------------------------------------------------- -->
+    <!-- 2. ORTA SÜTUN: Aktivite ve Süreç Zaman Tüneli & KPI Çipleri           -->
+    <!-- --------------------------------------------------------------------- -->
+    <div class="col-lg-5 col-md-7">
+        <div class="card border rounded-4 shadow-sm bg-white p-3 h-100 d-flex flex-column justify-content-between">
+            
+            <div>
+                <!-- Başlık ve Filtre -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold text-dark mb-0 fs-6">Aktivite ve Süreç Zaman Tüneli</h6>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-light border rounded-pill px-2.5 py-1 text-muted small d-inline-flex align-items-center gap-1" data-bs-toggle="dropdown">
+                            <i class="bi bi-funnel"></i> Filtrele
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 small">
+                            <li><a class="dropdown-item" href="javascript:void(0)" onclick="filterTimeline('ALL')">Tüm Aktiviteler</a></li>
+                            <li><a class="dropdown-item" href="javascript:void(0)" onclick="filterTimeline('TEKLIF')">Teklifler</a></li>
+                            <li><a class="dropdown-item" href="javascript:void(0)" onclick="filterTimeline('DFM')">Kalıp ve DFM Onayları</a></li>
+                            <li><a class="dropdown-item" href="javascript:void(0)" onclick="filterTimeline('KALITE')">Kalite ve ISIR Raporları</a></li>
+                            <li><a class="dropdown-item" href="javascript:void(0)" onclick="filterTimeline('SEVKIYAT')">Sevkiyat ve Lojistik</a></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- 4 KPI Çipi -->
+                <div class="d-flex flex-wrap gap-2 mb-3 pb-3 border-bottom">
+                    <div class="rounded-pill px-3 py-1 text-white d-inline-flex align-items-center gap-1.5 small fw-semibold shadow-sm" style="background-color: #7c3aed; font-size: 0.78rem;">
+                        <i class="bi bi-headset"></i> <span id="disp-stat-destek">{{ ilk_tesis.destek_sayisi }}</span> Destek ve Talep
+                    </div>
+                    <div class="rounded-pill px-3 py-1 text-white d-inline-flex align-items-center gap-1.5 small fw-semibold shadow-sm" style="background-color: #e11d48; font-size: 0.78rem;">
+                        <i class="bi bi-rocket-takeoff"></i> <span id="disp-stat-npi">{{ ilk_tesis.npi_proje_sayisi }}</span> NPI Proje
+                    </div>
+                    <div class="rounded-pill px-3 py-1 text-white d-inline-flex align-items-center gap-1.5 small fw-semibold shadow-sm" style="background-color: #ea580c; font-size: 0.78rem;">
+                        <i class="bi bi-file-earmark-text"></i> <span id="disp-stat-teklif">{{ ilk_tesis.teklif_sayisi }}</span> Teklif
+                    </div>
+                    <div class="rounded-pill px-3 py-1 text-white d-inline-flex align-items-center gap-1.5 small fw-semibold shadow-sm" style="background-color: #2563eb; font-size: 0.78rem;">
+                        <i class="bi bi-truck"></i> <span id="disp-stat-sevkiyat">{{ ilk_tesis.sevkiyat_sayisi }}</span> Sevkiyat
+                    </div>
+                </div>
+
+                <!-- Zaman Tüneli Kronolojik Akışı -->
+                <div class="timeline-feed" id="timeline-feed-container">
+                    {% for donem, etk_listesi in donem_gruplari.items %}
+                    <div class="mb-3">
+                        <div class="text-muted fw-bold text-uppercase mb-2 small" style="font-size: 0.72rem; letter-spacing: 0.5px;">
+                            {{ donem }}
+                        </div>
+                        
+                        <div class="d-flex flex-column gap-2.5">
+                            {% for etk in etk_listesi %}
+                            <div class="timeline-card p-3 d-flex align-items-start gap-3">
+                                <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 text-white shadow-sm {{ etk.ikon_bg }}" style="width: 36px; height: 36px; font-size: 0.95rem;">
+                                    <i class="bi {{ etk.ikon }}"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="fw-bold text-dark mb-1" style="font-size: 0.86rem;">{{ etk.baslik }}</h6>
+                                    <p class="text-muted small mb-1.5 line-height-sm" style="font-size: 0.78rem;">{{ etk.aciklama }}</p>
+                                    <div class="text-muted small" style="font-size: 0.72rem;">
+                                        <i class="bi bi-calendar3 me-1"></i>{{ etk.tarih|date:"d.m.Y" }} • <span class="text-primary fw-semibold">{{ etk.sorumlu }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+            </div>
+
+            <!-- Alt Buton: Yeni Etkileşim Kaydı -->
+            <div class="pt-3 border-top text-end mt-3">
+                <a href="{% url 'faaliyet_olustur' %}?musteri={{ musteri.kisa_ad }}" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-semibold">
+                    <i class="bi bi-plus-circle me-1"></i> Yeni Faaliyet ve Etkileşim Ekle
+                </a>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- --------------------------------------------------------------------- -->
+    <!-- 3. SAĞ SÜTUN: Finansal Metrikler, Aylık Ciro ve Birleşik Grafik       -->
+    <!-- --------------------------------------------------------------------- -->
+    <div class="col-lg-4 col-12">
+        <div class="d-flex flex-column gap-3">
+            
+            <!-- 2x2 Finansal Metrik Grid -->
+            <div class="row g-2.5">
+                
+                <!-- 1. CLV -->
+                <div class="col-sm-6">
+                    <div class="metric-box h-100">
+                        <div class="text-muted text-uppercase fw-semibold mb-1" style="font-size: 0.65rem; letter-spacing: 0.3px;">YAŞAM BOYU DEĞER</div>
+                        <h4 class="fw-bold text-success mb-1" id="disp-clv">{{ ilk_tesis.clv_m }}</h4>
+                        <small class="text-success fw-semibold d-inline-flex align-items-center gap-1" style="font-size: 0.73rem;">
+                            <i class="bi bi-graph-up-arrow"></i> +%12 Büyüme
+                        </small>
+                    </div>
+                </div>
+
+                <!-- 2. Churn -->
+                <div class="col-sm-6">
+                    <div class="metric-box h-100">
+                        <div class="text-muted text-uppercase fw-semibold mb-1" style="font-size: 0.65rem; letter-spacing: 0.3px;">TERK SKORU</div>
+                        <h4 class="fw-bold text-primary mb-1" id="disp-churn">{{ ilk_tesis.churn_skoru }}</h4>
+                        <small class="text-success fw-semibold d-inline-flex align-items-center gap-1" style="font-size: 0.73rem;" id="disp-churn-durum">
+                            <i class="bi bi-check-circle-fill"></i> {{ ilk_tesis.churn_durumu }}
+                        </small>
+                    </div>
+                </div>
+
+                <!-- 3. Cüzdan Payı -->
+                <div class="col-sm-6">
+                    <div class="metric-box h-100">
+                        <div class="text-muted text-uppercase fw-semibold mb-1" style="font-size: 0.65rem; letter-spacing: 0.3px;">CÜZDAN PAYI</div>
+                        <h4 class="fw-bold text-dark mb-1" id="disp-sow">%{{ ilk_tesis.cuzdan_payi_yuzde }}</h4>
+                        <small class="text-muted d-block text-truncate" style="font-size: 0.73rem;" id="disp-sow-alt">{{ ilk_tesis.cuzdan_alt_bilgi }}</small>
+                    </div>
+                </div>
+
+                <!-- 4. Yıllık Ciro -->
+                <div class="col-sm-6">
+                    <div class="metric-box h-100">
+                        <div class="text-muted text-uppercase fw-semibold mb-1" style="font-size: 0.65rem; letter-spacing: 0.3px;">YILLIK CİRO</div>
+                        <h4 class="fw-bold text-primary mb-1" id="disp-ciro">{{ ilk_tesis.yillik_ciro_str }}</h4>
+                        <small class="text-muted d-block text-truncate" style="font-size: 0.73rem;" id="disp-ciro-alt">{{ ilk_tesis.ciro_alt_bilgi }}</small>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- GRAFİK 1: Aylara Göre Ciro Gelişimi (Aylık Ciromuz) -->
+            <div class="chart-box shadow-sm">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <span class="fw-bold text-dark small d-inline-flex align-items-center gap-1.5" style="font-size: 0.80rem;">
+                        <i class="bi bi-currency-euro text-primary"></i> Aylık Ciro Dağılımı
+                    </span>
+                    <span class="badge bg-primary-subtle text-primary border" style="font-size: 0.68rem;">Son 7 Ay</span>
+                </div>
+                
+                <!-- Ciro Çubuk Grafiği Gövdesi -->
+                <div class="d-flex align-items-end justify-content-between gap-2 pt-2 pb-1" style="height: 100px;" id="ciro-chart-container">
+                    <div class="bar-col">
+                        <div class="bar-fill bg-primary" id="ciro-bar-1" style="height: 48px;" title="Eylül: € 850K"></div>
+                        <small class="text-muted" style="font-size: 0.68rem;">Eyl</small>
+                    </div>
+                    <div class="bar-col">
+                        <div class="bar-fill bg-primary" id="ciro-bar-2" style="height: 62px;" title="Ekim: € 1.10M"></div>
+                        <small class="text-muted" style="font-size: 0.68rem;">Eki</small>
+                    </div>
+                    <div class="bar-col">
+                        <div class="bar-fill bg-primary" id="ciro-bar-3" style="height: 40px;" title="Kasım: € 720K"></div>
+                        <small class="text-muted" style="font-size: 0.68rem;">Kas</small>
+                    </div>
+                    <div class="bar-col">
+                        <div class="bar-fill bg-primary" id="ciro-bar-4" style="height: 70px;" title="Aralık: € 1.25M"></div>
+                        <small class="text-muted" style="font-size: 0.68rem;">Ara</small>
+                    </div>
+                    <div class="bar-col">
+                        <div class="bar-fill bg-primary" id="ciro-bar-5" style="height: 85px;" title="Ocak: € 1.50M"></div>
+                        <small class="text-muted" style="font-size: 0.68rem;">Oca</small>
+                    </div>
+                    <div class="bar-col">
+                        <div class="bar-fill bg-primary" id="ciro-bar-6" style="height: 90px;" title="Şubat: € 1.62M"></div>
+                        <small class="text-muted" style="font-size: 0.68rem;">Şub</small>
+                    </div>
+                    <div class="bar-col">
+                        <div class="bar-fill bg-primary" id="ciro-bar-7" style="height: 75px;" title="Mart: € 1.35M"></div>
+                        <small class="text-muted" style="font-size: 0.68rem;">Mar</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GRAFİK 2: Aylara Göre Toplantı, DFM ve Teklif Trafiği (Birleştirilmiş Grafik) -->
+            <div class="chart-box shadow-sm">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="fw-bold text-dark small d-inline-flex align-items-center gap-1.5" style="font-size: 0.80rem;">
+                        <i class="bi bi-bar-chart-steps text-success"></i> Toplantı, DFM ve Teklif Trafiği
+                    </span>
+                    <div class="d-flex gap-1">
+                        <span class="badge bg-primary-subtle text-primary border" style="font-size: 0.65rem;">Toplantı & DFM</span>
+                        <span class="badge bg-success-subtle text-success border" style="font-size: 0.65rem;">Teklif & RFQ</span>
+                    </div>
+                </div>
+                
+                <!-- Birleşik Çift Çubuk Grafik Gövdesi -->
+                <div class="d-flex align-items-end justify-content-between gap-1 pt-2 pb-1" style="height: 100px;" id="activity-chart-container">
+                    
+                    <!-- Eyl -->
+                    <div class="bar-col">
+                        <div class="dual-bars">
+                            <div class="dual-bar-item bg-primary" id="act-bar1-1" style="height: 35px;" title="Eylül Toplantı: 4"></div>
+                            <div class="dual-bar-item bg-success" id="act-bar2-1" style="height: 45px;" title="Eylül Teklif: 5"></div>
+                        </div>
+                        <small class="text-muted" style="font-size: 0.68rem;">Eyl</small>
+                    </div>
+
+                    <!-- Eki -->
+                    <div class="bar-col">
+                        <div class="dual-bars">
+                            <div class="dual-bar-item bg-primary" id="act-bar1-2" style="height: 55px;" title="Ekim Toplantı: 6"></div>
+                            <div class="dual-bar-item bg-success" id="act-bar2-2" style="height: 65px;" title="Ekim Teklif: 7"></div>
+                        </div>
+                        <small class="text-muted" style="font-size: 0.68rem;">Eki</small>
+                    </div>
+
+                    <!-- Kas -->
+                    <div class="bar-col">
+                        <div class="dual-bars">
+                            <div class="dual-bar-item bg-primary" id="act-bar1-3" style="height: 25px;" title="Kasım Toplantı: 3"></div>
+                            <div class="dual-bar-item bg-success" id="act-bar2-3" style="height: 30px;" title="Kasım Teklif: 3"></div>
+                        </div>
+                        <small class="text-muted" style="font-size: 0.68rem;">Kas</small>
+                    </div>
+
+                    <!-- Ara -->
+                    <div class="bar-col">
+                        <div class="dual-bars">
+                            <div class="dual-bar-item bg-primary" id="act-bar1-4" style="height: 48px;" title="Aralık Toplantı: 5"></div>
+                            <div class="dual-bar-item bg-success" id="act-bar2-4" style="height: 70px;" title="Aralık Teklif: 8"></div>
+                        </div>
+                        <small class="text-muted" style="font-size: 0.68rem;">Ara</small>
+                    </div>
+
+                    <!-- Oca -->
+                    <div class="bar-col">
+                        <div class="dual-bars">
+                            <div class="dual-bar-item bg-primary" id="act-bar1-5" style="height: 75px;" title="Ocak Toplantı: 8"></div>
+                            <div class="dual-bar-item bg-success" id="act-bar2-5" style="height: 85px;" title="Ocak Teklif: 10"></div>
+                        </div>
+                        <small class="text-muted" style="font-size: 0.68rem;">Oca</small>
+                    </div>
+
+                    <!-- Şub -->
+                    <div class="bar-col">
+                        <div class="dual-bars">
+                            <div class="dual-bar-item bg-primary" id="act-bar1-6" style="height: 80px;" title="Şubat Toplantı: 9"></div>
+                            <div class="dual-bar-item bg-success" id="act-bar2-6" style="height: 55px;" title="Şubat Teklif: 6"></div>
+                        </div>
+                        <small class="text-muted" style="font-size: 0.68rem;">Şub</small>
+                    </div>
+
+                    <!-- Mar -->
+                    <div class="bar-col">
+                        <div class="dual-bars">
+                            <div class="dual-bar-item bg-primary" id="act-bar1-7" style="height: 60px;" title="Mart Toplantı: 7"></div>
+                            <div class="dual-bar-item bg-success" id="act-bar2-7" style="height: 50px;" title="Mart Teklif: 5"></div>
+                        </div>
+                        <small class="text-muted" style="font-size: 0.68rem;">Mar</small>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+<!-- ========================================================================= -->
+<!-- AI İLE MÜŞTERİ KEŞFİ MODALI                                               -->
+<!-- ========================================================================= -->
+<div class="modal fade" id="aiDiscoveryModal" tabindex="-1" aria-labelledby="aiDiscoveryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+            <div class="modal-header bg-primary text-white" style="border-radius: 16px 16px 0 0; background: linear-gradient(135deg, #0f2c4d 0%, #2563eb 100%) !important;">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="bg-white text-primary rounded-circle d-flex align-items-center justify-content-center p-2 shadow-sm" style="width: 36px; height: 36px;">
+                        <i class="bi bi-stars fs-5"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0" id="aiDiscoveryModalLabel">{{ musteri.kisa_ad }} • AI Stratejik Keşif ve Büyüme Analizi</h5>
+                        <small class="text-white-50">Teleset Satış ve Müşteri Portföy Akıllı Öneri Motoru</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            
+            <div class="modal-body p-4 bg-light">
+                <div class="row g-3">
+                    
+                    <div class="col-12">
+                        <div class="card border rounded-3 p-3 bg-white shadow-sm">
+                            <h6 class="fw-bold text-primary mb-2 d-flex align-items-center gap-1.5">
+                                <i class="bi bi-graph-up-arrow"></i> 1. Cüzdan Payı ve Hacim Büyütme Fırsatı
+                            </h6>
+                            <p class="small text-dark mb-0 line-height-base">
+                                <strong>{{ musteri.kisa_ad }}</strong> grubunda mevcut cüzdan payı <strong>%{{ musteri.cuzdan_payi_yuzde }}</strong> seviyesindedir. Özellikle Romanya ve Almanya tesislerine yönelik metal parça tedarikinde %18 ek büyüme potansiyeli tespit edilmiştir. Teleset'in SIMPAC 400T ve yeni sac şekillendirme parkı ile yıllık <strong>+2.4 M€</strong> ek ciro hedeflenebilir.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card border rounded-3 p-3 bg-white shadow-sm h-100">
+                            <h6 class="fw-bold text-success mb-2 d-flex align-items-center gap-1.5">
+                                <i class="bi bi-gear-wide-connected"></i> 2. DFM ve Kalıp İyileştirme
+                            </h6>
+                            <p class="small text-muted mb-0">
+                                PMG-EK-002 kapsamında kalıp büküm toleranslarının optimize edilmesi parça başına %4.2 hammadde tasarrufu sağlamaktadır. Müşteriye ortak Ar-Ge inisiyatifi olarak sunulması tavsiye edilir.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card border rounded-3 p-3 bg-white shadow-sm h-100">
+                            <h6 class="fw-bold text-info mb-2 d-flex align-items-center gap-1.5">
+                                <i class="bi bi-shield-check"></i> 3. Terk ve Risk Değerlendirmesi
+                            </h6>
+                            <p class="small text-muted mb-0">
+                                Kayıp riski <strong>0.05 Düşük</strong> seviyesinde olup, müşteri sözleşmeleri ve tedarikçi puanı A-Class kategorisindedir. Q4 döneminde yıllık çerçeve sözleşme yenilemesi planlanmalıdır.
+                            </p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="modal-footer bg-white" style="border-radius: 0 0 16px 16px;">
+                <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Kapat</button>
+                <a href="{% url 'urun_teklif_olustur' %}?musteri={{ musteri.kisa_ad }}" class="btn btn-primary rounded-pill px-4 fw-semibold">
+                    <i class="bi bi-plus-lg me-1"></i> Yeni Teklif Aç
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- JAVASCRIPT: TESİS GEÇİŞ VE DİNAMİK VERİ YÖNETİMİ                          -->
+<!-- ========================================================================= -->
+<script>
+    // Backend'den aktarılan tesis verileri
+    const facilitiesData = {{ tesisler_json|safe }};
+
+    function switchFacility(facilityId, btnElement) {
+        // 1. Buton Aktiflik Durumunu Güncelle
+        document.querySelectorAll('.facility-tab-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        if (btnElement) {
+            btnElement.classList.add('active');
+        }
+
+        // 2. Tesis Verisini Bul
+        const facility = facilitiesData.find(f => f.id === facilityId);
+        if (!facility) return;
+
+        // 3. Sol Kolon Bilgilerini Güncelle
+        document.getElementById('disp-lokasyon').innerHTML = `<i class="bi bi-geo-alt-fill text-danger me-0.5"></i>` + facility.lokasyon;
+        document.getElementById('disp-son-etkilesim').innerText = `Son Etkileşim: ` + facility.son_etkilesim;
+        document.getElementById('disp-kam-satis').innerText = facility.kam_satis_lideri;
+        document.getElementById('disp-kam-muh').innerText = facility.kam_muhendislik_lideri;
+        document.getElementById('disp-kam-kalite').innerText = facility.kam_kalite_lideri;
+        document.getElementById('disp-yetkili-adi').innerText = facility.yetkili_adi;
+        document.getElementById('disp-yetkili-unvan').innerText = facility.yetkili_unvan;
+        document.getElementById('disp-yetkili-email').innerText = facility.yetkili_email;
+        document.getElementById('disp-yetkili-email').href = "mailto:" + facility.yetkili_email;
+        document.getElementById('disp-email-link').href = "mailto:" + facility.yetkili_email;
+
+        // 4. Orta Kolon Çip Sayılarını Güncelle
+        document.getElementById('disp-stat-destek').innerText = facility.destek_sayisi;
+        document.getElementById('disp-stat-npi').innerText = facility.npi_proje_sayisi;
+        document.getElementById('disp-stat-teklif').innerText = facility.teklif_sayisi;
+        document.getElementById('disp-stat-sevkiyat').innerText = facility.sevkiyat_sayisi;
+
+        // 5. Sağ Kolon Finansal Metrikleri Güncelle
+        document.getElementById('disp-clv').innerText = facility.clv_m;
+        document.getElementById('disp-churn').innerText = facility.churn_skoru;
+        document.getElementById('disp-churn-durum').innerHTML = `<i class="bi bi-check-circle-fill"></i> ` + facility.churn_durumu;
+        document.getElementById('disp-sow').innerText = `%` + facility.cuzdan_payi_yuzde;
+        document.getElementById('disp-sow-alt').innerText = facility.cuzdan_alt_bilgi;
+        document.getElementById('disp-ciro').innerText = facility.yillik_ciro_str;
+        document.getElementById('disp-ciro-alt').innerText = facility.ciro_alt_bilgi;
+
+        // 6. Grafik Çubuklarını Dinamik Olarak Canlandır
+        animateBars(facility);
+    }
+
+    function animateBars(facility) {
+        const multiplier = facility.cuzdan_payi_yuzde / 58.0;
+        
+        // Ciro Çubukları
+        const ciroHeights = [48 * multiplier, 62 * multiplier, 40 * multiplier, 70 * multiplier, 85 * multiplier, 90 * multiplier, 75 * multiplier];
+        for (let i = 1; i <= 7; i++) {
+            const b = document.getElementById(`ciro-bar-${i}`);
+            if (b) b.style.height = `${Math.min(95, Math.max(15, Math.round(ciroHeights[i-1])))}px`;
+        }
+
+        // Birleşik Toplantı ve Teklif Çubukları
+        const actHeights1 = [35 * multiplier, 55 * multiplier, 25 * multiplier, 48 * multiplier, 75 * multiplier, 80 * multiplier, 60 * multiplier];
+        const actHeights2 = [45 * multiplier, 65 * multiplier, 30 * multiplier, 70 * multiplier, 85 * multiplier, 55 * multiplier, 50 * multiplier];
+
+        for (let i = 1; i <= 7; i++) {
+            const b1 = document.getElementById(`act-bar1-${i}`);
+            const b2 = document.getElementById(`act-bar2-${i}`);
+            if (b1) b1.style.height = `${Math.min(75, Math.max(10, Math.round(actHeights1[i-1])))}px`;
+            if (b2) b2.style.height = `${Math.min(75, Math.max(10, Math.round(actHeights2[i-1])))}px`;
+        }
+    }
+
+    function filterTimeline(category) {
+        const cards = document.querySelectorAll('.timeline-card');
+        cards.forEach(card => {
+            if (category === 'ALL') {
+                card.closest('.timeline-card').style.display = 'flex';
+            } else if (category === 'TEKLIF' && card.innerText.includes('SAT')) {
+                card.closest('.timeline-card').style.display = 'flex';
+            } else if (category === 'DFM' && (card.innerText.includes('DFM') || card.innerText.includes('PMG'))) {
+                card.closest('.timeline-card').style.display = 'flex';
+            } else if (category === 'KALITE' && (card.innerText.includes('ISIR') || card.innerText.includes('Kalite'))) {
+                card.closest('.timeline-card').style.display = 'flex';
+            } else if (category === 'SEVKIYAT' && (card.innerText.includes('Sevkiyat') || card.innerText.includes('İrsaliye'))) {
+                card.closest('.timeline-card').style.display = 'flex';
+            } else {
+                card.closest('.timeline-card').style.display = 'none';
+            }
+        });
+    }
+</script>
+
+{% endblock %}

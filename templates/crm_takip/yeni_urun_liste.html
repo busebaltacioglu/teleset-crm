@@ -91,7 +91,7 @@
                         <th class="py-3">
                             <select id="filterNpiUrunFabrika" class="form-select form-select-sm table-npi-filter shadow-sm" style="font-size: 0.78rem; border-radius: 6px;">
                                 <option value="">Ürün Grubu & Fabrika (Tümü)</option>
-                                <option value="Kondenser">Kondenser & Soğutma</option>
+                                <option value="Kondanser">Kondanser & Soğutma</option>
                                 <option value="Metal">Metal Parça & Sac</option>
                                 <option value="Kablo">Kablo Grubu</option>
                                 <option value="Kalıp">Kalıp, Fikstür & Aparat</option>
@@ -359,13 +359,13 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-secondary">Ürün / Proje Adı <span class="text-danger">*</span></label>
-                            <input type="text" name="ad" class="form-control form-control-sm rounded-3" placeholder="Örn: Yeni Nesil R290 Tel Borulu Kondenser Devreye Alma" required>
+                            <input type="text" name="ad" class="form-control form-control-sm rounded-3" placeholder="Örn: Yeni Nesil R290 Tel Borulu Kondanser Devreye Alma" required>
                         </div>
 
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-secondary">Ürün Grubu <span class="text-danger">*</span></label>
                             <select name="urun_grubu" class="form-select form-select-sm rounded-3">
-                                <option value="Kondenser & Sogutma">Kondenser & Soğutma Grubu</option>
+                                <option value="Kondanser & Sogutma">Kondanser & Soğutma Grubu</option>
                                 <option value="Metal Parca & Sac">Metal Parça & Sac Şekillendirme</option>
                                 <option value="Kablo Grubu">Kablo Grubu & Demetleri</option>
                                 <option value="Kalıp & Fikstür">Kalıp, Fikstür & Aparat</option>
@@ -376,13 +376,11 @@
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold text-secondary">Üretim Fabrikası <span class="text-danger">*</span></label>
+                            <label class="form-label small fw-bold text-secondary">Ana Departman / Fabrika <span class="text-danger">*</span></label>
                             <select name="ilgili_fabrika" class="form-select form-select-sm rounded-3">
-                                <option value="Teleset 1 (Manisa)">Teleset 1 (Manisa)</option>
-                                <option value="Teleset 2 (Manisa)">Teleset 2 (Manisa)</option>
-                                <option value="Teleset 3 (Kocaeli)">Teleset 3 (Kocaeli)</option>
-                                <option value="Teleset Otomotiv">Teleset Otomotiv</option>
-                                <option value="Teleset Global">Teleset Global</option>
+                                {% for s in intranet_sirketler %}
+                                <option value="{{ s }}" {% if s == 'PRESHANE' %}selected{% endif %}>{{ s }}</option>
+                                {% endfor %}
                             </select>
                         </div>
 
@@ -401,19 +399,43 @@
 
                         <div class="col-md-3">
                             <label class="form-label small fw-bold text-secondary">Proje Sorumlusu (R)</label>
-                            <input type="text" name="sorumlu_proje_lideri" class="form-control form-control-sm rounded-3" value="Buse Nur Baltacıoğlu">
+                            <select name="sorumlu_proje_lideri" class="form-select form-select-sm rounded-3">
+                                {% for p in proje_liderleri %}
+                                <option value="{{ p.ad_soyad }}" {% if p.ad_soyad == 'BUSE NUR BALTACIOĞLU' %}selected{% endif %}>
+                                    {{ p.ad_soyad }}
+                                </option>
+                                {% endfor %}
+                            </select>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label small fw-bold text-secondary">Fabrika Müdürü (A)</label>
-                            <input type="text" name="sorumlu_fabrika_muduru" class="form-control form-control-sm rounded-3" value="Engin Kaya">
+                            <select name="sorumlu_fabrika_muduru" class="form-select form-select-sm rounded-3">
+                                {% for p in satis_mudurleri %}
+                                <option value="{{ p.ad_soyad }}" {% if p.ad_soyad == 'ONUR TUNCER' or forloop.first %}selected{% endif %}>
+                                    {{ p.ad_soyad }}
+                                </option>
+                                {% endfor %}
+                            </select>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label small fw-bold text-secondary">Satış-Analiz (C)</label>
-                            <input type="text" name="sorumlu_satis_analiz" class="form-control form-control-sm rounded-3" value="Hakan Yılmaz">
+                            <select name="sorumlu_satis_analiz" class="form-select form-select-sm rounded-3">
+                                {% for p in pazarlama_uzmanlari %}
+                                <option value="{{ p.ad_soyad }}" {% if p.ad_soyad == 'MUHARREM FURKAN TARHAN' or forloop.first %}selected{% endif %}>
+                                    {{ p.ad_soyad }}
+                                </option>
+                                {% endfor %}
+                            </select>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label small fw-bold text-secondary">Kalite Sorumlusu (C)</label>
-                            <input type="text" name="sorumlu_kalite" class="form-control form-control-sm rounded-3" value="Merve Çelik">
+                            <select name="sorumlu_kalite" class="form-select form-select-sm rounded-3">
+                                {% for p in proje_liderleri %}
+                                <option value="{{ p.ad_soyad }}" {% if p.ad_soyad == 'METİN YAVAŞ' %}selected{% endif %}>
+                                    {{ p.ad_soyad }}
+                                </option>
+                                {% endfor %}
+                            </select>
                         </div>
 
                         <div class="col-12">

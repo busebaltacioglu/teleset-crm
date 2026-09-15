@@ -5,6 +5,9 @@ from . import views
 urlpatterns = [
     # Ana Sayfa (Executive Workspace & Takvim / Planner / Kanban)
     path('', views.ana_sayfa_view, name='ana_sayfa'),
+    path('ana-proje/yeni/', views.ana_proje_ekle_view, name='ana_proje_ekle'),
+    path('ana-proje/<int:pk>/senkronize/', views.ana_proje_senkronize_view, name='ana_proje_senkronize'),
+    path('ana-proje/<int:pk>/iterasyon-ekle/', views.ana_proje_iterasyon_ekle_view, name='ana_proje_iterasyon_ekle'),
     path('faaliyet/yeni/', views.faaliyet_olustur_view, name='faaliyet_olustur'),
     path('faaliyet/<int:pk>/durum/', views.faaliyet_durum_guncelle_view, name='faaliyet_durum_guncelle'),
     path('faaliyet/<int:pk>/sil/', views.faaliyet_sil_view, name='faaliyet_sil'),
@@ -12,6 +15,7 @@ urlpatterns = [
     # Pazarlama Süreci
     path('pazarlama-sureci/', views.dashboard, name='dashboard'),
     path('kartlar/', views.kartlar_view, name='kartlar'),
+    path('musteri/<int:pk>/360/', views.musteri_360_view, name='musteri_360_detay'),
     path('kanvaslar/', views.kanvas_listesi, name='kanvas_listesi'),
     path('proje/yeni/', views.proje_olustur, name='proje_olustur'),
     path('proje/<int:pk>/', views.proje_detay, name='proje_detay'),

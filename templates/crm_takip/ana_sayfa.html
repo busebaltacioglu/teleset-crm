@@ -1,13 +1,13 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Ajandam & Faaliyetlerim | Teleset CRM{% endblock %}
+{% block title %}Ana Sayfa | Teleset CRM{% endblock %}
 {% block sayfa_basligi %}Ana Sayfa{% endblock %}
 
 {% block extra_css %}
 <style>
     /* =========================================================
-       TELESET PERSONAL WORKSPACE & AGENDA - CLEAN & MINIMAL
+       TELESET EXECUTIVE WORKSPACE & END-TO-END WORKFLOW TRACKER
        ========================================================= */
     :root {
         --c-seyahat-bg: #f0f9ff;
@@ -31,7 +31,7 @@
         --c-destek-dot: #f59e0b;
     }
 
-    /* Minimalist Kart */
+    /* Minimalist & Spacious Card */
     .clean-card {
         background: #ffffff;
         border: 1px solid rgba(226, 232, 240, 0.85);
@@ -47,22 +47,22 @@
     /* Segmented Control View Switcher */
     .segmented-control {
         background: #f1f5f9;
-        padding: 3px;
-        border-radius: 10px;
+        padding: 5px 6px;
+        border-radius: 12px;
         display: inline-flex;
-        gap: 2px;
+        gap: 6px;
     }
     .segmented-item {
-        padding: 6px 16px;
-        font-size: 0.82rem;
+        padding: 8px 18px;
+        font-size: 0.84rem;
         font-weight: 500;
         color: #64748b;
         text-decoration: none;
-        border-radius: 8px;
+        border-radius: 9px;
         transition: all 0.15s ease;
         display: inline-flex;
         align-items: center;
-        gap: 6px;
+        gap: 7px;
     }
     .segmented-item:hover {
         color: #1e293b;
@@ -70,15 +70,15 @@
     .segmented-item.active {
         background: #ffffff;
         color: #0f2c4d;
-        font-weight: 600;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        font-weight: 700;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
     }
 
     /* Kategori Hapları */
     .cat-pill {
-        padding: 5px 14px;
+        padding: 7px 18px;
         border-radius: 20px;
-        font-size: 0.8rem;
+        font-size: 0.82rem;
         font-weight: 500;
         color: #64748b;
         background: #f8fafc;
@@ -87,7 +87,7 @@
         transition: all 0.15s ease;
         display: inline-flex;
         align-items: center;
-        gap: 6px;
+        gap: 7px;
     }
     .cat-pill:hover {
         color: #0f172a;
@@ -102,92 +102,158 @@
     }
 
     .dot-indicator {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
         display: inline-block;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
     }
 
-    /* Mini Calendar Widget */
-    .mini-cal-header {
+    /* Rol Filtre Butonları */
+    .role-pill-btn {
+        padding: 6px 16px;
+        border-radius: 20px;
+        font-size: 0.80rem;
+        font-weight: 500;
+        color: #475569;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        text-decoration: none;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+    }
+    .role-pill-btn:hover {
+        background: #f8fafc;
+        color: #0f172a;
+        border-color: #cbd5e1;
+    }
+    .role-pill-btn.active {
+        background: #0f2c4d !important;
+        color: #ffffff !important;
+        border-color: #0f2c4d !important;
+        font-weight: 600;
+        box-shadow: 0 2px 6px rgba(15, 44, 77, 0.18);
+    }
+
+    /* Uçtan Uca Süreç Kartları */
+    .process-thread-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        padding: 20px;
+        transition: all 0.2s ease;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+    .process-thread-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
+        border-color: #cbd5e1;
+    }
+    .process-thread-card.active-thread {
+        border-color: #e2e8f0;
+        background: #ffffff;
+    }
+    .process-thread-card.completed-thread {
+        border-color: #e2e8f0;
+        background: #ffffff;
+    }
+    .process-thread-card.pending-thread {
+        opacity: 0.85;
+        background: #fafbfc;
+        border-color: #eef2f6;
+    }
+
+    .process-num-badge {
+        width: 26px;
+        height: 26px;
+        border-radius: 7px;
         display: flex;
         align-items: center;
-        justify-content: space-between;
-        margin-bottom: 14px;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.80rem;
     }
-    .mini-cal-grid {
+    .process-num-completed { background: #ecfdf5; color: #059669; }
+    .process-num-active { background: #eff6ff; color: #2563eb; }
+    .process-num-pending { background: #f1f5f9; color: #94a3b8; }
+
+    /* Takvim Stilleri */
+    .cal-grid {
         display: grid;
         grid-template-columns: repeat(7, 1fr);
         gap: 4px;
+    }
+    .cal-header-day {
         text-align: center;
-    }
-    .mini-cal-dayname {
         font-size: 0.72rem;
-        font-weight: 600;
+        font-weight: 700;
         color: #94a3b8;
-        padding-bottom: 6px;
+        padding: 6px 0;
         text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
-    .mini-cal-cell {
+    .cal-cell {
         aspect-ratio: 1;
+        border: 1px solid #f1f5f9;
         border-radius: 10px;
+        padding: 5px;
+        position: relative;
+        background: #ffffff;
+        text-decoration: none;
+        color: #334155;
         display: flex;
         flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.82rem;
-        font-weight: 500;
-        color: #334155;
-        text-decoration: none;
-        position: relative;
+        justify-content: space-between;
         transition: all 0.15s ease;
-        border: 1px solid transparent;
-        cursor: pointer;
     }
-    .mini-cal-cell:hover {
-        background: #f1f5f9;
-        color: #0f2c4d;
+    .cal-cell:hover {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+        transform: scale(1.03);
     }
-    .mini-cal-cell.other-month {
-        color: #cbd5e1;
+    .cal-cell.today {
+        border: 2px solid #2563eb;
+        background: #eff6ff;
+        font-weight: bold;
     }
-    .mini-cal-cell.is-selected {
-        background: #22609d !important;
+    .cal-cell.selected {
+        background: #0f2c4d;
         color: #ffffff !important;
-        font-weight: 700;
-        box-shadow: 0 4px 10px rgba(34, 96, 157, 0.3);
+        border-color: #0f2c4d;
     }
-    .mini-cal-cell.is-today:not(.is-selected) {
-        border-color: #22609d;
-        color: #22609d;
-        font-weight: 700;
-        background: #f0f7ff;
+    .cal-cell.selected .cal-cell-number {
+        color: #ffffff;
     }
-    .mini-cal-dots {
+    .cal-cell.other-month {
+        opacity: 0.35;
+        background: #fafbfc;
+    }
+    .cal-cell-number {
+        font-size: 0.78rem;
+        font-weight: 600;
+        line-height: 1;
+    }
+    .cal-cell-dots {
         display: flex;
         gap: 2px;
-        position: absolute;
-        bottom: 3px;
+        margin-top: 3px;
     }
-    .mini-cal-dot {
+    .cal-dot {
         width: 4px;
         height: 4px;
         border-radius: 50%;
-        background: #0ea5e9;
-    }
-    .mini-cal-cell.is-selected .mini-cal-dot {
-        background: #ffffff;
     }
 
-    /* Activity Item Cards */
+    /* Faaliyet Kartları */
     .activity-card {
         background: #ffffff;
         border: 1px solid #e2e8f0;
         border-radius: 14px;
-        padding: 16px 18px;
-        margin-bottom: 12px;
-        transition: all 0.18s ease;
-        position: relative;
+        padding: 22px 24px;
+        transition: all 0.2s ease;
     }
     .activity-card:hover {
         border-color: #cbd5e1;
@@ -197,421 +263,800 @@
     .activity-badge {
         font-size: 0.74rem;
         font-weight: 600;
-        padding: 3.5px 9px;
+        padding: 4px 11px;
         border-radius: 6px;
         display: inline-flex;
         align-items: center;
-        gap: 5px;
+        gap: 6px;
     }
     .activity-badge-seyahat { background: var(--c-seyahat-bg); color: var(--c-seyahat-text); border: 1px solid var(--c-seyahat-border); }
     .activity-badge-toplanti { background: var(--c-toplanti-bg); color: var(--c-toplanti-text); border: 1px solid var(--c-toplanti-border); }
     .activity-badge-fuar { background: var(--c-fuar-bg); color: var(--c-fuar-text); border: 1px solid var(--c-fuar-border); }
     .activity-badge-destek { background: var(--c-destek-bg); color: var(--c-destek-text); border: 1px solid var(--c-destek-border); }
+
+    .pulse-dot {
+        display: inline-block;
+        width: 7px;
+        height: 7px;
+        background-color: #2563eb;
+        border-radius: 50%;
+        animation: pulseAnim 1.8s infinite;
+    }
+    @keyframes pulseAnim {
+        0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7); }
+        70% { transform: scale(1.1); box-shadow: 0 0 0 6px rgba(37, 99, 235, 0); }
+        100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+    }
+
+    /* Form Blok Başlıkları */
+    .form-block-title {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: #475569;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding-bottom: 4px;
+        border-bottom: 1px solid #e2e8f0;
+        margin-bottom: 12px;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid px-0 pb-5">
+<div class="container-fluid px-2 px-md-3 pb-5">
 
-    <!-- ÜST KONTROL VE FİLTRE ÇUBUĞU (TEK VE YALIN SATIR) -->
-    <div class="clean-card p-2.5 mb-4 shadow-sm">
-        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <!-- ÜST ÇALIŞMA ALANI & GÖRÜNÜM GEÇİŞİ -->
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3.5 px-1">
+        <div class="segmented-control bg-white border shadow-sm">
+            <a href="?tab=ajanda" class="segmented-item {% if tab != 'is_akisi' %}active{% endif %}">
+                <i class="bi bi-calendar2-week"></i> Ajandam & Faaliyetlerim
+            </a>
+            <a href="?tab=is_akisi" class="segmented-item {% if tab == 'is_akisi' %}active{% endif %}">
+                <i class="bi bi-diagram-3 text-primary"></i> Proje & İş Akış Takipçisi
+            </a>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+            <small class="text-muted d-none d-md-inline-block">Teleset Endüstriyel Süreç Portalı</small>
+        </div>
+    </div>
+
+
+    {% if tab == 'is_akisi' %}
+    <!-- ========================================================================= -->
+    <!-- 2. GÖRÜNÜM: PROJE & İŞ AKIŞ TAKİPÇİSİ (UÇTAN UCA 8 SÜREÇ & DİJİTAL İPLİK)   -->
+    <!-- ========================================================================= -->
+
+    {% if request.GET.sync == 'ok' %}
+    <div class="alert alert-success border-0 rounded-3 shadow-sm py-2.5 px-3 mb-3 d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-check-circle-fill text-success"></i>
+            <span class="small fw-medium">Dijital İplik Başarılı: Teklif, Sözleşme ve APQP verileri senkronize edildi.</span>
+        </div>
+        <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="alert"></button>
+    </div>
+    {% endif %}
+
+    <!-- ÜST FİLTRE VE SEÇİM KARTI -->
+    <div class="clean-card p-4 mb-4 shadow-sm">
+        
+        <!-- Başlık ve Aksiyon Butonları -->
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3.5 pb-2.5 border-bottom">
+            <div>
+                <h5 class="fw-bold mb-1 text-dark" style="letter-spacing: -0.3px;">Proje & İş Akış Takipçisi</h5>
+                <small class="text-muted">Uçtan Uca 8 Süreç Entegrasyonu ve Dijital İplik Yönetimi</small>
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" class="btn btn-sm btn-primary rounded-3 px-3.5 py-1.5 fw-semibold d-inline-flex align-items-center gap-1.5 shadow-sm" style="background-color: #0f2c4d; border-color: #0f2c4d;" data-bs-toggle="modal" data-bs-target="#yeniAnaProjeModal">
+                    <i class="bi bi-plus-lg"></i> Yeni Proje Başlat
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary rounded-3 px-3.5 py-1.5 fw-semibold d-inline-flex align-items-center gap-1.5 bg-white shadow-sm" onclick="window.print()">
+                    <i class="bi bi-printer"></i> Yazdır / PDF
+                </button>
+            </div>
+        </div>
+
+        <!-- 3 Kademeli Hiyerarşik Seçim Alanı -->
+        <form method="GET" id="isAkisiForm" class="row g-3 mb-3.5 px-1">
+            <input type="hidden" name="tab" value="is_akisi">
+            {% if secili_rol %}<input type="hidden" name="rol" value="{{ secili_rol }}">{% endif %}
+
+            <!-- 1. ANA DEPARTMAN / BÖLÜM SEÇİN -->
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold text-secondary mb-1.5">
+                    1. Bölüm / Departman Seçin
+                </label>
+                <select name="fabrika" class="form-select form-select-sm bg-light border" onchange="this.form.submit()">
+                    <option value="">Tüm Bölümler ({{ toplam_proje_sayisi }})</option>
+                    {% for b_kod, b_ad in bolumler_listesi %}
+                    <option value="{{ b_kod }}" {% if secili_fabrika == b_kod %}selected{% endif %}>{{ b_ad }}</option>
+                    {% endfor %}
+                    <optgroup label="Teleset Şirketleri">
+                        {% for sirket in intranet_sirketler %}
+                        <option value="{{ sirket }}" {% if secili_fabrika == sirket %}selected{% endif %}>{{ sirket }}</option>
+                        {% endfor %}
+                    </optgroup>
+                </select>
+            </div>
+
+            <!-- 2. CARİ / MÜŞTERİ SEÇİN -->
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold text-secondary mb-1.5">
+                    2. Cari / Müşteri Seçin
+                </label>
+                <select name="musteri_id" class="form-select form-select-sm bg-light border" onchange="this.form.submit()">
+                    <option value="">Tüm Müşteriler</option>
+                    {% for m in musteriler %}
+                    <option value="{{ m.id }}" {% if secili_musteri_id == m.id|stringformat:"s" %}selected{% endif %}>{{ m.ad }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- 3. PROJE / PARÇA KODU SEÇİN -->
+            <div class="col-md-6">
+                <label class="form-label small fw-semibold text-secondary mb-1.5">
+                    3. Proje / Parça Kodu Seçin
+                </label>
+                <select name="proje_id" class="form-select form-select-sm bg-light border fw-semibold" onchange="this.form.submit()">
+                    {% for p in ana_projeler_qs %}
+                    <option value="{{ p.id }}" {% if secili_proje and secili_proje.id == p.id %}selected{% endif %}>
+                        {{ p.proje_kodu }} | {{ p.musteri.kisa_ad }} - {{ p.bolum }} - {{ p.parca_adi|default:p.proje_adi }} {% if p.parca_kodu %}({{ p.parca_kodu }}){% endif %}
+                    </option>
+                    {% empty %}
+                    <option value="">Seçilen filtreye uygun proje bulunamadı</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+
+        <!-- Rol Filtreleme Hap Butonları -->
+        <div class="d-flex align-items-center flex-wrap gap-2 pt-3 px-1 border-top">
+            <span class="small fw-semibold text-secondary me-2">
+                Rol Filtresi:
+            </span>
+            <a href="?tab=is_akisi&fabrika={{ secili_fabrika }}&musteri_id={{ secili_musteri_id }}&proje_id={{ secili_proje.id }}&rol=ALL" 
+               class="role-pill-btn {% if secili_rol == 'ALL' or not secili_rol %}active{% endif %}">
+                Tüm Adımlar
+            </a>
+            <a href="?tab=is_akisi&fabrika={{ secili_fabrika }}&musteri_id={{ secili_musteri_id }}&proje_id={{ secili_proje.id }}&rol=Projeci / Kalıp" 
+               class="role-pill-btn {% if secili_rol == 'Projeci / Kalıp' %}active{% endif %}">
+                Projeci / Kalıp
+            </a>
+            <a href="?tab=is_akisi&fabrika={{ secili_fabrika }}&musteri_id={{ secili_musteri_id }}&proje_id={{ secili_proje.id }}&rol=Kalite Güvence" 
+               class="role-pill-btn {% if secili_rol == 'Kalite Güvence' %}active{% endif %}">
+                Kalite Güvence
+            </a>
+            <a href="?tab=is_akisi&fabrika={{ secili_fabrika }}&musteri_id={{ secili_musteri_id }}&proje_id={{ secili_proje.id }}&rol=Üretim & Planlama" 
+               class="role-pill-btn {% if secili_rol == 'Üretim & Planlama' %}active{% endif %}">
+                Üretim & Planlama
+            </a>
+            <a href="?tab=is_akisi&fabrika={{ secili_fabrika }}&musteri_id={{ secili_musteri_id }}&proje_id={{ secili_proje.id }}&rol=Satış & Pazarlama" 
+               class="role-pill-btn {% if secili_rol == 'Satış & Pazarlama' %}active{% endif %}">
+                Satış & Pazarlama
+            </a>
+            <a href="?tab=is_akisi&fabrika={{ secili_fabrika }}&musteri_id={{ secili_musteri_id }}&proje_id={{ secili_proje.id }}&rol=Fabrika Müdürü Onayı" 
+               class="role-pill-btn {% if secili_rol == 'Fabrika Müdürü Onayı' %}active{% endif %}">
+                Fabrika Müdürü Onayı
+            </a>
+        </div>
+    </div>
+
+    {% if secili_proje %}
+    <!-- SEÇİLİ PROJE ÖZET BAŞLIĞI & CANLI DURUM BİLGİSİ -->
+    <div class="clean-card p-4 mb-4 bg-white shadow-sm">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-4 mb-3 pb-3 border-bottom">
+            <div style="max-width: 70%;">
+                <div class="d-flex align-items-center flex-wrap gap-2 mb-2">
+                    <span class="badge bg-dark text-white px-2.5 py-1 font-monospace" style="font-size: 0.80rem;">{{ secili_proje.proje_kodu }}</span>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1 fw-semibold" style="font-size: 0.78rem;">{{ secili_proje.bolum }}</span>
+                    <span class="badge bg-secondary-subtle text-dark border px-2.5 py-1 fw-medium" style="font-size: 0.78rem;">{{ secili_proje.urun_grubu }}</span>
+                    {% if secili_proje.parca_kodu %}
+                    <span class="badge bg-light text-secondary border font-monospace px-2.5 py-1" style="font-size: 0.78rem;">Kod: {{ secili_proje.parca_kodu }}</span>
+                    {% endif %}
+                    {% if secili_proje.genel_ilerleme_yuzdesi == 100 %}
+                    <span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1 fw-semibold" style="font-size: 0.78rem;">
+                        <i class="bi bi-check-circle-fill me-1"></i>Tamamlandı
+                    </span>
+                    {% else %}
+                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2.5 py-1 fw-semibold" style="font-size: 0.78rem;">
+                        <i class="bi bi-hourglass-split me-1"></i>Devam Ediyor
+                    </span>
+                    {% endif %}
+                </div>
+
+                <h4 class="fw-bold mb-1 text-dark" style="letter-spacing: -0.3px;">
+                    {{ secili_proje.parca_adi|default:secili_proje.proje_adi }}
+                </h4>
+                <div class="text-muted small mb-2">
+                    <strong>Proje Adı:</strong> {{ secili_proje.proje_adi }}
+                </div>
+
+                <div class="text-secondary small d-flex flex-wrap align-items-center gap-3">
+                    <span><strong>Müşteri (Cari):</strong> {{ secili_proje.musteri.ad }}</span>
+                    <span class="text-muted">•</span>
+                    <span><strong>Lider:</strong> {{ secili_proje.sorumlu_lider }}</span>
+                    <span class="text-muted">•</span>
+                    <span><strong>Yıllık FRC Miktar:</strong> <strong class="text-dark">{% if secili_proje.yillik_frc_miktar > 0 %}{{ secili_proje.yillik_frc_miktar }} Adet{% else %}-{% endif %}</strong></span>
+                </div>
+            </div>
+
+            <div class="text-end" style="min-width: 240px;">
+                <div class="d-flex align-items-center justify-content-between gap-3 mb-1.5">
+                    <small class="text-muted fw-semibold">Uçtan Uca İlerleme</small>
+                    <span class="fw-bold text-primary fs-6">%{{ secili_proje.genel_ilerleme_yuzdesi }}</span>
+                </div>
+                <div class="progress" style="height: 7px; border-radius: 6px; background-color: #f1f5f9;">
+                    <div class="progress-bar {% if secili_proje.genel_ilerleme_yuzdesi == 100 %}bg-success{% else %}bg-primary{% endif %}" role="progressbar" style="width: {{ secili_proje.genel_ilerleme_yuzdesi }}%;"></div>
+                </div>
+                <div class="mt-2">
+                    <small class="text-muted" style="font-size: 0.76rem;">
+                        <span class="pulse-dot me-1"></span>Aktif Süreç: <strong class="text-dark">{{ secili_proje.aktif_surec_adi }}</strong>
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tarih ve Operasyonel Açıklama Çubuğu -->
+        <div class="row g-3 pt-1">
+            <div class="col-md-8">
+                <div class="p-2.5 rounded-3 bg-light border">
+                    <small class="text-muted fw-bold text-uppercase d-block mb-1" style="font-size: 0.70rem; letter-spacing: 0.4px;">
+                        <i class="bi bi-info-circle me-1"></i>Süreç Durumu ve Açıklama Notu
+                    </small>
+                    <div class="small text-dark fw-medium lh-sm">
+                        {{ secili_proje.aciklama_notu|default:secili_proje.aktif_durum_aciklamasi|default:"Süreç adımları planlandığı şekilde devam etmektedir." }}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="p-2.5 rounded-3 bg-light border">
+                    <small class="text-muted fw-bold text-uppercase d-block mb-1" style="font-size: 0.70rem; letter-spacing: 0.4px;">
+                        <i class="bi bi-calendar-range me-1"></i>Termin & Onay Takvimi
+                    </small>
+                    <div class="d-flex justify-content-between small text-secondary">
+                        <span>Başlangıç: <strong class="text-dark">{{ secili_proje.proje_baslangic_tarihi_str|default:"-" }}</strong></span>
+                        <span>Hedef: <strong class="text-dark">{{ secili_proje.proje_hedef_tarihi_str|default:"-" }}</strong></span>
+                    </div>
+                    <div class="d-flex justify-content-between small text-secondary mt-1">
+                        <span>Bitiş: <strong class="text-dark">{{ secili_proje.proje_bitis_tarihi_str|default:"-" }}</strong></span>
+                        <span>Onay: <strong class="text-dark">{{ secili_proje.proje_onay_tarihi_str|default:"-" }}</strong></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2 KOLONLU OPERASYONEL PANEL: BEKLEYEN AKSİYONLAR & DİJİTAL İPLİK / İTERASYONLAR -->
+    <div class="row g-4 mb-4">
+        
+        <!-- SOL KOLON: BEKLEYEN AKSİYONLAR & KRİTİK GÖREVLER (ACTION ITEMS) -->
+        <div class="col-lg-7">
+            <div class="clean-card p-4 shadow-sm h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                    <div>
+                        <h6 class="fw-bold mb-0 text-dark" style="font-size: 0.95rem;">
+                            Bekleyen Aksiyonlar & Kritik Görevler
+                        </h6>
+                        <small class="text-muted" style="font-size: 0.76rem;">130+ adım arasından rolünüze ve kritik yola düşen öncelikli işler</small>
+                    </div>
+                    <span class="badge bg-light text-dark border px-2.5 py-1 font-monospace" style="font-size: 0.75rem;">
+                        {{ bekleyen_aksiyonlar|length }} Görev
+                    </span>
+                </div>
+
+                <div class="d-flex flex-column gap-2.5">
+                    {% for aks in bekleyen_aksiyonlar %}
+                    <div class="p-3 rounded-3 border bg-light bg-opacity-50 d-flex justify-content-between align-items-center gap-3">
+                        <div style="max-width: 70%;">
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <span class="badge bg-dark text-white font-monospace py-0.5 px-2" style="font-size: 0.70rem;">{{ aks.surec_kodu }}</span>
+                                <span class="badge {{ aks.oncelik_badge }} py-0.5 px-2" style="font-size: 0.70rem;">{{ aks.oncelik }}</span>
+                                <span class="badge {{ aks.termin_badge }} py-0.5 px-2" style="font-size: 0.70rem;">{{ aks.termin_durumu }}</span>
+                            </div>
+                            <div class="fw-bold text-dark mb-0.5" style="font-size: 0.86rem;">
+                                Adım {{ aks.adim_no }}: {{ aks.adim_basligi }}
+                            </div>
+                            <small class="text-muted d-block" style="font-size: 0.74rem;">
+                                {{ aks.not }} • <span class="fw-semibold text-secondary">{{ aks.rol }}</span>
+                            </small>
+                        </div>
+                        <div class="text-end">
+                            <a href="{{ aks.url }}" class="btn btn-sm btn-outline-primary bg-white rounded-3 px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-1 shadow-sm" style="font-size: 0.78rem;">
+                                Adıma Git <i class="bi bi-arrow-right" style="font-size: 0.70rem;"></i>
+                            </a>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-4 text-muted">
+                        <i class="bi bi-check2-all fs-2 text-success d-block mb-1"></i>
+                        <small>Seçili rol ve filtre için bekleyen kritik aksiyon bulunmamaktadır.</small>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- SAĞ KOLON: DİJİTAL İPLİK VERİ KÖPRÜSÜ & DÖNGÜSEL İTERASYONLAR -->
+        <div class="col-lg-5">
+            <div class="clean-card p-4 shadow-sm h-100 d-flex flex-column justify-content-between">
+                
+                <!-- Üst Kısım: Dijital İplik Parametreleri -->
+                <div>
+                    <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                        <div>
+                            <h6 class="fw-bold mb-0 text-dark" style="font-size: 0.95rem;">
+                                Dijital İplik (Digital Thread)
+                            </h6>
+                            <small class="text-muted" style="font-size: 0.76rem;">Teklif, Sözleşme ve APQP Tek Kaynak Bütünlüğü</small>
+                        </div>
+                        <a href="/ana-proje/{{ secili_proje.id }}/senkronize/" class="btn btn-sm btn-light border rounded-3 px-2.5 py-1 text-secondary fw-medium d-inline-flex align-items-center gap-1" style="font-size: 0.74rem;" title="Teklif ve APQP verilerini senkronize et">
+                            <i class="bi bi-arrow-repeat"></i> Senkronize Et
+                        </a>
+                    </div>
+
+                    <div class="row g-2 mb-3.5">
+                        <div class="col-6">
+                            <div class="p-2.5 rounded-3 bg-light border">
+                                <small class="text-muted d-block" style="font-size: 0.70rem;">Bölüm / Fabrika</small>
+                                <span class="fw-bold text-dark" style="font-size: 0.84rem;">
+                                    {{ secili_proje.bolum }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-2.5 rounded-3 bg-light border">
+                                <small class="text-muted d-block" style="font-size: 0.70rem;">Yıllık FRC Miktar</small>
+                                <span class="fw-bold text-dark font-monospace" style="font-size: 0.88rem;">
+                                    {% if secili_proje.yillik_frc_miktar > 0 %}{{ secili_proje.yillik_frc_miktar }} Adet{% else %}-{% endif %}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-2.5 rounded-3 bg-light border">
+                                <small class="text-muted d-block" style="font-size: 0.70rem;">Parça Kodu</small>
+                                <span class="fw-bold text-dark font-monospace" style="font-size: 0.84rem;">
+                                    {{ secili_proje.parca_kodu|default:"-" }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-2.5 rounded-3 bg-light border">
+                                <small class="text-muted d-block" style="font-size: 0.70rem;">Ürün Grubu</small>
+                                <span class="fw-bold text-dark text-truncate d-block" style="font-size: 0.80rem;" title="{{ secili_proje.urun_grubu }}">
+                                    {{ secili_proje.urun_grubu }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alt Kısım: Döngüsel İterasyonlar (ECO & Prototip) -->
+                <div class="pt-3 border-top">
+                    <div class="d-flex justify-content-between align-items-center mb-2.5">
+                        <span class="small fw-bold text-dark" style="font-size: 0.82rem;">Döngüsel İterasyonlar & Revizyonlar</span>
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-0.5 bg-white" style="font-size: 0.72rem;" data-bs-toggle="modal" data-bs-target="#yeniIterasyonModal">
+                            <i class="bi bi-plus-lg"></i> İterasyon Ekle
+                        </button>
+                    </div>
+
+                    <div class="d-flex flex-column gap-1.5">
+                        {% for eco in eco_revizyonlari %}
+                        <div class="d-flex align-items-center justify-content-between p-2 rounded-2 bg-light border" style="font-size: 0.75rem;">
+                            <div class="d-flex align-items-center gap-1.5">
+                                <span class="badge bg-secondary-subtle text-secondary font-monospace py-0.5 px-1.5">{{ eco.revizyon_no }}</span>
+                                <span class="fw-semibold text-dark text-truncate" style="max-width: 170px;">{{ eco.ad }}</span>
+                            </div>
+                            <span class="badge {% if eco.durum == 'BASARIYLA_TAMAMLANDI' %}bg-success-subtle text-success{% else %}bg-primary-subtle text-primary{% endif %} py-0.5 px-2">
+                                {{ eco.get_durum_display }}
+                            </span>
+                        </div>
+                        {% endfor %}
+
+                        {% for prt in prototip_iterasyonlari %}
+                        <div class="d-flex align-items-center justify-content-between p-2 rounded-2 bg-light border" style="font-size: 0.75rem;">
+                            <div class="d-flex align-items-center gap-1.5">
+                                <span class="badge bg-info-subtle text-info-emphasis font-monospace py-0.5 px-1.5">{{ prt.revizyon_no }}</span>
+                                <span class="fw-semibold text-dark text-truncate" style="max-width: 170px;">{{ prt.ad }}</span>
+                            </div>
+                            <span class="badge {% if prt.durum == 'BASARIYLA_TAMAMLANDI' %}bg-success-subtle text-success{% else %}bg-warning-subtle text-warning-emphasis{% endif %} py-0.5 px-2">
+                                {{ prt.get_durum_display }}
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 8 SÜREÇLİK UÇTAN UCA YAŞAM DÖNGÜSÜ HATTI -->
+    <div class="row g-3 row-cols-1 row-cols-md-2 row-cols-lg-4 mb-4">
+        {% for s in surecler_listesi %}
+        <div class="col">
+            <div class="process-thread-card {% if s.durum_kod == 'DEVAM_EDIYOR' %}active-thread{% elif s.durum_kod == 'TAMAMLANDI' %}completed-thread{% else %}pending-thread{% endif %}">
+                <div>
+                    <!-- Üst Başlık ve No -->
+                    <div class="d-flex align-items-start gap-2.5 mb-2.5">
+                        <div class="process-num-badge {% if s.durum_kod == 'TAMAMLANDI' %}process-num-completed{% elif s.durum_kod == 'DEVAM_EDIYOR' %}process-num-active{% else %}process-num-pending{% endif %}">
+                            {{ s.no }}
+                        </div>
+                        <div>
+                            <h6 class="fw-bold mb-0.5 text-dark" style="font-size: 0.90rem; line-height: 1.35;">{{ s.baslik }}</h6>
+                            <small class="text-muted d-block" style="font-size: 0.72rem;">{{ s.alt_baslik }}</small>
+                        </div>
+                    </div>
+
+                    <!-- Durum Rozeti -->
+                    <div class="mb-3">
+                        <span class="badge {{ s.badge_class }} py-1 px-2.5 fw-medium" style="font-size: 0.72rem;">
+                            {{ s.durum_etiket }}
+                        </span>
+                    </div>
+
+                    <!-- Detay Bilgisi Kutusu -->
+                    <div class="p-2.5 rounded-3 bg-light border border-light-subtle mb-3" style="min-height: 58px;">
+                        <small class="d-block fw-semibold text-dark lh-sm mb-1" style="font-size: 0.76rem;">
+                            {{ s.detay }}
+                        </small>
+                        <div class="d-flex align-items-center justify-content-between text-muted" style="font-size: 0.70rem;">
+                            <span>{{ s.rol }}</span>
+                            <span>{{ s.adim_sayisi }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alt İlerleme ve Sürece Git Butonu -->
+                <div class="pt-2.5 border-top">
+                    <div class="d-flex align-items-center justify-content-between mb-1.5">
+                        <small class="text-muted" style="font-size: 0.70rem;">İlerleme</small>
+                        <small class="fw-bold {% if s.durum_kod == 'TAMAMLANDI' %}text-success{% elif s.durum_kod == 'DEVAM_EDIYOR' %}text-primary{% else %}text-muted{% endif %}" style="font-size: 0.72rem;">
+                            %{{ s.ilerleme }}
+                        </small>
+                    </div>
+                    <div class="progress mb-2.5" style="height: 4px; border-radius: 4px; background-color: #f1f5f9;">
+                        <div class="progress-bar {% if s.durum_kod == 'TAMAMLANDI' %}bg-success{% elif s.durum_kod == 'DEVAM_EDIYOR' %}bg-primary{% else %}bg-secondary-subtle{% endif %}" 
+                             role="progressbar" style="width: {{ s.ilerleme }}%;"></div>
+                    </div>
+                    <a href="{{ s.url }}" class="btn btn-sm btn-outline-secondary bg-white text-secondary w-100 py-1.5 fw-medium rounded-3 d-inline-flex align-items-center justify-content-center gap-1" style="font-size: 0.76rem;">
+                        Sürece Git <i class="bi bi-chevron-right" style="font-size: 0.70rem;"></i>
+                    </a>
+                </div>
+
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- 60 PROJE MASTER PORTFÖY TABLOSU -->
+    <div class="clean-card p-4 shadow-sm mb-4">
+        <!-- Tablo Üst Başlık & İstatistikler -->
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3 pb-3 border-bottom">
+            <div>
+                <h5 class="fw-bold mb-1 text-dark">
+                    Tüm Projeler Portföy Tablosu ({{ toplam_proje_sayisi }} Proje)
+                </h5>
+                <small class="text-muted">Kalıphane, Preshane, Kondanser ve Kablo Gruplama operasyonel takip listesi</small>
+            </div>
+
+            <!-- Dağılım Hap Rozetleri -->
+            <div class="d-flex align-items-center flex-wrap gap-2">
+                <span class="badge bg-light text-dark border px-2.5 py-1.5 font-monospace" style="font-size: 0.76rem;">
+                    Toplam: <strong>{{ toplam_proje_sayisi }}</strong>
+                </span>
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1.5" style="font-size: 0.76rem;">
+                    Tamamlanan: <strong>{{ tamamlanan_proje_sayisi }}</strong>
+                </span>
+                <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-2.5 py-1.5" style="font-size: 0.76rem;">
+                    Devam Eden: <strong>{{ devam_eden_proje_sayisi }}</strong>
+                </span>
+                <span class="badge bg-secondary-subtle text-secondary border px-2.5 py-1.5" style="font-size: 0.76rem;">
+                    Kalıp & Pres: <strong>{{ kaliphane_pres_sayisi }}</strong>
+                </span>
+                <span class="badge bg-secondary-subtle text-secondary border px-2.5 py-1.5" style="font-size: 0.76rem;">
+                    Kondanser: <strong>{{ kondanser_sayisi }}</strong>
+                </span>
+                <span class="badge bg-secondary-subtle text-secondary border px-2.5 py-1.5" style="font-size: 0.76rem;">
+                    Kablo: <strong>{{ kablo_sayisi }}</strong>
+                </span>
+            </div>
+        </div>
+
+        <!-- Hızlı Tablo İçi Arama & Bölüm Filtre Çubuğu -->
+        <div class="row g-2 mb-3">
+            <div class="col-md-5">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                    <input type="text" id="masterTableSearch" class="form-control bg-white border-start-0" placeholder="Proje kodu, parça adı, müşteri, parça kodu veya açıklama ara..." onkeyup="filterMasterTable()">
+                </div>
+            </div>
+            <div class="col-md-7 d-flex justify-content-md-end align-items-center gap-1.5 flex-wrap">
+                <button type="button" class="btn btn-sm btn-outline-secondary master-filter-btn active py-1 px-2.5 rounded-pill" onclick="filterMasterBolum('ALL', this)" style="font-size: 0.76rem;">Tümü</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary master-filter-btn py-1 px-2.5 rounded-pill" onclick="filterMasterBolum('Kalıphane', this)" style="font-size: 0.76rem;">Kalıphane</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary master-filter-btn py-1 px-2.5 rounded-pill" onclick="filterMasterBolum('Preshane', this)" style="font-size: 0.76rem;">Preshane</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary master-filter-btn py-1 px-2.5 rounded-pill" onclick="filterMasterBolum('Kondanser', this)" style="font-size: 0.76rem;">Kondanser</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary master-filter-btn py-1 px-2.5 rounded-pill" onclick="filterMasterBolum('Kablo', this)" style="font-size: 0.76rem;">Kablo Gruplama</button>
+            </div>
+        </div>
+
+        <!-- Tablo -->
+        <div class="table-responsive" style="max-height: 520px; overflow-y: auto;">
+            <table class="table table-hover align-middle mb-0" id="masterProjectsTable" style="font-size: 0.84rem;">
+                <thead class="table-light sticky-top" style="z-index: 2;">
+                    <tr>
+                        <th style="width: 105px;">Kod</th>
+                        <th>Bölüm</th>
+                        <th>Müşteri</th>
+                        <th>Ürün Grubu</th>
+                        <th>Proje & Parça Bilgisi</th>
+                        <th class="text-end">Yıllık FRC</th>
+                        <th>Takvim</th>
+                        <th>İlerleme & Aşama</th>
+                        <th>Açıklama</th>
+                        <th class="text-end" style="width: 110px;">İşlem</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in tum_ana_projeler %}
+                    <tr class="master-row {% if secili_proje and secili_proje.id == p.id %}table-primary-subtle{% endif %}" data-bolum="{{ p.bolum }}" data-musteri="{{ p.musteri.kisa_ad }}">
+                        <td>
+                            <span class="badge bg-dark text-white font-monospace py-1 px-2" style="font-size: 0.74rem;">{{ p.proje_kodu }}</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-secondary border py-1 px-2 fw-medium" style="font-size: 0.74rem;">{{ p.bolum }}</span>
+                        </td>
+                        <td>
+                            <strong class="text-dark">{{ p.musteri.kisa_ad }}</strong>
+                            <small class="text-muted d-block text-truncate" style="max-width: 120px;" title="{{ p.musteri.ad }}">{{ p.musteri.ad }}</small>
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary-subtle text-dark border py-0.5 px-2" style="font-size: 0.72rem;">{{ p.urun_grubu }}</span>
+                        </td>
+                        <td>
+                            <div class="fw-bold text-dark">{{ p.parca_adi|default:p.proje_adi }}</div>
+                            <small class="text-muted d-block text-truncate" style="max-width: 220px;" title="{{ p.proje_adi }}">
+                                Proje: {{ p.proje_adi }}
+                            </small>
+                            {% if p.parca_kodu %}
+                            <small class="text-secondary font-monospace d-block">Kod: {{ p.parca_kodu }}</small>
+                            {% endif %}
+                        </td>
+                        <td class="text-end font-monospace">
+                            {% if p.yillik_frc_miktar > 0 %}
+                            <strong class="text-dark">{{ p.yillik_frc_miktar }}</strong>
+                            <small class="text-muted d-block" style="font-size: 0.70rem;">Adet/Yıl</small>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="small">
+                                <span class="text-muted">Bşl:</span> <strong class="text-dark">{{ p.proje_baslangic_tarihi_str|default:"-" }}</strong>
+                            </div>
+                            <div class="small">
+                                <span class="text-muted">Hdf:</span> <strong class="text-dark">{{ p.proje_hedef_tarihi_str|default:"-" }}</strong>
+                            </div>
+                            {% if p.proje_bitis_tarihi_str or p.proje_onay_tarihi_str %}
+                            <div class="small text-muted" style="font-size: 0.72rem;">
+                                Bit: {{ p.proje_bitis_tarihi_str|default:"-" }} | Onay: {{ p.proje_onay_tarihi_str|default:"-" }}
+                            </div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-1.5 mb-1">
+                                <span class="fw-bold {% if p.genel_ilerleme_yuzdesi == 100 %}text-success{% else %}text-primary{% endif %}" style="font-size: 0.76rem;">%{{ p.genel_ilerleme_yuzdesi }}</span>
+                                <div class="progress flex-grow-1" style="height: 5px; min-width: 60px;">
+                                    <div class="progress-bar {% if p.genel_ilerleme_yuzdesi == 100 %}bg-success{% else %}bg-primary{% endif %}" style="width: {{ p.genel_ilerleme_yuzdesi }}%;"></div>
+                                </div>
+                            </div>
+                            <span class="badge {% if p.genel_ilerleme_yuzdesi == 100 %}bg-success-subtle text-success{% else %}bg-primary-subtle text-primary{% endif %} py-0.5 px-2" style="font-size: 0.70rem;">
+                                {{ p.aktif_surec_adi|truncatechars:20 }}
+                            </span>
+                        </td>
+                        <td>
+                            <small class="text-muted d-block text-truncate" style="max-width: 200px;" title="{{ p.aciklama_notu }}">
+                                {{ p.aciklama_notu|default:"-" }}
+                            </small>
+                        </td>
+                        <td class="text-end">
+                            <a href="?tab=is_akisi&proje_id={{ p.id }}" class="btn btn-sm btn-outline-primary bg-white rounded-3 px-2.5 py-1 fw-semibold d-inline-flex align-items-center gap-1 shadow-sm" style="font-size: 0.74rem;">
+                                Seç <i class="bi bi-arrow-right" style="font-size: 0.70rem;"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="10" class="text-center py-4 text-muted">Kayıtlı proje bulunamadı.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Tablo Arama & Filtreleme Scripti -->
+    <script>
+    function filterMasterTable() {
+        var input = document.getElementById("masterTableSearch");
+        var filter = input.value.toLowerCase();
+        var rows = document.querySelectorAll("#masterProjectsTable tbody tr.master-row");
+        
+        rows.forEach(function(row) {
+            var text = row.textContent.toLowerCase();
+            if (text.indexOf(filter) > -1) {
+                row.style.display = "";
+            } else {
+                row.style.display = "none";
+            }
+        });
+    }
+
+    function filterMasterBolum(bolum, btn) {
+        document.querySelectorAll(".master-filter-btn").forEach(function(b) {
+            b.classList.remove("active", "btn-secondary", "text-white");
+            b.classList.add("btn-outline-secondary");
+        });
+        btn.classList.add("active", "btn-secondary", "text-white");
+        btn.classList.remove("btn-outline-secondary");
+
+        var rows = document.querySelectorAll("#masterProjectsTable tbody tr.master-row");
+        rows.forEach(function(row) {
+            var rowBolum = row.getAttribute("data-bolum") || "";
+            if (bolum === 'ALL' || rowBolum.indexOf(bolum) > -1) {
+                row.style.display = "";
+            } else {
+                row.style.display = "none";
+            }
+        });
+    }
+    </script>
+    {% endif %}
+
+
+    {% else %}
+    <!-- ========================================================================= -->
+    <!-- 1. GÖRÜNÜM: AJANDAM & FAALİYETLERİM (KİŞİSEL TAKVİM, TOPLANTI, SEYAHAT)    -->
+    <!-- ========================================================================= -->
+
+    <!-- Üst Filtre Çubuğu -->
+    <div class="clean-card p-3.5 px-4 mb-4 shadow-sm">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 px-1">
             <!-- Kategori Filtreleri -->
-            <div class="d-flex align-items-center gap-1.5 flex-wrap">
-                <a href="?view={{ secili_gorunum }}&yil={{ secili_yil }}&ay={{ secili_ay }}&gun={{ secili_gun }}" 
+            <div class="d-flex align-items-center gap-2 flex-wrap ps-1">
+                <a href="?tab=ajanda&view={{ secili_gorunum }}&yil={{ secili_yil }}&ay={{ secili_ay }}&gun={{ secili_gun }}" 
                    class="cat-pill {% if not secili_tur %}active{% endif %}">
-                    <span>Tümü ({{ kategori_sayilari.toplam }})</span>
+                    <span>Tümü</span>
                 </a>
 
-                <a href="?tur=SEYAHAT&view={{ secili_gorunum }}&yil={{ secili_yil }}&ay={{ secili_ay }}&gun={{ secili_gun }}" 
+                <a href="?tab=ajanda&tur=SEYAHAT&view={{ secili_gorunum }}&yil={{ secili_yil }}&ay={{ secili_ay }}&gun={{ secili_gun }}" 
                    class="cat-pill {% if secili_tur == 'SEYAHAT' %}active{% endif %}">
                     <span class="dot-indicator" style="background: var(--c-seyahat-dot);"></span>
-                    <span>Seyahat ({{ kategori_sayilari.seyahat }})</span>
+                    <span>Seyahat</span>
                 </a>
 
-                <a href="?tur=TOPLANTI&view={{ secili_gorunum }}&yil={{ secili_yil }}&ay={{ secili_ay }}&gun={{ secili_gun }}" 
+                <a href="?tab=ajanda&tur=TOPLANTI&view={{ secili_gorunum }}&yil={{ secili_yil }}&ay={{ secili_ay }}&gun={{ secili_gun }}" 
                    class="cat-pill {% if secili_tur == 'TOPLANTI' %}active{% endif %}">
                     <span class="dot-indicator" style="background: var(--c-toplanti-dot);"></span>
-                    <span>Toplantı ({{ kategori_sayilari.toplanti }})</span>
+                    <span>Toplantı</span>
                 </a>
 
-                <a href="?tur=FUAR&view={{ secili_gorunum }}&yil={{ secili_yil }}&ay={{ secili_ay }}&gun={{ secili_gun }}" 
+                <a href="?tab=ajanda&tur=FUAR&view={{ secili_gorunum }}&yil={{ secili_yil }}&ay={{ secili_ay }}&gun={{ secili_gun }}" 
                    class="cat-pill {% if secili_tur == 'FUAR' %}active{% endif %}">
                     <span class="dot-indicator" style="background: var(--c-fuar-dot);"></span>
-                    <span>Fuar ({{ kategori_sayilari.fuar }})</span>
+                    <span>Fuar</span>
                 </a>
 
-                <a href="?tur=DESTEK&view={{ secili_gorunum }}&yil={{ secili_yil }}&ay={{ secili_ay }}&gun={{ secili_gun }}" 
+                <a href="?tab=ajanda&tur=DESTEK&view={{ secili_gorunum }}&yil={{ secili_yil }}&ay={{ secili_ay }}&gun={{ secili_gun }}" 
                    class="cat-pill {% if secili_tur == 'DESTEK' %}active{% endif %}">
                     <span class="dot-indicator" style="background: var(--c-destek-dot);"></span>
-                    <span>Destek ({{ kategori_sayilari.destek }})</span>
+                    <span>Destek</span>
                 </a>
             </div>
 
             <!-- Sağ Aksiyonlar: Arama, Görünüm Seçici, Yeni Ekle -->
-            <div class="d-flex align-items-center gap-2 flex-wrap">
+            <div class="d-flex align-items-center gap-2 flex-wrap pe-1">
                 <!-- Arama -->
                 <form method="GET" class="d-flex align-items-center">
+                    <input type="hidden" name="tab" value="ajanda">
                     {% if secili_tur %}<input type="hidden" name="tur" value="{{ secili_tur }}">{% endif %}
                     {% if secili_durum %}<input type="hidden" name="durum" value="{{ secili_durum }}">{% endif %}
                     {% if secili_gorunum %}<input type="hidden" name="view" value="{{ secili_gorunum }}">{% endif %}
                     {% if secili_yil %}<input type="hidden" name="yil" value="{{ secili_yil }}">{% endif %}
                     {% if secili_ay %}<input type="hidden" name="ay" value="{{ secili_ay }}">{% endif %}
                     <div class="input-group input-group-sm" style="width: 190px;">
-                        <span class="input-group-text bg-white border-end-0 text-muted ps-2.5"><i class="bi bi-search" style="font-size: 0.75rem;"></i></span>
-                        <input type="text" name="q" value="{{ arama_q }}" class="form-control border-start-0 ps-1" placeholder="Ara..." style="font-size: 0.8rem;">
+                        <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                        <input type="text" name="q" value="{{ arama_q }}" class="form-control bg-light border-start-0 py-1" placeholder="Ara...">
                     </div>
                 </form>
 
-                <!-- Görünüm Seçici -->
+                <!-- Takvim / Liste Görünüm Toggle -->
                 <div class="segmented-control">
-                    <a href="?{% if secili_tur %}tur={{ secili_tur }}&{% endif %}view=takvim&yil={{ secili_yil }}&ay={{ secili_ay }}&gun={{ secili_gun }}" 
-                       class="segmented-item {% if secili_gorunum == 'takvim' or not secili_gorunum %}active{% endif %}">
-                        <i class="bi bi-calendar-week"></i>
-                        <span>Takvim</span>
+                    <a href="?tab=ajanda&view=takvim&tur={{ secili_tur }}&durum={{ secili_durum }}&yil={{ secili_yil }}&ay={{ secili_ay }}&gun={{ secili_gun }}" 
+                       class="segmented-item {% if secili_gorunum == 'takvim' %}active{% endif %}">
+                        <i class="bi bi-calendar3"></i> Takvim
                     </a>
-                    <a href="?{% if secili_tur %}tur={{ secili_tur }}&{% endif %}view=liste&yil={{ secili_yil }}&ay={{ secili_ay }}" 
+                    <a href="?tab=ajanda&view=liste&tur={{ secili_tur }}&durum={{ secili_durum }}&yil={{ secili_yil }}&ay={{ secili_ay }}&gun={{ secili_gun }}" 
                        class="segmented-item {% if secili_gorunum == 'liste' %}active{% endif %}">
-                        <i class="bi bi-list-ul"></i>
-                        <span>Liste</span>
+                        <i class="bi bi-list-task"></i> Liste
                     </a>
                 </div>
 
-                <!-- Yeni Ekle Butonu -->
-                <button type="button" class="btn btn-primary btn-sm px-3 py-1.5 rounded-3 d-flex align-items-center gap-1.5 shadow-sm fw-semibold" data-bs-toggle="modal" data-bs-target="#yeniFaaliyetModal">
-                    <i class="bi bi-plus-lg"></i>
-                    <span>Yeni Faaliyet</span>
+                <!-- Yeni Faaliyet Ekle Butonu -->
+                <button type="button" class="btn btn-sm btn-primary rounded-3 px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-1.5 shadow-sm" style="background-color: #2563eb; border-color: #2563eb;" data-bs-toggle="modal" data-bs-target="#faaliyetModal">
+                    <i class="bi bi-plus-lg"></i> Yeni Faaliyet
                 </button>
             </div>
         </div>
     </div>
 
 
-    <!-- ================================================================= -->
-    <!-- GÖRÜNÜM 1: AJANDA & TAKVİM (SPLIT ÇALIŞMA ALANI) -->
-    <!-- ================================================================= -->
-    {% if secili_gorunum == 'takvim' or not secili_gorunum %}
-    <div class="row g-4">
-        <!-- SOL PANEL: MİNİ TAKVİM & GÜN SEÇİCİ -->
-        <div class="col-lg-4 col-xl-3.5">
-            <div class="clean-card p-3 p-xl-4 sticky-lg-top" style="top: 20px;">
-                <!-- Mini Takvim Başlığı -->
-                <div class="mini-cal-header">
-                    <div class="fw-bold text-dark" style="font-size: 0.95rem;">
-                        {{ secili_ay_adi }} {{ secili_yil }}
-                    </div>
-                    <div class="d-flex align-items-center gap-1">
-                        <a href="?{% if secili_tur %}tur={{ secili_tur }}&{% endif %}view=takvim&yil={{ onceki_yil }}&ay={{ onceki_ay }}" 
-                           class="btn btn-sm btn-light border-0 py-0.5 px-2 rounded-2 text-muted" title="Önceki Ay">
-                            <i class="bi bi-chevron-left" style="font-size: 0.75rem;"></i>
-                        </a>
-                        <a href="?{% if secili_tur %}tur={{ secili_tur }}&{% endif %}view=takvim&yil={{ bugun.year }}&ay={{ bugun.month }}&gun={{ bugun.day }}" 
-                           class="btn btn-sm btn-light border py-0.5 px-2 rounded-2 text-primary fw-bold" style="font-size: 0.75rem;">
-                            Bugün
-                        </a>
-                        <a href="?{% if secili_tur %}tur={{ secili_tur }}&{% endif %}view=takvim&yil={{ sonraki_yil }}&ay={{ sonraki_ay }}" 
-                           class="btn btn-sm btn-light border-0 py-0.5 px-2 rounded-2 text-muted" title="Sonraki Ay">
-                            <i class="bi bi-chevron-right" style="font-size: 0.75rem;"></i>
-                        </a>
-                    </div>
-                </div>
-
-                <!-- Gün İsimleri -->
-                <div class="mini-cal-grid mb-1">
-                    <div class="mini-cal-dayname">Pt</div>
-                    <div class="mini-cal-dayname">Sa</div>
-                    <div class="mini-cal-dayname">Ça</div>
-                    <div class="mini-cal-dayname">Pe</div>
-                    <div class="mini-cal-dayname">Cu</div>
-                    <div class="mini-cal-dayname">Ct</div>
-                    <div class="mini-cal-dayname">Pz</div>
-                </div>
-
-                <!-- Gün Hücreleri -->
-                {% for hafta in takvim_haftalari %}
-                <div class="mini-cal-grid mb-1">
-                    {% for gun_data in hafta %}
-                    <a href="?{% if secili_tur %}tur={{ secili_tur }}&{% endif %}view=takvim&yil={{ gun_data.tarih.year }}&ay={{ gun_data.tarih.month }}&gun={{ gun_data.gun }}" 
-                       class="mini-cal-cell {% if not gun_data.is_current_month %}other-month{% endif %} {% if gun_data.is_today %}is-today{% endif %} {% if gun_data.is_selected %}is-selected{% endif %}">
-                        <span>{{ gun_data.gun }}</span>
-                        {% if gun_data.adet > 0 %}
-                        <div class="mini-cal-dots">
-                            <span class="mini-cal-dot"></span>
-                        </div>
-                        {% endif %}
-                    </a>
-                    {% endfor %}
-                </div>
-                {% endfor %}
-
-                <hr class="my-3 opacity-25">
-
-                <!-- Seçili Gün Özeti -->
-                <div class="p-3 rounded-3 bg-light border">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <span class="small fw-bold text-dark">
-                            <i class="bi bi-calendar-check me-1 text-primary"></i> {{ secili_gun_tarih|date:"d F Y" }}
-                        </span>
-                        <span class="badge bg-white text-dark border rounded-pill px-2 py-0.5" style="font-size: 0.72rem;">
-                            {{ gun_faaliyetleri.count }} Kayıt
-                        </span>
-                    </div>
-                    <p class="text-muted small mb-0" style="font-size: 0.76rem;">
-                        Takvimden seçtiğiniz günün ajandası sağ tarafta görüntülenmektedir.
-                    </p>
-                </div>
-            </div>
-        </div>
-
-        <!-- SAĞ PANEL: SEÇİLİ GÜNÜN AJANDASI VE AYIN DİĞER PLANLARI -->
-        <div class="col-lg-8 col-xl-8.5">
-            <!-- Gün Başlığı -->
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4 class="h5 fw-bold text-dark mb-0 d-flex align-items-center gap-2">
-                    <span>{{ secili_gun_tarih|date:"d F Y, l" }} Programı</span>
-                    {% if secili_gun_tarih == bugun %}
-                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-0.5 fw-semibold" style="font-size: 0.72rem;">Bugün</span>
-                    {% endif %}
-                </h4>
-
-                <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 py-1 fw-semibold" data-bs-toggle="modal" data-bs-target="#yeniFaaliyetModal">
-                    <i class="bi bi-plus-lg me-1"></i> Bu Güne Ekle
-                </button>
-            </div>
-
-            <!-- Seçili Günün Faaliyet Kartları -->
-            {% if gun_faaliyetleri %}
-                <div class="mb-4">
-                    {% for f in gun_faaliyetleri %}
-                    <div class="activity-card shadow-sm">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="activity-badge activity-badge-{{ f.tur|lower }}">
-                                    <i class="bi {{ f.tur_ikonu }}"></i> {{ f.get_tur_display }}
-                                </span>
-                                <span class="text-muted small fw-medium" style="font-size: 0.8rem;">
-                                    <i class="bi bi-clock me-1 text-secondary"></i>{{ f.saat_araligi|default:"Tüm Gün" }}
-                                </span>
-                            </div>
-                            <span class="badge {{ f.durum_badge_class }}" style="font-size: 0.72rem;">
-                                {{ f.get_durum_display }}
-                            </span>
-                        </div>
-
-                        <h5 class="fw-bold text-dark mb-1.5" style="font-size: 0.98rem;">{{ f.baslik }}</h5>
-
-                        <div class="d-flex align-items-center gap-3 text-muted small mb-2 flex-wrap" style="font-size: 0.82rem;">
-                            {% if f.musteri_adi %}
-                            <div class="d-flex align-items-center gap-1 text-dark fw-medium">
-                                <i class="bi bi-building text-secondary"></i>
-                                <span>{{ f.musteri_adi }}</span>
-                            </div>
-                            {% endif %}
-                            {% if f.lokasyon %}
-                            <div class="d-flex align-items-center gap-1">
-                                <i class="bi bi-geo-alt text-secondary"></i>
-                                <span>{{ f.lokasyon }}</span>
-                            </div>
-                            {% endif %}
-                            <div>
-                                <span class="badge {{ f.oncelik_badge_class }}" style="font-size: 0.7rem;">
-                                    Öncelik: {{ f.get_oncelik_display }}
-                                </span>
-                            </div>
-                        </div>
-
-                        {% if f.aciklama %}
-                        <p class="text-secondary small mb-3 bg-light p-2.5 rounded-3 border" style="font-size: 0.82rem; line-height: 1.45;">
-                            {{ f.aciklama }}
-                        </p>
-                        {% endif %}
-
-                        <div class="d-flex justify-content-between align-items-center pt-2 border-top">
-                            <div class="dropdown">
-                                <button class="btn btn-light btn-sm py-1 px-3 rounded-pill border text-secondary small" type="button" data-bs-toggle="dropdown" style="font-size: 0.78rem;">
-                                    Durum: <span class="fw-semibold text-dark">{{ f.get_durum_display }}</span> <i class="bi bi-chevron-down ms-1"></i>
-                                </button>
-                                <ul class="dropdown-menu shadow-sm" style="font-size: 0.82rem;">
-                                    {% for durum_kod, durum_ad in f.DURUM_CHOICES %}
-                                    <li>
-                                        <form method="POST" action="{% url 'faaliyet_durum_guncelle' f.pk %}">
-                                            {% csrf_token %}
-                                            <input type="hidden" name="durum" value="{{ durum_kod }}">
-                                            <button type="submit" class="dropdown-item d-flex align-items-center justify-content-between {% if f.durum == durum_kod %}active{% endif %}">
-                                                <span>{{ durum_ad }}</span>
-                                                {% if f.durum == durum_kod %}<i class="bi bi-check-lg"></i>{% endif %}
-                                            </button>
-                                        </form>
-                                    </li>
-                                    {% endfor %}
-                                </ul>
-                            </div>
-
-                            <div class="d-flex align-items-center gap-1">
-                                <button type="button" class="btn btn-light btn-sm px-2.5 py-1 rounded-pill border text-secondary" data-bs-toggle="modal" data-bs-target="#faaliyetDetayModal{{ f.id }}" title="Detay Görüntüle">
-                                    <i class="bi bi-eye me-1"></i> Detay
-                                </button>
-                                <form method="POST" action="{% url 'faaliyet_sil' f.pk %}" onsubmit="return confirm('Bu faaliyeti silmek istediğinize emin misiniz?');" class="d-inline">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-light btn-sm px-2.5 py-1 rounded-pill border text-danger" title="Sil">
-                                        <i class="bi bi-trash3"></i>
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            {% else %}
-                <div class="clean-card p-4 text-center text-muted mb-4">
-                    <i class="bi bi-calendar2-check fs-2 d-block mb-1 text-secondary opacity-50"></i>
-                    <h6 class="fw-bold text-dark mb-1">Bu tarihte planlanmış faaliyetiniz bulunmuyor</h6>
-                    <p class="small text-muted mb-3">{{ secili_gun_tarih|date:"d F Y" }} için yeni bir seyahat, toplantı veya destek talebi ekleyebilirsiniz.</p>
-                    <button type="button" class="btn btn-primary btn-sm rounded-pill px-3 py-1.5" data-bs-toggle="modal" data-bs-target="#yeniFaaliyetModal">
-                        <i class="bi bi-plus-lg me-1"></i> Yeni Faaliyet Planla
-                    </button>
-                </div>
-            {% endif %}
-
-            <!-- BU AYIN DİĞER PLANLARI -->
-            <div class="mt-4 pt-2">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="h6 fw-bold text-dark mb-0 d-flex align-items-center gap-2">
-                        <i class="bi bi-calendar-month text-primary"></i>
-                        <span>{{ secili_ay_adi }} {{ secili_yil }} Ayının Diğer Planları</span>
-                    </h5>
-                    <span class="badge bg-light text-secondary border rounded-pill px-2.5 py-1">
-                        {{ aylik_faaliyetler.count }} Faaliyet
-                    </span>
-                </div>
-
-                <div class="row g-3">
-                    {% for f in aylik_faaliyetler %}
-                    <div class="col-md-6">
-                        <div class="clean-card p-3 h-100 position-relative">
-                            <div class="d-flex justify-content-between align-items-start mb-1.5">
-                                <span class="activity-badge activity-badge-{{ f.tur|lower }}" style="font-size: 0.7rem;">
-                                    <i class="bi {{ f.tur_ikonu }}"></i> {{ f.get_tur_display }}
-                                </span>
-                                <span class="badge {{ f.durum_badge_class }}" style="font-size: 0.68rem;">
-                                    {{ f.get_durum_display }}
-                                </span>
-                            </div>
-
-                            <h6 class="fw-bold text-dark mb-1" style="font-size: 0.88rem;">
-                                <a href="javascript:void(0);" class="text-dark text-decoration-none" data-bs-toggle="modal" data-bs-target="#faaliyetDetayModal{{ f.id }}">
-                                    {{ f.baslik }}
-                                </a>
-                            </h6>
-
-                            <div class="text-muted small mb-2" style="font-size: 0.78rem;">
-                                <div><i class="bi bi-calendar-event me-1"></i>{{ f.baslangic_tarihi|date:"d M Y" }} • {{ f.saat_araligi|default:"Tüm Gün" }}</div>
-                                {% if f.musteri_adi %}<div><i class="bi bi-building me-1"></i>{{ f.musteri_adi }}</div>{% endif %}
-                            </div>
-
-                            <div class="d-flex justify-content-end align-items-center pt-2 border-top mt-auto">
-                                <a href="javascript:void(0);" class="text-primary small fw-semibold text-decoration-none" data-bs-toggle="modal" data-bs-target="#faaliyetDetayModal{{ f.id }}" style="font-size: 0.76rem;">
-                                    Detay <i class="bi bi-chevron-right"></i>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                    {% empty %}
-                    <div class="col-12">
-                        <div class="p-3 text-center text-muted small bg-light rounded-3 border">
-                            Bu ay için kayıtlı başka bir faaliyetiniz bulunmuyor.
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-
-    <!-- ================================================================= -->
-    <!-- GÖRÜNÜM 2: LİSTE TABLOSU (TABLE VIEW) -->
-    <!-- ================================================================= -->
     {% if secili_gorunum == 'liste' %}
-    <div class="clean-card overflow-hidden">
-        <div class="p-3 border-bottom bg-light d-flex justify-content-between align-items-center">
-            <h5 class="h6 fw-bold text-dark mb-0 d-flex align-items-center gap-2">
-                <i class="bi bi-list-ul text-primary"></i>
-                <span>Faaliyet ve Talep Tablosu</span>
-            </h5>
-            <span class="badge bg-white text-dark border rounded-pill px-2.5 py-1">
-                Toplam {{ faaliyetler.count }} Kayıt
-            </span>
+    <!-- LİSTE GÖRÜNÜMÜ -->
+    <div class="clean-card p-4 shadow-sm">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold text-dark mb-0">Tüm Planlanan Faaliyetler ve Görevler</h5>
+            <small class="text-muted">{{ faaliyetler.count }} Faaliyet Listelendi</small>
         </div>
 
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0" style="font-size: 0.84rem;">
-                <thead class="table-light text-secondary">
+            <table class="table table-hover align-middle mb-0" style="font-size: 0.88rem;">
+                <thead class="table-light">
                     <tr>
                         <th style="width: 130px;">Tür</th>
-                        <th>Faaliyet & Talep Başlığı</th>
+                        <th>Başlık / Konu</th>
                         <th>Müşteri / Lokasyon</th>
                         <th>Tarih & Saat</th>
                         <th>Öncelik</th>
                         <th>Durum</th>
-                        <th class="text-end" style="width: 100px;">İşlemler</th>
+                        <th class="text-end">İşlem</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for f in faaliyetler %}
                     <tr>
                         <td>
-                            <span class="activity-badge activity-badge-{{ f.tur|lower }}" style="font-size: 0.72rem;">
-                                <i class="bi {{ f.tur_ikonu }}"></i> {{ f.get_tur_display }}
+                            <span class="activity-badge activity-badge-{{ f.tur|lower }}">
+                                <i class="bi {{ f.tur_icon }}"></i> {{ f.get_tur_display }}
                             </span>
                         </td>
                         <td>
-                            <a href="javascript:void(0);" class="fw-bold text-dark text-decoration-none" data-bs-toggle="modal" data-bs-target="#faaliyetDetayModal{{ f.id }}">
-                                {{ f.baslik }}
-                            </a>
+                            <div class="fw-bold text-dark">{{ f.baslik }}</div>
                             {% if f.aciklama %}
-                            <div class="text-muted small text-truncate" style="max-width: 300px; font-size: 0.75rem;">
-                                {{ f.aciklama }}
-                            </div>
+                            <small class="text-muted text-truncate d-block" style="max-width: 340px;">{{ f.aciklama }}</small>
                             {% endif %}
                         </td>
                         <td>
-                            {% if f.musteri_adi %}<div class="fw-medium text-dark">{{ f.musteri_adi }}</div>{% endif %}
-                            {% if f.lokasyon %}<small class="text-muted"><i class="bi bi-geo-alt me-1"></i>{{ f.lokasyon }}</small>{% endif %}
+                            <div class="fw-semibold text-secondary">{{ f.musteri_adi|default:"Teleset İç Faaliyet" }}</div>
+                            {% if f.lokasyon %}
+                            <small class="text-muted"><i class="bi bi-geo-alt me-0.5"></i>{{ f.lokasyon }}</small>
+                            {% endif %}
                         </td>
                         <td>
-                            <div class="fw-medium text-dark">{{ f.baslangic_tarihi|date:"d.m.Y" }}</div>
-                            <small class="text-muted">{{ f.saat_araligi|default:"Tüm Gün" }}</small>
+                            <div class="fw-medium text-dark">{{ f.baslangic_tarihi|date:"d M Y" }}</div>
+                            <small class="text-muted">{{ f.saat_araligi }}</small>
                         </td>
                         <td>
-                            <span class="badge {{ f.oncelik_badge_class }}" style="font-size: 0.7rem;">
-                                {{ f.get_oncelik_display }}
-                            </span>
+                            <span class="badge {{ f.oncelik_badge_class }}">{{ f.get_oncelik_display }}</span>
                         </td>
                         <td>
-                            <span class="badge {{ f.durum_badge_class }}" style="font-size: 0.7rem;">
-                                {{ f.get_durum_display }}
-                            </span>
+                            <span class="badge {{ f.durum_badge_class }}">{{ f.get_durum_display }}</span>
                         </td>
                         <td class="text-end">
-                            <div class="d-flex align-items-center justify-content-end gap-1">
-                                <button type="button" class="btn btn-outline-secondary btn-sm p-1 rounded-2" data-bs-toggle="modal" data-bs-target="#faaliyetDetayModal{{ f.id }}" title="Detay">
-                                    <i class="bi bi-eye"></i>
+                            <form action="/faaliyet/{{ f.id }}/sil/" method="POST" class="d-inline" onsubmit="return confirm('Bu faaliyeti silmek istediğinize emin misiniz?');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-link text-danger p-0 border-0" title="Sil">
+                                    <i class="bi bi-trash"></i>
                                 </button>
-                                <form method="POST" action="{% url 'faaliyet_sil' f.pk %}" onsubmit="return confirm('Silmek istediğinize emin misiniz?');" class="d-inline">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-outline-danger btn-sm p-1 rounded-2" title="Sil">
-                                        <i class="bi bi-trash3"></i>
-                                    </button>
-                                </form>
-                            </div>
+                            </form>
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
                         <td colspan="7" class="text-center py-5 text-muted">
-                            Kayıt bulunamadı.
+                            <i class="bi bi-calendar-x fs-1 d-block mb-2 text-secondary"></i>
+                            Kriterlere uygun kayıt bulunamadı.
                         </td>
                     </tr>
                     {% endfor %}
@@ -619,90 +1064,176 @@
             </table>
         </div>
     </div>
+
+
+    {% else %}
+    <!-- TAKVİM & GÜNLÜK AJANDA İKİLİ GÖRÜNÜMÜ -->
+    <div class="row g-4">
+        
+        <!-- SOL KOLON: TAKVİM IZGARASI -->
+        <div class="col-lg-4 col-md-5">
+            <div class="clean-card p-4 shadow-sm h-100">
+                <!-- Ay Seçimi ve Başlık -->
+                <div class="d-flex justify-content-between align-items-center mb-3.5 pb-2 border-bottom">
+                    <h6 class="fw-bold mb-0 text-dark" style="font-size: 1rem;">
+                        {{ secili_ay_adi }} {{ secili_yil }}
+                    </h6>
+                    <div class="d-flex align-items-center gap-1.5">
+                        <a href="?tab=ajanda&yil={{ onceki_yil }}&ay={{ onceki_ay }}&tur={{ secili_tur }}&durum={{ secili_durum }}" 
+                           class="btn btn-sm btn-outline-secondary px-2.5 py-1 rounded-2 bg-white" title="Önceki Ay">
+                            <i class="bi bi-chevron-left" style="font-size: 0.75rem;"></i>
+                        </a>
+                        <a href="?tab=ajanda&yil={{ bugun.year }}&ay={{ bugun.month }}&gun={{ bugun.day }}&tur={{ secili_tur }}&durum={{ secili_durum }}" 
+                           class="btn btn-sm btn-outline-primary px-3 py-1 rounded-2 bg-white fw-semibold" style="font-size: 0.78rem;">
+                            Bugün
+                        </a>
+                        <a href="?tab=ajanda&yil={{ sonraki_yil }}&ay={{ sonraki_ay }}&tur={{ secili_tur }}&durum={{ secili_durum }}" 
+                           class="btn btn-sm btn-outline-secondary px-2.5 py-1 rounded-2 bg-white" title="Sonraki Ay">
+                            <i class="bi bi-chevron-right" style="font-size: 0.75rem;"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Gün Başlıkları (PT, SA, ÇA, PE, CU, CT, PZ) -->
+                <div class="cal-grid mb-1.5">
+                    <div class="cal-header-day">PT</div>
+                    <div class="cal-header-day">SA</div>
+                    <div class="cal-header-day">ÇA</div>
+                    <div class="cal-header-day">PE</div>
+                    <div class="cal-header-day">CU</div>
+                    <div class="cal-header-day">CT</div>
+                    <div class="cal-header-day">PZ</div>
+                </div>
+
+                <!-- Takvim Günleri -->
+                <div class="cal-grid">
+                    {% for week in takvim_haftalari %}
+                        {% for day in week %}
+                            <a href="?tab=ajanda&yil={{ day.tarih.year }}&ay={{ day.tarih.month }}&gun={{ day.gun }}&tur={{ secili_tur }}&durum={{ secili_durum }}&view={{ secili_gorunum }}" 
+                               class="cal-cell {% if not day.is_current_month %}other-month{% endif %} {% if day.is_today %}today{% endif %} {% if day.is_selected %}selected{% endif %}">
+                                <span class="cal-cell-number">{{ day.gun }}</span>
+                                {% if day.adet > 0 %}
+                                <div class="cal-cell-dots">
+                                    {% for f in day.faaliyetler|slice:":3" %}
+                                    <span class="cal-dot" style="background-color: {{ f.tur_renk }};"></span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </a>
+                        {% endfor %}
+                    {% endfor %}
+                </div>
+
+                <!-- Günün Seçim Notu -->
+                <div class="mt-4 pt-3 border-top">
+                    <div class="d-flex align-items-center justify-content-between text-muted small">
+                        <span class="d-inline-flex align-items-center gap-1.5"><i class="bi bi-calendar-check text-primary"></i><strong>{{ secili_gun }} {{ secili_ay_adi }} {{ secili_yil }}</strong></span>
+                        <span class="badge bg-light text-dark border px-2 py-1">{{ gun_faaliyetleri.count }} Kayıt</span>
+                    </div>
+                    <small class="text-muted d-block mt-1.5" style="font-size: 0.75rem;">
+                        Takvimden seçtiğiniz günün ajandası sağ tarafta görüntülenmektedir.
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- SAĞ KOLON: SEÇİLİ GÜNÜN FAALİYETLERİ VE GÖREVLERİ -->
+        <div class="col-lg-8 col-md-7">
+            <div class="clean-card p-4 shadow-sm h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3.5 pb-2 border-bottom">
+                    <div>
+                        <h6 class="fw-bold mb-0 text-dark" style="font-size: 1rem;">
+                            {{ secili_gun }} {{ secili_ay_adi }} {{ secili_yil }} Günlük Planı
+                        </h6>
+                        <small class="text-muted" style="font-size: 0.78rem;">Seçilen gün için planlanan tüm görüşmeler ve görevler</small>
+                    </div>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1 fw-semibold" style="font-size: 0.75rem;">
+                        {{ gun_faaliyetleri.count }} Faaliyet
+                    </span>
+                </div>
+
+                <!-- Faaliyet Listesi -->
+                <div class="d-flex flex-column gap-3">
+                    {% for f in gun_faaliyetleri %}
+                    <div class="activity-card shadow-sm">
+                        <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                            <span class="activity-badge activity-badge-{{ f.tur|lower }}">
+                                <i class="bi {{ f.tur_icon }}"></i> {{ f.get_tur_display }}
+                            </span>
+                            <div class="d-flex align-items-center gap-1.5">
+                                <span class="badge {{ f.oncelik_badge_class }} py-1 px-2">{{ f.get_oncelik_display }}</span>
+                                <span class="badge {{ f.durum_badge_class }} py-1 px-2">{{ f.get_durum_display }}</span>
+                            </div>
+                        </div>
+
+                        <h6 class="fw-bold text-dark mt-2.5 mb-2.5" style="font-size: 0.96rem; letter-spacing: -0.2px;">
+                            {{ f.baslik }}
+                        </h6>
+
+                        {% if f.aciklama %}
+                        <p class="text-muted small mb-3 lh-sm" style="font-size: 0.84rem;">
+                            {{ f.aciklama }}
+                        </p>
+                        {% endif %}
+
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pt-2 border-top text-muted small" style="font-size: 0.78rem;">
+                            <div class="d-flex align-items-center gap-3">
+                                {% if f.musteri_adi %}
+                                <span><i class="bi bi-building me-1"></i><strong>{{ f.musteri_adi }}</strong></span>
+                                {% endif %}
+                                {% if f.lokasyon %}
+                                <span><i class="bi bi-geo-alt me-1"></i>{{ f.lokasyon }}</span>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <i class="bi bi-clock me-1"></i>{{ f.saat_araligi }}
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-calendar-check fs-1 text-secondary d-block mb-2"></i>
+                        <h6 class="fw-bold text-dark mb-1">Bu Tarihte Planlanmış Faaliyet Bulunmuyor</h6>
+                        <small class="text-muted">Yukarıdaki "Yeni Faaliyet" butonunu kullanarak bu tarihe seyahat veya toplantı ekleyebilirsiniz.</small>
+                    </div>
+                    {% endfor %}
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+    {% endif %}
+
     {% endif %}
 
 </div>
 
-
-<!-- ================================================================= -->
-<!-- MODALLAR: YENİ FAALİYET & DETAY GÖRÜNTÜLEME -->
-<!-- ================================================================= -->
-
-<!-- 1. YENİ FAALİYET OLUŞTURMA MODALI -->
-<div class="modal fade" id="yeniFaaliyetModal" tabindex="-1" aria-labelledby="yeniFaaliyetModalLabel" aria-hidden="true">
+<!-- YENİ FAALİYET OLUŞTURMA MODALI -->
+<div class="modal fade" id="faaliyetModal" tabindex="-1" aria-labelledby="faaliyetModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
-            <form method="POST" action="{% url 'faaliyet_olustur' %}">
+            <div class="modal-header bg-dark text-white" style="border-radius: 16px 16px 0 0;">
+                <h5 class="modal-title fw-bold" id="faaliyetModalLabel">
+                    Yeni Faaliyet & Görev Ekle
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <form action="/faaliyet/yeni/" method="POST">
                 {% csrf_token %}
-                <input type="hidden" name="sorumlu_kisi" value="{{ aktif_kullanici }}">
-                
-                <div class="modal-header bg-light border-bottom px-4 py-3" style="border-top-left-radius: 16px; border-top-right-radius: 16px;">
-                    <div class="d-flex align-items-center gap-2">
-                        <div class="p-2 rounded-3 bg-primary-subtle text-primary">
-                            <i class="bi bi-plus-circle-fill fs-5"></i>
-                        </div>
-                        <div>
-                            <h5 class="modal-title fw-bold text-dark mb-0" id="yeniFaaliyetModalLabel">Yeni Faaliyet & Talep Ekle</h5>
-                            <small class="text-muted">Seyahat, toplantı, fuar veya destek talebi kaydı oluşturun.</small>
-                        </div>
-                    </div>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
-                </div>
-
                 <div class="modal-body p-4">
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold text-secondary">Faaliyet / Talep Türü <span class="text-danger">*</span></label>
+                            <label class="form-label small fw-bold text-muted">Faaliyet Türü <span class="text-danger">*</span></label>
                             <select name="tur" class="form-select" required>
-                                <option value="TOPLANTI" selected>Müşteri / İç Toplantı</option>
+                                <option value="TOPLANTI">Müşteri / İç Toplantı</option>
                                 <option value="SEYAHAT">Müşteri / İş Seyahati</option>
                                 <option value="FUAR">Fuar & Sektörel Etkinlik</option>
                                 <option value="DESTEK">Destek & Aksiyon Talebi</option>
                             </select>
                         </div>
-
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold text-secondary">İlişkili Müşteri (Opsiyonel)</label>
-                            <select name="musteri" class="form-select">
-                                <option value="">-- Müşteri Kartı Seçin --</option>
-                                {% for m in musteriler %}
-                                <option value="{{ m.pk }}">{{ m.kisa_ad }} - {{ m.ad }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                        <div class="col-12">
-                            <label class="form-label small fw-bold text-secondary">Faaliyet Başlığı <span class="text-danger">*</span></label>
-                            <input type="text" name="baslik" class="form-control" placeholder="Örn: Bosch Termoteknik Yıllık Görüşme" required>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold text-secondary">Firma / Kurum Adı</label>
-                            <input type="text" name="musteri_adi" class="form-control" placeholder="Örn: Arçelik A.Ş. veya Fuar Organizasyonu">
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold text-secondary">Lokasyon / Kanal</label>
-                            <input type="text" name="lokasyon" class="form-control" placeholder="Örn: Manisa Fabrika / MS Teams / Frankfurt">
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold text-secondary">Saat / Zaman Dilimi</label>
-                            <input type="text" name="saat_araligi" class="form-control" value="09:00 - 10:30" placeholder="Örn: 10:00 - 12:00 veya Tüm Gün">
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold text-secondary">Başlangıç Tarihi <span class="text-danger">*</span></label>
-                            <input type="date" name="baslangic_tarihi" value="{{ secili_gun_tarih|date:'Y-m-d' }}" class="form-control" required>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold text-secondary">Bitiş Tarihi</label>
-                            <input type="date" name="bitis_tarihi" value="{{ secili_gun_tarih|date:'Y-m-d' }}" class="form-control">
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold text-secondary">Öncelik Seviyesi</label>
+                            <label class="form-label small fw-bold text-muted">Öncelik Derecesi</label>
                             <select name="oncelik" class="form-select">
                                 <option value="DUSUK">Düşük</option>
                                 <option value="ORTA" selected>Orta</option>
@@ -711,32 +1242,48 @@
                             </select>
                         </div>
 
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold text-secondary">Durum</label>
-                            <select name="durum" class="form-select">
-                                <option value="PLANLANDI" selected>Planlandı</option>
-                                <option value="DEVAM_EDIYOR">Devam Ediyor / Hazırlık</option>
-                                <option value="ONAYDA">Yönetici Onayında</option>
-                                <option value="TAMAMLANDI">Tamamlandı</option>
-                            </select>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted">Faaliyet / Görev Başlığı <span class="text-danger">*</span></label>
+                            <input type="text" name="baslik" class="form-control" placeholder="Örn: Arçelik Çerkezköy Fabrika Ziyareti & 2026 Q3 Kapasite İncelemesi" required>
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold text-secondary">Tahmini Bütçe (₺/€)</label>
-                            <input type="number" step="0.01" name="tahmini_butce" class="form-control" value="0.00">
+                            <label class="form-label small fw-bold text-muted">İlişkili Müşteri / Firma</label>
+                            <select name="musteri_id" class="form-select">
+                                <option value="">Müşteri Seçin (Opsiyonel)</option>
+                                {% for m in musteriler %}
+                                <option value="{{ m.id }}">{{ m.ad }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Lokasyon / Kanal</label>
+                            <input type="text" name="lokasyon" class="form-control" placeholder="Örn: Tekirdağ / Çerkezköy veya Teams Online">
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted">Başlangıç Tarihi <span class="text-danger">*</span></label>
+                            <input type="date" name="baslangic_tarihi" class="form-control" value="{{ secili_gun_tarih|date:'Y-m-d' }}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted">Bitiş Tarihi</label>
+                            <input type="date" name="bitis_tarihi" class="form-control" value="{{ secili_gun_tarih|date:'Y-m-d' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted">Saat Aralığı</label>
+                            <input type="text" name="saat_araligi" class="form-control" value="09:00 - 17:30" placeholder="09:00 - 11:30">
                         </div>
 
                         <div class="col-12">
-                            <label class="form-label small fw-bold text-secondary">Açıklama, Gündem & Detaylar</label>
-                            <textarea name="aciklama" rows="3" class="form-control" placeholder="Toplantı gündemi, seyahat detayları veya destek talebinin notlarını giriniz..."></textarea>
+                            <label class="form-label small fw-bold text-muted">Açıklama / Hedef & Notlar</label>
+                            <textarea name="aciklama" rows="3" class="form-control" placeholder="Görüşülecek maddeler, seyahat amacı veya destek detayları..."></textarea>
                         </div>
                     </div>
                 </div>
-
-                <div class="modal-footer bg-light px-4 py-3 border-top" style="border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Vazgeç</button>
-                    <button type="submit" class="btn btn-primary px-4 fw-semibold">
-                        <i class="bi bi-check-lg me-1"></i> Faaliyeti Kaydet
+                <div class="modal-footer bg-light" style="border-radius: 0 0 16px 16px;">
+                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-semibold" style="background-color: #2563eb;">
+                        Faaliyeti Kaydet
                     </button>
                 </div>
             </form>
@@ -744,108 +1291,178 @@
     </div>
 </div>
 
-
-<!-- 2. FAALİYET DETAY MODALI -->
-{% for f in faaliyetler %}
-<div class="modal fade" id="faaliyetDetayModal{{ f.id }}" tabindex="-1" aria-labelledby="faaliyetDetayModalLabel{{ f.id }}" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+<!-- YENİ UÇTAN UCA ANA PROJE BAŞLATMA MODALI (4 BLOKLU STANDART & INTRANET ENTEGRASYONLU) -->
+<div class="modal fade" id="yeniAnaProjeModal" tabindex="-1" aria-labelledby="yeniAnaProjeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
-            <div class="modal-header border-bottom px-4 py-3" style="background-color: {{ f.tur_renk }}10;">
-                <div class="d-flex align-items-center gap-2">
-                    <div class="p-2 rounded-3 text-white" style="background-color: {{ f.tur_renk }};">
-                        <i class="bi {{ f.tur_ikonu }} fs-5"></i>
-                    </div>
-                    <div>
-                        <span class="badge rounded-pill px-2 py-0.5 fw-semibold" style="background-color: {{ f.tur_renk }}20; color: {{ f.tur_renk }}; font-size: 0.72rem;">
-                            {{ f.get_tur_display }}
-                        </span>
-                        <h5 class="modal-title fw-bold text-dark mb-0 mt-0.5" id="faaliyetDetayModalLabel{{ f.id }}">
-                            {{ f.baslik }}
-                        </h5>
-                    </div>
+            <div class="modal-header text-white" style="background-color: #0f2c4d; border-radius: 16px 16px 0 0;">
+                <div>
+                    <h5 class="modal-title fw-bold mb-0" id="yeniAnaProjeModalLabel">
+                        Yeni Uçtan Uca Proje Başlat
+                    </h5>
+                    <small class="text-white-50" style="font-size: 0.76rem;">8 Süreçlik Yaşam Döngüsü & Teleset Intranet Personel Entegrasyonu</small>
                 </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
             </div>
+            <form action="/ana-proje/yeni/" method="POST">
+                {% csrf_token %}
+                <div class="modal-body p-4">
 
-            <div class="modal-body p-4">
-                <div class="d-flex align-items-center justify-content-between mb-3 pb-3 border-bottom">
-                    <div>
-                        <span class="badge {{ f.durum_badge_class }} mb-1 d-inline-block">{{ f.get_durum_display }}</span>
-                        <div class="text-muted" style="font-size: 0.76rem;">Öncelik: <span class="fw-bold">{{ f.get_oncelik_display }}</span></div>
+                    <!-- BLOK 1: SÜREÇ & KİMLİK BİLGİLERİ -->
+                    <div class="form-block-title">
+                        1. Süreç & Kimlik Bilgileri
+                    </div>
+                    <div class="row g-3 mb-3.5">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted mb-1">
+                                Master CRM Proje Kodu
+                            </label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-dark text-white font-monospace fw-bold" style="font-size: 0.76rem;">AUTO</span>
+                                <input type="text" name="proje_kodu" class="form-control font-monospace fw-bold text-primary bg-light" value="{{ siradaki_proje_kodu }}" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label small fw-bold text-muted mb-1">
+                                Proje / Parça Adı <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" name="proje_adi" class="form-control form-control-sm" placeholder="Örn: Beko Kurutucu Sac Kapak Projesi" required>
+                        </div>
                     </div>
 
-                    {% if f.tahmini_butce and f.tahmini_butce > 0 %}
-                    <div class="text-end">
-                        <div class="text-muted" style="font-size: 0.74rem;">Tahmini Bütçe</div>
-                        <div class="fw-bold text-dark">{{ f.tahmini_butce }} ₺</div>
+                    <!-- BLOK 2: MÜŞTERİ & TESİS / FABRİKA BİLGİLERİ -->
+                    <div class="form-block-title">
+                        2. Müşteri & Tesis / Şirket Bilgileri
                     </div>
-                    {% endif %}
+                    <div class="row g-3 mb-3.5">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted mb-1">
+                                Cari / Müşteri <span class="text-danger">*</span>
+                            </label>
+                            <select name="musteri_id" class="form-select form-select-sm" required>
+                                <option value="">Müşteri Seçin...</option>
+                                {% for m in musteriler %}
+                                <option value="{{ m.id }}">{{ m.ad }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted mb-1">
+                                Ana Departman / Bölüm <span class="text-danger">*</span>
+                            </label>
+                            <select name="fabrika" class="form-select form-select-sm" required>
+                                {% for sirket in intranet_sirketler %}
+                                <option value="{{ sirket }}" {% if sirket == 'PRESHANE' %}selected{% endif %}>{{ sirket }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- BLOK 3: TEKNİK & TİCARİ PARAMETRELER -->
+                    <div class="form-block-title">
+                        3. Teknik & Finansal Parametreler
+                    </div>
+                    <div class="row g-3 mb-3.5">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted mb-1">Parça / Kalıp Kodu</label>
+                            <input type="text" name="parca_kodu" class="form-control form-control-sm" placeholder="Örn: 4200055984">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted mb-1">Hedef Bütçe (EUR)</label>
+                            <input type="number" name="hedef_butce" class="form-control form-control-sm" placeholder="125000" value="125000">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted mb-1">Yıllık Hacim (Adet)</label>
+                            <input type="number" name="yillik_hacim_adet" class="form-control form-control-sm" placeholder="50000" value="50000">
+                        </div>
+                    </div>
+
+                    <!-- BLOK 4: ORGANİZASYON & SORUMLULAR -->
+                    <div class="form-block-title">
+                        4. Organizasyon & Sorumlu Lider
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted mb-1">
+                                Proje Lideri <span class="text-danger">*</span>
+                            </label>
+                            <select name="sorumlu_lider" class="form-select form-select-sm" required>
+                                {% for p in proje_liderleri %}
+                                <option value="{{ p.ad_soyad }}" {% if p.ad_soyad == 'BUSE NUR BALTACIOĞLU' %}selected{% endif %}>
+                                    {{ p.ad_soyad }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted mb-1">Başlangıç Süreci</label>
+                            <select name="aktif_surec_adi" class="form-select form-select-sm">
+                                <option value="Müşteri İlişkileri Süreci">1. Müşteri İlişkileri Süreci</option>
+                                <option value="Pazarlama Süreci">2. Pazarlama Süreci</option>
+                                <option value="Ürün Teklif Süreci">3. Ürün Teklif Süreci</option>
+                                <option value="Sözleşme Değerlendirme Süreci">4. Sözleşme Değerlendirme Süreci</option>
+                                <option value="Prototip Süreci">5. Prototip Süreci</option>
+                                <option value="Yeni Ürün Devreye Alma Süreci" selected>6. Yeni Ürün Devreye Alma Süreci</option>
+                                <option value="Mühendislik Değişikliği Süreci">7. Mühendislik Değişikliği Süreci</option>
+                                <option value="Ürün Seri Üretim Sonlandırma Süreci">8. Ürün Seri Üretim Sonlandırma Süreci</option>
+                            </select>
+                        </div>
+                    </div>
+
                 </div>
-
-                <div class="row g-2 mb-3 small">
-                    <div class="col-6">
-                        <div class="text-muted" style="font-size: 0.75rem;"><i class="bi bi-calendar-check me-1"></i>Tarih:</div>
-                        <div class="fw-semibold text-dark">{{ f.baslangic_tarihi|date:"d F Y" }} {% if f.bitis_tarihi != f.baslangic_tarihi %}- {{ f.bitis_tarihi|date:"d F Y" }}{% endif %}</div>
-                    </div>
-                    <div class="col-6">
-                        <div class="text-muted" style="font-size: 0.75rem;"><i class="bi bi-clock me-1"></i>Saat:</div>
-                        <div class="fw-semibold text-dark">{{ f.saat_araligi|default:"Tüm Gün" }}</div>
-                    </div>
-                    {% if f.musteri_adi %}
-                    <div class="col-6 mt-2">
-                        <div class="text-muted" style="font-size: 0.75rem;"><i class="bi bi-building me-1"></i>Müşteri:</div>
-                        <div class="fw-semibold text-dark">{{ f.musteri_adi }}</div>
-                    </div>
-                    {% endif %}
-                    {% if f.lokasyon %}
-                    <div class="col-6 mt-2">
-                        <div class="text-muted" style="font-size: 0.75rem;"><i class="bi bi-geo-alt me-1"></i>Lokasyon:</div>
-                        <div class="fw-semibold text-dark">{{ f.lokasyon }}</div>
-                    </div>
-                    {% endif %}
-                </div>
-
-                {% if f.aciklama %}
-                <div class="mb-3">
-                    <div class="small fw-bold text-secondary mb-1">Açıklama & Gündem:</div>
-                    <div class="p-3 bg-light rounded-3 border text-secondary small" style="font-size: 0.8rem; line-height: 1.45;">
-                        {{ f.aciklama|linebreaks }}
-                    </div>
-                </div>
-                {% endif %}
-
-                <!-- Durum Güncelleme Formu -->
-                <div class="pt-3 border-top">
-                    <label class="small fw-bold text-secondary mb-1.5 d-block">Durumu Güncelle:</label>
-                    <form method="POST" action="{% url 'faaliyet_durum_guncelle' f.pk %}" class="d-flex align-items-center gap-2">
-                        {% csrf_token %}
-                        <select name="durum" class="form-select form-select-sm">
-                            {% for durum_kod, durum_ad in f.DURUM_CHOICES %}
-                            <option value="{{ durum_kod }}" {% if f.durum == durum_kod %}selected{% endif %}>
-                                {{ durum_ad }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                        <button type="submit" class="btn btn-primary btn-sm px-3 fw-semibold">
-                            Güncelle
-                        </button>
-                    </form>
-                </div>
-            </div>
-
-            <div class="modal-footer bg-light px-4 py-2.5 border-top d-flex justify-content-between" style="border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
-                <form method="POST" action="{% url 'faaliyet_sil' f.pk %}" onsubmit="return confirm('Bu faaliyeti kalıcı olarak silmek istediğinize emin misiniz?');">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-outline-danger btn-sm">
-                        <i class="bi bi-trash3 me-1"></i> Sil
+                <div class="modal-footer bg-light" style="border-radius: 0 0 16px 16px;">
+                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-semibold" style="background-color: #0f2c4d; border-color: #0f2c4d;">
+                        Projeyi Başlat
                     </button>
-                </form>
-
-                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Kapat</button>
-            </div>
+                </div>
+            </form>
         </div>
     </div>
 </div>
-{% endfor %}
+
+<!-- YENİ DÖNGÜSEL İTERASYON / REVİZYON EKLEME MODALI -->
+{% if secili_proje %}
+<div class="modal fade" id="yeniIterasyonModal" tabindex="-1" aria-labelledby="yeniIterasyonModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+            <div class="modal-header bg-dark text-white" style="border-radius: 16px 16px 0 0;">
+                <h5 class="modal-title fw-bold" id="yeniIterasyonModalLabel">
+                    Yeni Döngüsel İterasyon / Revizyon Ekle
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <form action="/ana-proje/{{ secili_proje.id }}/iterasyon-ekle/" method="POST">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">İterasyon Tipi</label>
+                        <select name="iterasyon_tipi" class="form-select" required>
+                            <option value="ECO">Mühendislik Değişikliği (ECO / ECN Revizyonu)</option>
+                            <option value="PROTOTIP">Prototip / Kalıp Deneme Turu (T0 / T1 / Numune)</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Revizyon / Tur Kodu</label>
+                        <input type="text" name="revizyon_no" class="form-control" placeholder="Örn: Rev.03 (T2) veya Rev.C" value="Rev.02" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">İterasyon / Değişiklik Gerekçesi</label>
+                        <textarea name="aciklama" rows="3" class="form-control" placeholder="Müşteri tasarım revizyonu, boyutsal ölçüm sapması veya hammadde optimizasyonu sebebiyle..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light" style="border-radius: 0 0 16px 16px;">
+                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-semibold" style="background-color: #0f2c4d; border-color: #0f2c4d;">
+                        İterasyonu Başlat
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 {% endblock %}

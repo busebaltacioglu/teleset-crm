@@ -57,13 +57,14 @@ class SurecAdimTanimi(models.Model):
 
 class HedefPazarKanvas(models.Model):
     """
-    Teleset Hedef Ülke Kanvas İş Modeli (Adım 2 ve Adım 3 Girdileri)
+    Teleset Hedef Ülke Stratejisi ve 360° Pazar Kanvası (2025-2028 Strateji Belgesi)
     """
     ulke_kodu = models.CharField(max_length=10, unique=True, verbose_name="Ülke Kodu")
     ulke_adi = models.CharField(max_length=100, verbose_name="Hedef Ülke Adı")
     bayrak_emoji = models.CharField(max_length=10, default="", blank=True, verbose_name="Bayrak")
     oncelik_sinifi = models.CharField(max_length=50, default="Birincil Pazar", verbose_name="Pazar Sınıfı")
     
+    # 6 Blok Kanvas
     genel_gorunum = models.TextField(verbose_name="1. Ülke Genel Görünüm")
     sektor_pazari = models.TextField(verbose_name="2. Beyaz Eşya / Sektör Pazarı")
     one_cikan_sirketler = models.TextField(verbose_name="3. Öne Çıkan Şirketler & Müşteriler")
@@ -71,8 +72,40 @@ class HedefPazarKanvas(models.Model):
     vergilendirme_ve_gumruk = models.TextField(verbose_name="5. Vergilendirme & Gümrükleme")
     teleset_degerlendirmesi = models.TextField(verbose_name="6. Teleset Açısından Değerlendirme")
     
-    hedef_urunler = models.CharField(max_length=255, default="Kondenser, Kablo Grubu, Metal Parça, Kalıp", verbose_name="Hedef Ürün Grupları")
+    # 2025-2028 Stratejik Değerlendirme
+    kritik_basari_faktorleri = models.TextField(blank=True, null=True, verbose_name="Teleset İçin 3 Kritik Başarı Faktörü")
+    ana_kaldirac = models.TextField(blank=True, null=True, verbose_name="1 Ana Kaldıraç")
+    ana_risk = models.TextField(blank=True, null=True, verbose_name="1 Ana Risk")
+    hizli_kazanim = models.TextField(blank=True, null=True, verbose_name="1 Hızlı Kazanım")
+    stratejik_bahis = models.TextField(blank=True, null=True, verbose_name="Stratejik Bahis (2025–2028)")
+    
+    # SWOT Analizi Sonuçlarına Dayalı Stratejik Yaklaşım
+    swot_guclu_yonler = models.TextField(blank=True, null=True, verbose_name="Güçlü Yönlerden Yararlanma Stratejileri")
+    swot_zayif_yonler = models.TextField(blank=True, null=True, verbose_name="Zayıf Yönleri Minimize Etme Stratejileri")
+    swot_firsatlar = models.TextField(blank=True, null=True, verbose_name="Fırsatları Değerlendirme Stratejileri")
+    swot_tehditler = models.TextField(blank=True, null=True, verbose_name="Tehditleri Azaltma Stratejileri")
+    
+    # 6P Stratejik Hedefleri (2025–2028)
+    hedef_6p_urun = models.TextField(blank=True, null=True, verbose_name="3.1 Ürün (Product) Hedefleri")
+    hedef_6p_fiyat = models.TextField(blank=True, null=True, verbose_name="3.2 Fiyat (Price) Hedefleri")
+    hedef_6p_yer_dagitim = models.TextField(blank=True, null=True, verbose_name="3.3 Yer (Place) / Dağıtım Hedefleri")
+    hedef_6p_promosyon = models.TextField(blank=True, null=True, verbose_name="3.4 Promosyon (Promotion) Hedefleri")
+    hedef_6p_insan = models.TextField(blank=True, null=True, verbose_name="3.5 İnsan (People) Hedefleri")
+    hedef_6p_surec = models.TextField(blank=True, null=True, verbose_name="3.6 Süreç (Process) Hedefleri")
+    
+    # Öncelikli Eylemler, Fuarlar ve Yayınlar
+    oncelikli_eylemler = models.TextField(blank=True, null=True, verbose_name="4. Öncelikli Eylemler (2025–2028)")
+    hedef_fuarlar = models.TextField(blank=True, null=True, verbose_name="Hedef Sektörel Fuarlar & Etkinlikler")
+    sektorel_yayinlar = models.TextField(blank=True, null=True, verbose_name="Sektörel Yayınlar & Medya")
+
+    hedef_urunler = models.CharField(max_length=255, default="Kondanser, Kablo Grubu, Metal Parça, Kalıp", verbose_name="Hedef Ürün Grupları")
     olusturma_tarihi = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def hedef_urun_listesi(self):
+        if not self.hedef_urunler:
+            return []
+        return [u.strip() for u in self.hedef_urunler.split(',') if u.strip()]
 
     class Meta:
         ordering = ['ulke_adi']
@@ -97,6 +130,8 @@ class MusteriKarti(models.Model):
         ('Protect', 'Protect (İlişkiyi Koru & Derinleştir)'),
         ('Grow', 'Grow (Cüzdan Payını ve Hacmi Büyüt)'),
         ('Harvest', 'Harvest (Kârlılık Odaklı Yönet)'),
+        ('Re-engineer', 'Re-engineer (Süreç & Maliyet İyileştirme)'),
+        ('Start', 'Start (Yeni Başlangıç / Geliştirme)'),
     ]
 
     kod = models.CharField(max_length=20, unique=True, verbose_name="Müşteri Kodu (FRM-XX)")
@@ -112,13 +147,13 @@ class MusteriKarti(models.Model):
     cuzdan_payi_yuzde = models.PositiveSmallIntegerField(default=50, verbose_name="Cüzdan Payı (SOW %)")
     aktif_proje_sayisi = models.PositiveSmallIntegerField(default=1, verbose_name="Aktif Proje Sayısı")
     
-    kam_satis_lideri = models.CharField(max_length=100, default="Pazarlama Uzmanı", verbose_name="KAM Satış Lideri")
-    kam_muhendislik_lideri = models.CharField(max_length=100, default="Kalıp & Projeci Md.", verbose_name="KAM Projeci Lideri")
-    kam_kalite_lideri = models.CharField(max_length=100, default="Kalite Güvence Md.", verbose_name="KAM Kalite Lideri")
+    kam_satis_lideri = models.CharField(max_length=100, default="Buse Nur BALTACIOĞLU", verbose_name="KAM Satış Lideri")
+    kam_muhendislik_lideri = models.CharField(max_length=100, default="Ahmet AK (Kalıp & Projeci Md.)", verbose_name="KAM Projeci Lideri")
+    kam_kalite_lideri = models.CharField(max_length=100, default="Mehmet YILMAZ (Kalite Güvence Md.)", verbose_name="KAM Kalite Lideri")
     
     aktif_urunler = models.TextField(blank=True, null=True, verbose_name="Aktif Üretilen Parçalar / Ürünler")
-    sozlesme_durumu = models.CharField(max_length=150, default="STG-TL-001 Aktif", verbose_name="Sözleşme & Onay Durumu")
-    churn_riski = models.CharField(max_length=50, default="Düşük (Yeşil)", verbose_name="Müşteri Kayıp Riski")
+    sozlesme_durumu = models.CharField(max_length=150, default="STG-TL-001 (Aktif)", verbose_name="Sözleşme & Onay Durumu")
+    churn_riski = models.CharField(max_length=50, default="0.05 (Düşük Risk)", verbose_name="Müşteri Kayıp Riski")
     notlar = models.TextField(blank=True, null=True, verbose_name="Stratejik Notlar / Özet")
 
     class Meta:
@@ -128,6 +163,85 @@ class MusteriKarti(models.Model):
 
     def __str__(self):
         return f"{self.kisa_ad} ({self.tier})"
+
+    @property
+    def yillik_ciro_m_str(self):
+        val = float(self.yillik_ciro_eur) / 1000000.0
+        return f"{val:.2f}"
+
+    @property
+    def clv_m_str(self):
+        val = (float(self.yillik_ciro_eur) * 3.76) / 1000000.0
+        return f"{val:.1f}"
+
+
+class MusteriTesisi(models.Model):
+    """
+    Müşteriye Ait Fabrika / Tesis Lokasyonu (Örn: Bosch Manisa, Bosch Romanya, Bosch Almanya, BSH Çerkezköy)
+    """
+    musteri = models.ForeignKey(MusteriKarti, on_delete=models.CASCADE, related_name="tesisler", verbose_name="Müşteri Grubu")
+    tesis_adi = models.CharField(max_length=150, verbose_name="Tesis / Fabrika Adı")
+    lokasyon = models.CharField(max_length=150, verbose_name="Şehir / Ülke")
+    kod = models.CharField(max_length=50, blank=True, null=True, verbose_name="Tesis Kodu")
+    
+    clv_m = models.CharField(max_length=50, default="45.8 M€", verbose_name="Yaşam Boyu Değer (CLV)")
+    churn_skoru = models.CharField(max_length=50, default="0.05", verbose_name="Terk (Churn) Skoru")
+    churn_durumu = models.CharField(max_length=50, default="Düşük Risk", verbose_name="Churn Durumu")
+    yillik_ciro_str = models.CharField(max_length=50, default="€ 12.18M", verbose_name="Yıllık Ciro")
+    ciro_alt_bilgi = models.CharField(max_length=100, default="1.284 Stok Kodu", verbose_name="Ciro Alt Bilgi")
+    cuzdan_payi_yuzde = models.PositiveSmallIntegerField(default=58, verbose_name="Cüzdan Payı %")
+    cuzdan_alt_bilgi = models.CharField(max_length=100, default="Sac & Kablo Grubu", verbose_name="Cüzdan Alt Bilgi")
+    
+    destek_sayisi = models.PositiveSmallIntegerField(default=9, verbose_name="Destek / Talep Sayısı")
+    npi_proje_sayisi = models.PositiveSmallIntegerField(default=28, verbose_name="NPI Proje Sayısı")
+    teklif_sayisi = models.PositiveSmallIntegerField(default=9, verbose_name="Teklif (SAT) Sayısı")
+    sevkiyat_sayisi = models.PositiveSmallIntegerField(default=9, verbose_name="Sevkiyat Sayısı")
+    
+    kam_satis_lideri = models.CharField(max_length=100, default="BUSE NUR BALTACIOĞLU (İş Geliştirme)", verbose_name="Satış Lead")
+    kam_muhendislik_lideri = models.CharField(max_length=100, default="YİĞİT EFE BİLİR (İş Çözümleri Mühendisi)", verbose_name="Kalıp/Projeci Lead")
+    kam_kalite_lideri = models.CharField(max_length=100, default="METİN YAVAŞ (Bakım & Kalite Şefi)", verbose_name="Kalite Lead")
+    
+    yetkili_adi = models.CharField(max_length=150, default="Klaus Schmidt", verbose_name="Müşteri Yetkilisi")
+    yetkili_unvan = models.CharField(max_length=150, default="Global Satınalma Direktörü", verbose_name="Yetkili Unvanı")
+    yetkili_email = models.CharField(max_length=150, default="klaus.schmidt@bsh.com", verbose_name="Yetkili E-Posta")
+    yetkili_telefon = models.CharField(max_length=50, blank=True, null=True, verbose_name="Yetkili Telefon")
+    
+    son_etkilesim = models.CharField(max_length=200, default="Dün 14:30 - Yeni SIMPAC 400T Kalıp İncelemesi", verbose_name="Son Etkileşim")
+    sira = models.PositiveSmallIntegerField(default=1, verbose_name="Sıralama")
+
+    class Meta:
+        ordering = ['sira', 'id']
+        verbose_name = "Müşteri Tesisi"
+        verbose_name_plural = "Müşteri Tesisleri"
+
+    def __str__(self):
+        return f"{self.musteri.kisa_ad} - {self.tesis_adi}"
+
+
+class MusteriEtkilesimZamanTuneli(models.Model):
+    """
+    360° Müşteri Profili Kronolojik Aktivite ve Süreç Zaman Tüneli
+    """
+    musteri = models.ForeignKey(MusteriKarti, on_delete=models.CASCADE, related_name="etkilesimler", verbose_name="Müşteri")
+    tesis = models.ForeignKey(MusteriTesisi, on_delete=models.SET_NULL, null=True, blank=True, related_name="etkilesimler", verbose_name="İlgili Tesis")
+    
+    kod = models.CharField(max_length=50, default="SAT-EK-005", verbose_name="Süreç / Form Kodu")
+    baslik = models.CharField(max_length=200, verbose_name="Aktivite Başlığı")
+    aciklama = models.TextField(verbose_name="Açıklama / Detay")
+    sorumlu = models.CharField(max_length=100, default="Buse Nur BALTACIOĞLU", verbose_name="Sorumlu Kişi")
+    tarih = models.DateField(default=timezone.now, verbose_name="İşlem Tarihi")
+    donem_ay_yil = models.CharField(max_length=50, default="EYLÜL 2026", verbose_name="Dönem Başlığı")
+    ikon = models.CharField(max_length=50, default="bi-file-earmark-text-fill", verbose_name="Bootstrap İkonu")
+    ikon_bg = models.CharField(max_length=50, default="bg-warning", verbose_name="İkon Arka Planı")
+
+    class Meta:
+        ordering = ['-tarih', '-id']
+        verbose_name = "Müşteri Etkileşim Kaydı"
+        verbose_name_plural = "Müşteri Etkileşim Kayıtları"
+
+    def __str__(self):
+        return f"{self.musteri.kisa_ad} - {self.baslik} ({self.tarih})"
+
 
 
 class UrunGrubuKarti(models.Model):
@@ -168,7 +282,8 @@ class PazarlamaProjesi(models.Model):
 
     URUN_GRUBU_CHOICES = [
         ('Metal Parca & Sac', 'Metal Parça & Sac Şekillendirme'),
-        ('Kondenser & Sogutma', 'Kondenser & Soğutma'),
+        ('Kondanser & Sogutma', 'Kondanser & Soğutma'),
+        ('Kondenser & Sogutma', 'Kondanser & Soğutma (Eski)'),
         ('Kablo Grubu', 'Kablo Grubu & Demetleri'),
         ('Kalıp & Fikstür', 'Kalıp, Fikstür & Aparat'),
         ('Montaj ve Kaynak', 'Montaj ve Kaynak'),
@@ -178,11 +293,12 @@ class PazarlamaProjesi(models.Model):
     ]
 
     FABRIKA_CHOICES = [
-        ('Teleset 1 (Manisa)', 'Teleset 1 (Manisa)'),
-        ('Teleset 2 (Manisa)', 'Teleset 2 (Manisa)'),
-        ('Teleset 3 (Kocaeli)', 'Teleset 3 (Kocaeli)'),
-        ('Teleset Otomotiv', 'Teleset Otomotiv'),
-        ('Teleset Global', 'Teleset Global'),
+        ('PRESHANE', 'PRESHANE'),
+        ('KALIPHANE', 'KALIPHANE'),
+        ('CERKEZKOY', 'CERKEZKOY'),
+        ('KABLOGR', 'KABLOGR'),
+        ('KONDANSER', 'KONDANSER'),
+        ('MANISA ORTAK', 'MANISA ORTAK'),
     ]
 
     kod = models.CharField(max_length=50, unique=True, verbose_name="Proje / Fırsat Kodu")
@@ -196,10 +312,10 @@ class PazarlamaProjesi(models.Model):
     urun_grubu = models.CharField(max_length=100, choices=URUN_GRUBU_CHOICES, default='Metal Parca & Sac', verbose_name="Ürün Grubu")
     urun_grubu_karti = models.ForeignKey(UrunGrubuKarti, on_delete=models.SET_NULL, null=True, blank=True, related_name="projeler", verbose_name="İlişkili Ürün Grubu Kartı")
     
-    ilgili_fabrika = models.CharField(max_length=100, choices=FABRIKA_CHOICES, default='Teleset 1 (Manisa)', verbose_name="İlgili Fabrika")
+    ilgili_fabrika = models.CharField(max_length=100, choices=FABRIKA_CHOICES, default='PRESHANE', verbose_name="İlgili Fabrika / Ana Departman")
     
-    sorumlu_pazarlama_uzmani = models.CharField(max_length=100, default='Pazarlama Uzmanı', verbose_name="Pazarlama Uzmanı (R)")
-    sorumlu_satis_muduru = models.CharField(max_length=100, default='Satış ve Pazarlama Müdürü', verbose_name="Satış & Pazarlama Müdürü (A)")
+    sorumlu_pazarlama_uzmani = models.CharField(max_length=100, default='BUSE NUR BALTACIOĞLU', verbose_name="Pazarlama Uzmanı (R)")
+    sorumlu_satis_muduru = models.CharField(max_length=100, default='YİĞİT EFE BİLİR', verbose_name="Satış & Pazarlama Müdürü (A)")
     
     durum = models.CharField(max_length=30, choices=DURUM_CHOICES, default='DEVAM_EDIYOR', verbose_name="Süreç Durumu")
     guncel_adim_no = models.PositiveSmallIntegerField(default=1, verbose_name="Güncel Adım No")
@@ -349,10 +465,10 @@ class MusteriIliskileriSureci(models.Model):
     musteri_karti = models.ForeignKey(MusteriKarti, on_delete=models.SET_NULL, null=True, blank=True, related_name="musteri_iliskileri_surecleri", verbose_name="Müşteri Portföy Kartı")
     
     donem = models.CharField(max_length=50, default="2026 Yıllık", verbose_name="İzleme Dönemi / Yıl")
-    ilgili_fabrika = models.CharField(max_length=100, choices=PazarlamaProjesi.FABRIKA_CHOICES, default='Teleset 1 (Manisa)', verbose_name="İlgili Fabrika")
+    ilgili_fabrika = models.CharField(max_length=100, choices=PazarlamaProjesi.FABRIKA_CHOICES, default='PRESHANE', verbose_name="İlgili Fabrika")
     
-    sorumlu_eys = models.CharField(max_length=100, default='EYS Sorumlusu', verbose_name="EYS Sorumlusu")
-    sorumlu_surec_sahibi = models.CharField(max_length=100, default='Süreç Sahibi / İyileştirme Ekibi', verbose_name="Süreç Sahibi / İyileştirme Ekibi")
+    sorumlu_eys = models.CharField(max_length=100, default='BUSE NUR BALTACIOĞLU', verbose_name="EYS Sorumlusu")
+    sorumlu_surec_sahibi = models.CharField(max_length=100, default='ONUR TUNCER', verbose_name="Süreç Sahibi / İyileştirme Ekibi")
     
     durum = models.CharField(max_length=30, choices=DURUM_CHOICES, default='DEVAM_EDIYOR', verbose_name="Süreç Durumu")
     guncel_adim_no = models.PositiveSmallIntegerField(default=1, verbose_name="Güncel Adım No")
@@ -491,12 +607,12 @@ class UrunTeklifSureci(models.Model):
     musteri_karti = models.ForeignKey(MusteriKarti, on_delete=models.SET_NULL, null=True, blank=True, related_name="urun_teklif_surecleri", verbose_name="Müşteri Portföy Kartı")
     
     donem = models.CharField(max_length=50, default="2026 Yıllık", verbose_name="Dönem / Yıl")
-    ilgili_fabrika = models.CharField(max_length=100, choices=PazarlamaProjesi.FABRIKA_CHOICES, default='Teleset 1 (Manisa)', verbose_name="İlgili Fabrika")
+    ilgili_fabrika = models.CharField(max_length=100, choices=PazarlamaProjesi.FABRIKA_CHOICES, default='PRESHANE', verbose_name="İlgili Fabrika")
     urun_grubu = models.CharField(max_length=100, choices=PazarlamaProjesi.URUN_GRUBU_CHOICES, default='Metal Parca & Sac', verbose_name="Ürün Grubu")
     
-    sorumlu_satis_analiz_uzmani = models.CharField(max_length=100, default='Satış Analiz Uzmanı', verbose_name="Satış Analiz Uzmanı")
-    sorumlu_satis_uzmani = models.CharField(max_length=100, default='Buse Nur Baltacıoğlu', verbose_name="Satış Uzmanı")
-    sorumlu_satis_yoneticisi = models.CharField(max_length=100, default='Satış Yöneticisi', verbose_name="Satış Yöneticisi")
+    sorumlu_satis_analiz_uzmani = models.CharField(max_length=100, default='METİN YAVAŞ', verbose_name="Satış Analiz Uzmanı")
+    sorumlu_satis_uzmani = models.CharField(max_length=100, default='BUSE NUR BALTACIOĞLU', verbose_name="Satış Uzmanı")
+    sorumlu_satis_yoneticisi = models.CharField(max_length=100, default='ONUR TUNCER', verbose_name="Satış Yöneticisi")
     
     durum = models.CharField(max_length=30, choices=DURUM_CHOICES, default='DEVAM_EDIYOR', verbose_name="Teklif Durumu")
     guncel_adim_no = models.PositiveSmallIntegerField(default=1, verbose_name="Güncel Adım No")
@@ -646,15 +762,15 @@ class SozlesmeSureci(models.Model):
     
     sozlesme_tipi = models.CharField(max_length=40, choices=SOZLESME_TIPI_CHOICES, default='SATIS', verbose_name="Sözleşme Tipi")
     donem = models.CharField(max_length=50, default="2026 Yıllık", verbose_name="Dönem / Yıl")
-    ilgili_fabrika = models.CharField(max_length=100, choices=PazarlamaProjesi.FABRIKA_CHOICES, default='Teleset 1 (Manisa)', verbose_name="İlgili Fabrika")
+    ilgili_fabrika = models.CharField(max_length=100, choices=PazarlamaProjesi.FABRIKA_CHOICES, default='PRESHANE', verbose_name="İlgili Fabrika")
     
     baslangic_tarihi = models.DateField(null=True, blank=True, verbose_name="Başlangıç Tarihi")
     bitis_tarihi = models.DateField(null=True, blank=True, verbose_name="Bitiş Tarihi")
 
-    sorumlu_satis_uzmani = models.CharField(max_length=100, default='Buse Nur Baltacıoğlu', verbose_name="Satış Uzmanı")
-    sorumlu_satis_yoneticisi = models.CharField(max_length=100, default='Satış Yöneticisi', verbose_name="Satış Yöneticisi")
-    sorumlu_fabrika_muduru = models.CharField(max_length=100, default='Fabrika Müdürü', verbose_name="Fabrika Müdürü")
-    sorumlu_hukuk = models.CharField(max_length=100, default='Şirket Hukuk Müşaviri', verbose_name="Şirket Hukuk Müşaviri / Avukat")
+    sorumlu_satis_uzmani = models.CharField(max_length=100, default='BUSE NUR BALTACIOĞLU', verbose_name="Satış Uzmanı")
+    sorumlu_satis_yoneticisi = models.CharField(max_length=100, default='ONUR TUNCER', verbose_name="Satış Yöneticisi")
+    sorumlu_fabrika_muduru = models.CharField(max_length=100, default='MUHARREM FURKAN TARHAN', verbose_name="Fabrika Müdürü")
+    sorumlu_hukuk = models.CharField(max_length=100, default='Hukuk Müşaviri', verbose_name="Şirket Hukuk Müşaviri / Avukat")
     
     durum = models.CharField(max_length=30, choices=DURUM_CHOICES, default='DEVAM_EDIYOR', verbose_name="Sözleşme Durumu")
     guncel_adim_no = models.PositiveSmallIntegerField(default=1, verbose_name="Güncel Adım No")
@@ -788,7 +904,8 @@ class YeniUrunDevreyeAlmaSureci(models.Model):
     ]
 
     URUN_GRUBU_CHOICES = [
-        ('Kondenser & Sogutma', 'Kondenser & Soğutma Grubu'),
+        ('Kondanser & Sogutma', 'Kondanser & Soğutma Grubu'),
+        ('Kondenser & Sogutma', 'Kondanser & Soğutma Grubu (Eski)'),
         ('Metal Parca & Sac', 'Metal Parça & Sac Şekillendirme'),
         ('Kablo Grubu', 'Kablo Grubu & Demetleri'),
         ('Kalıp & Fikstür', 'Kalıp, Fikstür & Aparat'),
@@ -799,11 +916,12 @@ class YeniUrunDevreyeAlmaSureci(models.Model):
     ]
 
     FABRIKA_CHOICES = [
-        ('Teleset 1 (Manisa)', 'Teleset 1 (Manisa)'),
-        ('Teleset 2 (Manisa)', 'Teleset 2 (Manisa)'),
-        ('Teleset 3 (Kocaeli)', 'Teleset 3 (Kocaeli)'),
-        ('Teleset Otomotiv', 'Teleset Otomotiv'),
-        ('Teleset Global', 'Teleset Global'),
+        ('PRESHANE', 'PRESHANE'),
+        ('KALIPHANE', 'KALIPHANE'),
+        ('CERKEZKOY', 'CERKEZKOY'),
+        ('KABLOGR', 'KABLOGR'),
+        ('KONDANSER', 'KONDANSER'),
+        ('MANISA ORTAK', 'MANISA ORTAK'),
     ]
 
     kod = models.CharField(max_length=50, unique=True, verbose_name="NPI Proje Kodu")
@@ -811,19 +929,19 @@ class YeniUrunDevreyeAlmaSureci(models.Model):
     musteri_adi = models.CharField(max_length=150, verbose_name="Müşteri / Firma Adı")
     musteri_karti = models.ForeignKey(MusteriKarti, on_delete=models.SET_NULL, null=True, blank=True, related_name="yeni_urun_surecleri", verbose_name="Müşteri Portföy Kartı")
 
-    urun_grubu = models.CharField(max_length=100, choices=URUN_GRUBU_CHOICES, default='Kondenser & Sogutma', verbose_name="Ürün Grubu")
+    urun_grubu = models.CharField(max_length=100, choices=URUN_GRUBU_CHOICES, default='Kondanser & Sogutma', verbose_name="Ürün Grubu")
     urun_grubu_karti = models.ForeignKey(UrunGrubuKarti, on_delete=models.SET_NULL, null=True, blank=True, related_name="yeni_urun_surecleri", verbose_name="İlişkili Ürün Grubu Kartı")
 
-    ilgili_fabrika = models.CharField(max_length=100, choices=FABRIKA_CHOICES, default='Teleset 1 (Manisa)', verbose_name="Üretim Fabrikası")
+    ilgili_fabrika = models.CharField(max_length=100, choices=FABRIKA_CHOICES, default='PRESHANE', verbose_name="Üretim Fabrikası / Ana Departman")
 
     parca_kodu = models.CharField(max_length=100, blank=True, null=True, verbose_name="Müşteri / Teleset Parça Kodu")
     hedef_seri_uretim_tarihi = models.DateField(null=True, blank=True, verbose_name="Hedef Seri Üretime Geçiş Tarihi")
     yillik_hedef_adet = models.PositiveIntegerField(null=True, blank=True, verbose_name="Yıllık Hedef Adet")
 
-    sorumlu_proje_lideri = models.CharField(max_length=100, default='Proje Sorumlusu', verbose_name="Proje Sorumlusu")
-    sorumlu_fabrika_muduru = models.CharField(max_length=100, default='Fabrika Müdürü', verbose_name="Fabrika Müdürü")
-    sorumlu_satis_analiz = models.CharField(max_length=100, default='Satış-Analiz Sorumlusu', verbose_name="Satış-Analiz Sorumlusu")
-    sorumlu_kalite = models.CharField(max_length=100, default='Kalite Sorumlusu', verbose_name="Kalite Sorumlusu")
+    sorumlu_proje_lideri = models.CharField(max_length=100, default='BUSE NUR BALTACIOĞLU', verbose_name="Proje Sorumlusu")
+    sorumlu_fabrika_muduru = models.CharField(max_length=100, default='ONUR TUNCER', verbose_name="Fabrika Müdürü")
+    sorumlu_satis_analiz = models.CharField(max_length=100, default='MUHARREM FURKAN TARHAN', verbose_name="Satış-Analiz Sorumlusu")
+    sorumlu_kalite = models.CharField(max_length=100, default='METİN YAVAŞ', verbose_name="Kalite Sorumlusu")
 
     durum = models.CharField(max_length=35, choices=DURUM_CHOICES, default='DEVAM_EDIYOR', verbose_name="Süreç Durumu")
     guncel_adim_no = models.PositiveSmallIntegerField(default=1, verbose_name="Güncel Adım No")
@@ -967,20 +1085,21 @@ class MuhendislikDegisikligiSureci(models.Model):
     ad = models.CharField(max_length=200, verbose_name="Değişiklik Konusu / Başlığı")
     musteri_adi = models.CharField(max_length=150, verbose_name="Müşteri / Firma Adı")
     musteri_karti = models.ForeignKey(MusteriKarti, on_delete=models.SET_NULL, null=True, blank=True, related_name="muhendislik_degisiklikleri", verbose_name="Müşteri Portföy Kartı")
+    ana_proje = models.ForeignKey('AnaProje', on_delete=models.SET_NULL, null=True, blank=True, related_name="eco_iterasyonlari", verbose_name="Bağlı Ana Proje")
 
     parca_kodu = models.CharField(max_length=100, blank=True, null=True, verbose_name="Parça Kodu / No")
     revizyon_no = models.CharField(max_length=50, default="Rev.01", verbose_name="Revizyon No")
     degisiklik_nedeni = models.CharField(max_length=40, choices=DEGISIKLIK_NEDENI_CHOICES, default='MUSTERI_TALEBI', verbose_name="Değişiklik Nedeni")
 
     urun_grubu = models.CharField(max_length=100, choices=PazarlamaProjesi.URUN_GRUBU_CHOICES, default='Metal Parca & Sac', verbose_name="Ürün Grubu")
-    ilgili_fabrika = models.CharField(max_length=100, choices=PazarlamaProjesi.FABRIKA_CHOICES, default='Teleset 1 (Manisa)', verbose_name="İlgili Fabrika")
+    ilgili_fabrika = models.CharField(max_length=100, choices=PazarlamaProjesi.FABRIKA_CHOICES, default='PRESHANE', verbose_name="İlgili Fabrika")
 
     hedef_tamamlanma_tarihi = models.DateField(null=True, blank=True, verbose_name="Hedef Tamamlanma Tarihi")
 
-    sorumlu_proje_sorumlusu = models.CharField(max_length=100, default='Buse Nur Baltacıoğlu', verbose_name="Proje Sorumlusu (R)")
-    sorumlu_fabrika_muduru = models.CharField(max_length=100, default='Serdar Acar', verbose_name="Fabrika Müdürü (A)")
-    sorumlu_satis_analiz = models.CharField(max_length=100, default='Hakan Yılmaz', verbose_name="Satış-Analiz Sorumlusu (C)")
-    sorumlu_kalite = models.CharField(max_length=100, default='Ahmet Yurt', verbose_name="Kalite Sorumlusu (C)")
+    sorumlu_proje_sorumlusu = models.CharField(max_length=100, default='BUSE NUR BALTACIOĞLU', verbose_name="Proje Sorumlusu (R)")
+    sorumlu_fabrika_muduru = models.CharField(max_length=100, default='ONUR TUNCER', verbose_name="Fabrika Müdürü (A)")
+    sorumlu_satis_analiz = models.CharField(max_length=100, default='METİN YAVAŞ', verbose_name="Satış-Analiz Sorumlusu (C)")
+    sorumlu_kalite = models.CharField(max_length=100, default='MUHARREM FURKAN TARHAN', verbose_name="Kalite Sorumlusu (C)")
 
     durum = models.CharField(max_length=40, choices=DURUM_CHOICES, default='DEVAM_EDIYOR', verbose_name="Süreç Durumu")
     guncel_adim_no = models.PositiveSmallIntegerField(default=1, verbose_name="Güncel Adım No")
@@ -1123,20 +1242,21 @@ class PrototipSureci(models.Model):
     ad = models.CharField(max_length=200, verbose_name="Prototip Konusu / Proje Adı")
     musteri_adi = models.CharField(max_length=150, verbose_name="Müşteri / Firma Adı")
     musteri_karti = models.ForeignKey(MusteriKarti, on_delete=models.SET_NULL, null=True, blank=True, related_name="prototip_surecleri", verbose_name="Müşteri Portföy Kartı")
+    ana_proje = models.ForeignKey('AnaProje', on_delete=models.SET_NULL, null=True, blank=True, related_name="prototip_iterasyonlari", verbose_name="Bağlı Ana Proje")
 
     parca_kodu = models.CharField(max_length=100, blank=True, null=True, verbose_name="Parça / Numune Kodu")
     revizyon_no = models.CharField(max_length=50, default="Rev.01", verbose_name="Revizyon No")
     prototip_tipi = models.CharField(max_length=40, choices=PROTOTIP_TIPI_CHOICES, default='YENI_TASARIM', verbose_name="Prototip Tipi")
 
     urun_grubu = models.CharField(max_length=100, choices=PazarlamaProjesi.URUN_GRUBU_CHOICES, default='Metal Parca & Sac', verbose_name="Ürün Grubu")
-    ilgili_fabrika = models.CharField(max_length=100, choices=PazarlamaProjesi.FABRIKA_CHOICES, default='Teleset 1 (Manisa)', verbose_name="İlgili Fabrika")
+    ilgili_fabrika = models.CharField(max_length=100, choices=PazarlamaProjesi.FABRIKA_CHOICES, default='PRESHANE', verbose_name="İlgili Fabrika")
 
     hedef_tamamlanma_tarihi = models.DateField(null=True, blank=True, verbose_name="Hedef Tamamlanma Tarihi")
 
-    sorumlu_proje_sorumlusu = models.CharField(max_length=100, default='Buse Nur Baltacıoğlu', verbose_name="Proje Sorumlusu (R)")
-    sorumlu_fabrika_muduru = models.CharField(max_length=100, default='Serdar Acar', verbose_name="Fabrika Müdürü (A)")
-    sorumlu_satis_analiz = models.CharField(max_length=100, default='Hakan Yılmaz', verbose_name="Satış-Analiz Sorumlusu (C)")
-    sorumlu_kalite = models.CharField(max_length=100, default='Ahmet Yurt', verbose_name="Kalite Sorumlusu (C)")
+    sorumlu_proje_sorumlusu = models.CharField(max_length=100, default='BUSE NUR BALTACIOĞLU', verbose_name="Proje Sorumlusu (R)")
+    sorumlu_fabrika_muduru = models.CharField(max_length=100, default='ONUR TUNCER', verbose_name="Fabrika Müdürü (A)")
+    sorumlu_satis_analiz = models.CharField(max_length=100, default='METİN YAVAŞ', verbose_name="Satış-Analiz Sorumlusu (C)")
+    sorumlu_kalite = models.CharField(max_length=100, default='MUHARREM FURKAN TARHAN', verbose_name="Kalite Sorumlusu (C)")
 
     durum = models.CharField(max_length=40, choices=DURUM_CHOICES, default='DEVAM_EDIYOR', verbose_name="Süreç Durumu")
     guncel_adim_no = models.PositiveSmallIntegerField(default=1, verbose_name="Güncel Adım No")
@@ -1278,18 +1398,18 @@ class EOPSureci(models.Model):
     musteri_adi = models.CharField(max_length=150, verbose_name="Müşteri / Firma Adı")
     musteri_karti = models.ForeignKey(MusteriKarti, on_delete=models.SET_NULL, null=True, blank=True, related_name="eop_surecleri", verbose_name="Müşteri Portföy Kartı")
 
-    urun_grubu = models.CharField(max_length=100, choices=PazarlamaProjesi.URUN_GRUBU_CHOICES, default='Kondenser', verbose_name="Ürün Grubu")
-    ilgili_fabrika = models.CharField(max_length=100, choices=PazarlamaProjesi.FABRIKA_CHOICES, default='Teleset 1 (Manisa)', verbose_name="İlgili Fabrika")
+    urun_grubu = models.CharField(max_length=100, choices=PazarlamaProjesi.URUN_GRUBU_CHOICES, default='Kondanser & Sogutma', verbose_name="Ürün Grubu")
+    ilgili_fabrika = models.CharField(max_length=100, choices=PazarlamaProjesi.FABRIKA_CHOICES, default='PRESHANE', verbose_name="İlgili Fabrika")
 
     eop_bildirim_tarihi = models.DateField(default=timezone.now, verbose_name="EOP Bildirim Tarihi")
     seri_uretim_bitis_tarihi = models.DateField(null=True, blank=True, verbose_name="Seri Üretim Bitiş Tarihi")
     yedek_parca_servis_suresi_yil = models.PositiveSmallIntegerField(default=10, verbose_name="Yedek Parça Servis Yükümlülüğü (Yıl)")
 
-    sorumlu_proje_sorumlusu = models.CharField(max_length=100, default='Buse Nur Baltacıoğlu', verbose_name="Proje Sorumlusu (R)")
-    sorumlu_fabrika_muduru = models.CharField(max_length=100, default='Serdar Acar', verbose_name="Fabrika Müdürü (A)")
-    sorumlu_satis_analiz = models.CharField(max_length=100, default='Hakan Yılmaz', verbose_name="Satış-Analiz Sorumlusu (C)")
-    sorumlu_planlama = models.CharField(max_length=100, default='Canan Kaya', verbose_name="Planlama Sorumlusu (C)")
-    sorumlu_uretim = models.CharField(max_length=100, default='Murat Çelik', verbose_name="Üretim Sorumlusu (C)")
+    sorumlu_proje_sorumlusu = models.CharField(max_length=100, default='BUSE NUR BALTACIOĞLU', verbose_name="Proje Sorumlusu (R)")
+    sorumlu_fabrika_muduru = models.CharField(max_length=100, default='ONUR TUNCER', verbose_name="Fabrika Müdürü (A)")
+    sorumlu_satis_analiz = models.CharField(max_length=100, default='METİN YAVAŞ', verbose_name="Satış-Analiz Sorumlusu (C)")
+    sorumlu_planlama = models.CharField(max_length=100, default='MUHARREM FURKAN TARHAN', verbose_name="Planlama Sorumlusu (C)")
+    sorumlu_uretim = models.CharField(max_length=100, default='YİĞİT EFE BİLİR', verbose_name="Üretim Sorumlusu (C)")
 
     durum = models.CharField(max_length=40, choices=DURUM_CHOICES, default='DEVAM_EDIYOR', verbose_name="Süreç Durumu")
     guncel_adim_no = models.PositiveSmallIntegerField(default=1, verbose_name="Güncel Adım No")
@@ -1467,6 +1587,372 @@ class FaaliyetKaydi(models.Model):
             'IPTAL': 'bg-danger-subtle text-danger border border-danger-subtle',
         }
         return classes.get(self.durum, 'bg-light text-dark')
+
+
+class AnaProje(models.Model):
+    """
+    Uçtan Uca 8 Süreci Birleştiren Master Proje / Dijital İplik (Digital Thread) Modeli
+    1. Müşteri İlişkileri Süreci
+    2. Pazarlama Süreci
+    3. Ürün Teklif Süreci
+    4. Sözleşme Değerlendirme Süreci
+    5. Prototip Süreci
+    6. Yeni Ürün Devreye Alma Süreci
+    7. Mühendislik Değişikliği Süreci
+    8. Ürün Seri Üretim Sonlandırma Süreci (EOP)
+    """
+    FABRIKA_CHOICES = [
+        ('PRESHANE', 'PRESHANE'),
+        ('KALIPHANE', 'KALIPHANE'),
+        ('CERKEZKOY', 'CERKEZKOY'),
+        ('KABLOGR', 'KABLOGR'),
+        ('KONDANSER', 'KONDANSER'),
+        ('MANISA ORTAK', 'MANISA ORTAK'),
+    ]
+
+    proje_kodu = models.CharField(max_length=50, unique=True, verbose_name="Proje Kodu")
+    proje_adi = models.CharField(max_length=200, verbose_name="Proje Başlığı")
+    bolum = models.CharField(max_length=100, default='Kalıphane', verbose_name="Bölüm / Departman")
+    urun_grubu = models.CharField(max_length=100, default='Kurutucu', verbose_name="Ürün Grubu")
+    parca_kodu = models.CharField(max_length=100, blank=True, default='', verbose_name="Parça / Kalıp Kodu")
+    parca_adi = models.CharField(max_length=200, blank=True, default='', verbose_name="Parça Adı")
+    yillik_frc_miktar = models.BigIntegerField(default=0, verbose_name="Yıllık FRC Miktar (Adet)")
+    
+    proje_hedef_tarihi_str = models.CharField(max_length=50, default='', blank=True, verbose_name="Proje Hedef Tarihi")
+    proje_baslangic_tarihi_str = models.CharField(max_length=50, default='', blank=True, verbose_name="Proje Başlangıç Tarihi")
+    proje_bitis_tarihi_str = models.CharField(max_length=50, default='', blank=True, verbose_name="Proje Bitiş Tarihi")
+    proje_onay_tarihi_str = models.CharField(max_length=50, default='', blank=True, verbose_name="Proje Onay Tarihi")
+    aciklama_notu = models.TextField(default='', blank=True, verbose_name="Açıklama / Durum Notu")
+
+    fabrika = models.CharField(max_length=100, choices=FABRIKA_CHOICES, default='PRESHANE', verbose_name="Ana Departman / Bölüm")
+    
+    musteri = models.ForeignKey(
+        'MusteriKarti', 
+        on_delete=models.CASCADE, 
+        related_name='ana_projeler', 
+        verbose_name="Cari / Müşteri"
+    )
+    tesis = models.ForeignKey(
+        'MusteriTesisi', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='ana_projeler',
+        verbose_name="Müşteri Tesisi / Lokasyonu"
+    )
+    
+    sorumlu_lider = models.CharField(max_length=120, default='Buse Nur Baltacıoğlu', verbose_name="Proje Lideri")
+    hedef_sop_tarihi = models.DateField(null=True, blank=True, verbose_name="Hedef Seri Üretim Tarihi")
+    genel_ilerleme_yuzdesi = models.IntegerField(default=50, verbose_name="Genel İlerleme %")
+    
+    # Dijital İplik (Digital Thread) Parametreleri
+    hedef_butce = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True, default=125000.00, verbose_name="Hedef Proje / Teklif Bütçesi (EUR)")
+    yillik_hacim_adet = models.IntegerField(default=50000, verbose_name="Yıllık Tahmini Hacim (Adet)")
+    kalip_goz_sayisi = models.IntegerField(default=4, verbose_name="Kalıp Göz Sayısı")
+    hammadde_cinsi = models.CharField(max_length=120, default="DC01 Galvaniz Sac / 1.20mm", blank=True, verbose_name="Hammadde / Spesifikasyon")
+    dijital_iplik_senkronize_mi = models.BooleanField(default=True, verbose_name="Teklif & APQP Veri Senkronizasyonu Aktif mi?")
+
+    # Aktif Süreç ve Adım Bilgisi
+    aktif_surec_no = models.IntegerField(default=6, verbose_name="Aktif Süreç No (1-8)")
+    aktif_surec_adi = models.CharField(max_length=120, default="Yeni Ürün Devreye Alma Süreci", verbose_name="Aktif Süreç Adı")
+    aktif_adim_no = models.IntegerField(default=18, verbose_name="Aktif Adım No")
+    aktif_adim_basligi = models.CharField(max_length=255, default="T0 Kalıp Denemesi ve İlk Numune Basımı", verbose_name="Aktif Adım Başlığı")
+    aktif_rol = models.CharField(max_length=100, default="Projeci / Kalıp", verbose_name="Aktif Rol Sorumlusu")
+    aktif_durum_aciklamasi = models.CharField(max_length=255, default="Kalıp denemesi tamamlandı, CMM boyutsal ölçüm raporu bekleniyor.", verbose_name="Durum Özeti / Not")
+    
+    durum = models.CharField(max_length=50, default="Devam Ediyor", verbose_name="Proje Genel Durumu")
+    olusturulma_tarihi = models.DateTimeField(auto_now_add=True)
+    guncellenme_tarihi = models.DateTimeField(auto_now=True)
+
+    # 8 Süreçle Birebir İlişki (Opsiyonel / Bağlantılı)
+    musteri_iliskileri_sureci = models.ForeignKey('MusteriIliskileriSureci', null=True, blank=True, on_delete=models.SET_NULL, related_name='bagli_ana_projeler')
+    pazarlama_sureci = models.ForeignKey('PazarlamaProjesi', null=True, blank=True, on_delete=models.SET_NULL, related_name='bagli_ana_projeler')
+    urun_teklif_sureci = models.ForeignKey('UrunTeklifSureci', null=True, blank=True, on_delete=models.SET_NULL, related_name='bagli_ana_projeler')
+    sozlesme_sureci = models.ForeignKey('SozlesmeSureci', null=True, blank=True, on_delete=models.SET_NULL, related_name='bagli_ana_projeler')
+    prototip_sureci = models.ForeignKey('PrototipSureci', null=True, blank=True, on_delete=models.SET_NULL, related_name='bagli_ana_projeler')
+    yeni_urun_sureci = models.ForeignKey('YeniUrunDevreyeAlmaSureci', null=True, blank=True, on_delete=models.SET_NULL, related_name='bagli_ana_projeler')
+    muhendislik_degisikligi_sureci = models.ForeignKey('MuhendislikDegisikligiSureci', null=True, blank=True, on_delete=models.SET_NULL, related_name='bagli_ana_projeler')
+    eop_sureci = models.ForeignKey('EOPSureci', null=True, blank=True, on_delete=models.SET_NULL, related_name='bagli_ana_projeler')
+
+    class Meta:
+        verbose_name = "Uçtan Uca Ana Proje"
+        verbose_name_plural = "Uçtan Uca Ana Projeler"
+        ordering = ['proje_kodu']
+
+    def __str__(self):
+        return f"[{self.proje_kodu}] {self.proje_adi} - {self.musteri.ad if self.musteri else ''}"
+
+    @property
+    def uctan_uca_ilerleme_yuzdesi(self):
+        """
+        8 süreçlik omurgadaki aktif sürecin oranına göre genel uçtan uca ilerleme yüzdesi (Örn: 6/8 = %75).
+        """
+        if self.aktif_surec_no:
+            return int(round((self.aktif_surec_no / 8.0) * 100))
+        return self.genel_ilerleme_yuzdesi or 0
+
+    def save(self, *args, **kwargs):
+        if self.aktif_surec_no:
+            self.genel_ilerleme_yuzdesi = int(round((self.aktif_surec_no / 8.0) * 100))
+        super().save(*args, **kwargs)
+
+    def get_surecler_listesi(self):
+        """
+        8 sürecin her birinin bu proje için canlı durumunu, adım sayısını,
+        sorumlu rolünü ve bağlantısını listeler.
+        """
+        # Temel 8 süreç tanımları
+        surec_tanimlari = [
+            {
+                'no': 1,
+                'kod': 'S1',
+                'baslik': 'Müşteri İlişkileri Süreci',
+                'alt_baslik': 'İlk Temas, Müşteri Profili ve Ziyaret',
+                'adim_sayisi': '4 Adım',
+                'varsayilan_rol': 'Satış & Pazarlama',
+                'url': '/musteri-iliskileri/',
+                'ikon': 'bi-people',
+            },
+            {
+                'no': 2,
+                'kod': 'S2',
+                'baslik': 'Pazarlama Süreci',
+                'alt_baslik': '15 Adım Pazar & Bütçe Onay Akışı',
+                'adim_sayisi': '15 Adım',
+                'varsayilan_rol': 'Satış & Pazarlama',
+                'url': '/pazarlama-sureci/',
+                'ikon': 'bi-megaphone',
+            },
+            {
+                'no': 3,
+                'kod': 'S3',
+                'baslik': 'Ürün Teklif Süreci',
+                'alt_baslik': 'SAT-EK-005 Maliyet, Fizibilite ve Fiyat',
+                'adim_sayisi': '6 Adım',
+                'varsayilan_rol': 'Satış & Pazarlama',
+                'url': '/urun-teklif-sureci/',
+                'ikon': 'bi-calculator',
+            },
+            {
+                'no': 4,
+                'kod': 'S4',
+                'baslik': 'Sözleşme Değerlendirme Süreci',
+                'alt_baslik': 'Gizlilik, Kalite ve Ticari Protokoller',
+                'adim_sayisi': '5 Adım',
+                'varsayilan_rol': 'Fabrika Müdürü Onayı',
+                'url': '/sozlesme-sureci/',
+                'ikon': 'bi-file-earmark-check',
+            },
+            {
+                'no': 5,
+                'kod': 'S5',
+                'baslik': 'Prototip Süreci',
+                'alt_baslik': '23 Adım Numune ve CMM Ölçüm Onayı',
+                'adim_sayisi': '23 Adım',
+                'varsayilan_rol': 'Kalite Güvence',
+                'url': '/prototip-sureci/',
+                'ikon': 'bi-cpu',
+            },
+            {
+                'no': 6,
+                'kod': 'S6',
+                'baslik': 'Yeni Ürün Devreye Alma Süreci',
+                'alt_baslik': '45 Adım APQP / PPAP ve Kalıp İmalatı',
+                'adim_sayisi': '45 Adım',
+                'varsayilan_rol': 'Projeci / Kalıp',
+                'url': '/yeni-urun-devreye-alma/',
+                'ikon': 'bi-gear-wide-connected',
+            },
+            {
+                'no': 7,
+                'kod': 'S7',
+                'baslik': 'Mühendislik Değişikliği Süreci',
+                'alt_baslik': '5 Adım ECN / ECR Revizyon Yönetimi',
+                'adim_sayisi': '5 Adım',
+                'varsayilan_rol': 'Projeci / Kalıp',
+                'url': '/muhendislik-degisikligi/',
+                'ikon': 'bi-wrench',
+            },
+            {
+                'no': 8,
+                'kod': 'S8',
+                'baslik': 'Ürün Seri Üretim Sonlandırma Süreci',
+                'alt_baslik': '6 Adım EOP ve Kalıp Arşivleme',
+                'adim_sayisi': '6 Adım',
+                'varsayilan_rol': 'Üretim & Planlama',
+                'url': '/eop-sureci/',
+                'ikon': 'bi-box-arrow-right',
+            },
+        ]
+
+        sonuc = []
+        for s in surec_tanimlari:
+            s_no = s['no']
+            if s_no < self.aktif_surec_no:
+                durum_kod = 'TAMAMLANDI'
+                durum_etiket = 'Tamamlandı'
+                badge_class = 'bg-success-subtle text-success border border-success-subtle'
+                ilerleme = 100
+                detay = f"Tüm adımlar onaylandı • {s['adim_sayisi']}"
+                is_active = False
+            elif s_no == self.aktif_surec_no:
+                durum_kod = 'DEVAM_EDIYOR'
+                durum_etiket = 'Aktif Devam Ediyor'
+                badge_class = 'bg-primary-subtle text-primary border border-primary-subtle'
+                ilerleme = self.uctan_uca_ilerleme_yuzdesi
+                detay = f"Adım {self.aktif_adim_no}: {self.aktif_adim_basligi}"
+                is_active = True
+            else:
+                durum_kod = 'BEKLEMEDE'
+                durum_etiket = 'Sıradaki / Beklemede'
+                badge_class = 'bg-light text-muted border'
+                ilerleme = 0
+                detay = f"Önceki süreçlerin tamamlanması bekleniyor"
+                is_active = False
+
+            sonuc.append({
+                'no': s_no,
+                'kod': s['kod'],
+                'baslik': s['baslik'],
+                'alt_baslik': s['alt_baslik'],
+                'adim_sayisi': s['adim_sayisi'],
+                'rol': s['varsayilan_rol'],
+                'url': s['url'],
+                'ikon': s['ikon'],
+                'durum_kod': durum_kod,
+                'durum_etiket': durum_etiket,
+                'badge_class': badge_class,
+                'ilerleme': ilerleme,
+                'detay': detay,
+                'is_active': is_active,
+            })
+        return sonuc
+
+    def teklif_verilerini_senkronize_et(self):
+        """
+        Teklif (SAT-EK-005) aşamasındaki bütçe, müşteri ve parça verilerini
+        Sözleşme, Prototip ve APQP süreçlerine aktaran Digital Thread köprüsü.
+        """
+        guncellenenler = []
+        if self.urun_teklif_sureci:
+            if self.urun_teklif_sureci.teklif_tutari:
+                self.hedef_butce = self.urun_teklif_sureci.teklif_tutari
+                guncellenenler.append('hedef_butce')
+            if self.urun_teklif_sureci.musteri_karti and not self.musteri:
+                self.musteri = self.urun_teklif_sureci.musteri_karti
+                guncellenenler.append('musteri')
+        if self.sozlesme_sureci and self.musteri:
+            if not self.sozlesme_sureci.musteri_karti:
+                self.sozlesme_sureci.musteri_karti = self.musteri
+                self.sozlesme_sureci.save()
+                guncellenenler.append('sozlesme_musteri')
+        if self.yeni_urun_sureci and self.musteri:
+            if not self.yeni_urun_sureci.musteri_karti:
+                self.yeni_urun_sureci.musteri_karti = self.musteri
+                self.yeni_urun_sureci.save()
+                guncellenenler.append('yeni_urun_musteri')
+        self.dijital_iplik_senkronize_mi = True
+        self.save()
+        return guncellenenler
+
+    def get_prototip_iterasyonlari(self):
+        """
+        Bağlı prototip döngülerini (T0, T1, Malzeme Doğrulama vb.) listeler.
+        """
+        iterasyonlar = list(self.prototip_iterasyonlari.all().order_by('olusturma_tarihi'))
+        if not iterasyonlar and self.prototip_sureci:
+            iterasyonlar = [self.prototip_sureci]
+        return iterasyonlar
+
+    def get_eco_revizyonlari(self):
+        """
+        Bağlı mühendislik değişikliklerini (ECO revizyonları) listeler.
+        """
+        revizyonlar = list(self.eco_iterasyonlari.all().order_by('olusturma_tarihi'))
+        if not revizyonlar and self.muhendislik_degisikligi_sureci:
+            revizyonlar = [self.muhendislik_degisikligi_sureci]
+        return revizyonlar
+
+    def get_bekleyen_aksiyonlar(self, rol=None):
+        """
+        Projenin aktif süreç ve alt adımlarında kullanıcının rolüne düşen
+        en kritik bekleyen aksiyonları ve termin risk durumunu döndürür.
+        """
+        aksiyonlar = []
+        
+        # 1. Aktif sürecin güncel adımı (Birincil Kritik Yol)
+        aksiyonlar.append({
+            'surec_kodu': f"S{self.aktif_surec_no}",
+            'surec_adi': self.aktif_surec_adi,
+            'adim_no': self.aktif_adim_no,
+            'adim_basligi': self.aktif_adim_basligi,
+            'rol': self.aktif_rol,
+            'oncelik': 'Kritik Yol',
+            'oncelik_badge': 'bg-danger-subtle text-danger border border-danger-subtle',
+            'termin_durumu': 'Termin Yaklaşıyor (2 Gün)',
+            'termin_badge': 'bg-warning-subtle text-warning border border-warning-subtle',
+            'url': f"/yeni-urun-devreye-alma/?adim={self.aktif_adim_no}" if self.aktif_surec_no == 6 else "/?tab=is_akisi",
+            'not': self.aktif_durum_aciklamasi,
+        })
+        
+        # 2. Döngüsel ECO / Prototip aksiyonları varsa ekle
+        for eco in self.get_eco_revizyonlari():
+            if eco.durum in ['DEVAM_EDIYOR', 'REVIZYONDA']:
+                aksiyonlar.append({
+                    'surec_kodu': 'S7 (ECO)',
+                    'surec_adi': f"ECO Revizyonu: {eco.kod}",
+                    'adim_no': eco.guncel_adim_no,
+                    'adim_basligi': f"{eco.ad} - {eco.revizyon_no}",
+                    'rol': 'Projeci / Kalıp',
+                    'oncelik': 'Yüksek',
+                    'oncelik_badge': 'bg-primary-subtle text-primary border border-primary-subtle',
+                    'termin_durumu': 'Devam Ediyor',
+                    'termin_badge': 'bg-info-subtle text-info border border-info-subtle',
+                    'url': '/muhendislik-degisikligi/',
+                    'not': f"Revizyon nedeni: {eco.get_degisiklik_nedeni_display()}",
+                })
+
+        for prt in self.get_prototip_iterasyonlari():
+            if prt.durum in ['DEVAM_EDIYOR', 'REVIZYONDA']:
+                aksiyonlar.append({
+                    'surec_kodu': 'S5 (PRT)',
+                    'surec_adi': f"Prototip İterasyonu: {prt.kod}",
+                    'adim_no': prt.guncel_adim_no,
+                    'adim_basligi': f"{prt.ad} - {prt.revizyon_no}",
+                    'rol': 'Kalite Güvence',
+                    'oncelik': 'Orta',
+                    'oncelik_badge': 'bg-secondary-subtle text-secondary border border-secondary-subtle',
+                    'termin_durumu': 'Numune Doğrulama',
+                    'termin_badge': 'bg-light text-muted border',
+                    'url': '/prototip-sureci/',
+                    'not': f"Prototip tipi: {prt.get_prototip_tipi_display()}",
+                })
+
+        # Rol filtresi
+        if rol and rol != 'ALL':
+            aksiyonlar = [a for a in aksiyonlar if a['rol'].lower() == rol.lower()]
+            
+        return aksiyonlar
+
+
+class SistemKodSayaci(models.Model):
+    """
+    Süreç bazlı tekil artan IncKey sayaç tablosu
+    """
+    surec_tipi = models.CharField(max_length=20, verbose_name="Süreç Tipi (PRJ, TEK, ECO vb.)")
+    yil = models.IntegerField(verbose_name="Yıl")
+    son_sira_no = models.IntegerField(default=100, verbose_name="Son Verilen Sıra Numarası")
+    guncellenme_tarihi = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('surec_tipi', 'yil')
+        verbose_name = "Sistem Kod Sayacı"
+        verbose_name_plural = "Sistem Kod Sayaçları"
+
+    def __str__(self):
+        return f"{self.surec_tipi}-{self.yil}: {self.son_sira_no}"
+
+
 
 
 

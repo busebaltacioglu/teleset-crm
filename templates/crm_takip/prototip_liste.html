@@ -323,7 +323,7 @@
                             <label class="form-label small fw-bold text-muted">Ürün Grubu</label>
                             <select name="urun_grubu" class="form-select">
                                 <option value="Metal Parca & Sac">Metal Parça & Sac Şekillendirme</option>
-                                <option value="Kondenser & Sogutma">Kondenser & Soğutma</option>
+                                <option value="Kondanser & Sogutma">Kondanser & Soğutma</option>
                                 <option value="Kablo Grubu">Kablo Grubu</option>
                                 <option value="Kalıp & Fikstür">Kalıp & Fikstür</option>
                                 <option value="Montaj ve Kaynak">Montaj ve Kaynak</option>
@@ -334,13 +334,11 @@
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold text-muted">İlgili Fabrika</label>
+                            <label class="form-label small fw-bold text-muted">Ana Departman / Fabrika</label>
                             <select name="ilgili_fabrika" class="form-select">
-                                <option value="Teleset 1 (Manisa)">Teleset 1 (Manisa)</option>
-                                <option value="Teleset 2 (Manisa)">Teleset 2 (Manisa)</option>
-                                <option value="Teleset 3 (Kocaeli)">Teleset 3 (Kocaeli)</option>
-                                <option value="Teleset Otomotiv">Teleset Otomotiv</option>
-                                <option value="Teleset Global">Teleset Global</option>
+                                {% for s in intranet_sirketler %}
+                                <option value="{{ s }}" {% if s == 'PRESHANE' %}selected{% endif %}>{{ s }}</option>
+                                {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-6">
@@ -350,20 +348,44 @@
 
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-muted">Proje Sorumlusu (R - İşi Yürüten)</label>
-                            <input type="text" name="sorumlu_proje_sorumlusu" class="form-control" value="Buse Nur Baltacıoğlu" required>
+                            <select name="sorumlu_proje_sorumlusu" class="form-select" required>
+                                {% for p in proje_liderleri %}
+                                <option value="{{ p.ad_soyad }}" {% if p.ad_soyad == 'BUSE NUR BALTACIOĞLU' %}selected{% endif %}>
+                                    {{ p.ad_soyad }}
+                                </option>
+                                {% endfor %}
+                            </select>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-muted">Fabrika Müdürü (A - Onay Veren)</label>
-                            <input type="text" name="sorumlu_fabrika_muduru" class="form-control" value="Serdar Acar" required>
+                            <select name="sorumlu_fabrika_muduru" class="form-select" required>
+                                {% for p in satis_mudurleri %}
+                                <option value="{{ p.ad_soyad }}" {% if p.ad_soyad == 'ONUR TUNCER' or forloop.first %}selected{% endif %}>
+                                    {{ p.ad_soyad }}
+                                </option>
+                                {% endfor %}
+                            </select>
                         </div>
 
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-muted">Satış-Analiz Sorumlusu (C - Danışılan)</label>
-                            <input type="text" name="sorumlu_satis_analiz" class="form-control" value="Hakan Yılmaz" required>
+                            <select name="sorumlu_satis_analiz" class="form-select" required>
+                                {% for p in pazarlama_uzmanlari %}
+                                <option value="{{ p.ad_soyad }}" {% if p.ad_soyad == 'MUHARREM FURKAN TARHAN' or forloop.first %}selected{% endif %}>
+                                    {{ p.ad_soyad }}
+                                </option>
+                                {% endfor %}
+                            </select>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-muted">Kalite Sorumlusu (C - Kalite / ISIR)</label>
-                            <input type="text" name="sorumlu_kalite" class="form-control" value="Ahmet Yurt" required>
+                            <select name="sorumlu_kalite" class="form-select" required>
+                                {% for p in proje_liderleri %}
+                                <option value="{{ p.ad_soyad }}" {% if p.ad_soyad == 'METİN YAVAŞ' %}selected{% endif %}>
+                                    {{ p.ad_soyad }}
+                                </option>
+                                {% endfor %}
+                            </select>
                         </div>
 
                         <div class="col-12">

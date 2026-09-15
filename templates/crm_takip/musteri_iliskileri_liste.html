@@ -275,13 +275,11 @@
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold text-muted">İlgili Fabrika</label>
+                            <label class="form-label small fw-bold text-muted">Ana Departman / Fabrika</label>
                             <select name="ilgili_fabrika" class="form-select">
-                                <option value="Teleset 1 (Manisa)">Teleset 1 (Manisa)</option>
-                                <option value="Teleset 2 (Manisa)">Teleset 2 (Manisa)</option>
-                                <option value="Teleset 3 (Kocaeli)">Teleset 3 (Kocaeli)</option>
-                                <option value="Teleset Otomotiv">Teleset Otomotiv</option>
-                                <option value="Teleset Global">Teleset Global</option>
+                                {% for s in intranet_sirketler %}
+                                <option value="{{ s }}" {% if s == 'PRESHANE' %}selected{% endif %}>{{ s }}</option>
+                                {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-6">
@@ -290,12 +288,24 @@
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold text-muted">Sorumlu EYS Uzmanı</label>
-                            <input type="text" name="sorumlu_eys" class="form-control" value="Buse Nur Baltacıoğlu" required>
+                            <label class="form-label small fw-bold text-muted">Sorumlu EYS / Süreç Uzmanı</label>
+                            <select name="sorumlu_eys" class="form-select" required>
+                                {% for p in proje_liderleri %}
+                                <option value="{{ p.ad_soyad }}" {% if p.ad_soyad == 'BUSE NUR BALTACIOĞLU' %}selected{% endif %}>
+                                    {{ p.ad_soyad }}
+                                </option>
+                                {% endfor %}
+                            </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold text-muted">Süreç Sahibi / İyileştirme Ekibi</label>
-                            <input type="text" name="sorumlu_surec_sahibi" class="form-control" value="Süreç Sahibi / İyileştirme Ekibi" required>
+                            <label class="form-label small fw-bold text-muted">Süreç Sahibi / Yönetici</label>
+                            <select name="sorumlu_surec_sahibi" class="form-select" required>
+                                {% for p in satis_mudurleri %}
+                                <option value="{{ p.ad_soyad }}" {% if p.ad_soyad == 'ONUR TUNCER' or forloop.first %}selected{% endif %}>
+                                    {{ p.ad_soyad }}
+                                </option>
+                                {% endfor %}
+                            </select>
                         </div>
 
                         <div class="col-12">

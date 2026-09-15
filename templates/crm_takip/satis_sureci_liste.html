@@ -293,7 +293,7 @@
                             <label class="form-label small fw-bold text-muted">Ürün Grubu</label>
                             <select name="urun_grubu" class="form-select">
                                 <option value="Metal Parça & Sac">Metal Parça & Sac Şekillendirme</option>
-                                <option value="Kondenser & Soğutma">Kondenser & Soğutma</option>
+                                <option value="Kondanser & Soğutma">Kondanser & Soğutma</option>
                                 <option value="Kablo Grubu">Kablo Grubu</option>
                                 <option value="Kalıp & Fikstür">Kalıp & Fikstür</option>
                                 <option value="Montaj ve Kaynak">Montaj ve Kaynak</option>
@@ -303,23 +303,40 @@
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold text-muted">İlgili Fabrika</label>
+                            <label class="form-label small fw-bold text-muted">Ana Departman / Fabrika</label>
                             <select name="ilgili_fabrika" class="form-select">
-                                <option value="Teleset 1 (Manisa)">Teleset 1 (Manisa)</option>
-                                <option value="Teleset 2 (Manisa)">Teleset 2 (Manisa)</option>
-                                <option value="Teleset 3 (Kocaeli)">Teleset 3 (Kocaeli)</option>
-                                <option value="Teleset Otomotiv">Teleset Otomotiv</option>
-                                <option value="Teleset Global">Teleset Global</option>
+                                {% for sirket in intranet_sirketler %}
+                                <option value="{{ sirket }}" {% if sirket == 'PRESHANE' %}selected{% endif %}>{{ sirket }}</option>
+                                {% empty %}
+                                <option value="PRESHANE" selected>PRESHANE</option>
+                                <option value="KONDANSER">KONDANSER</option>
+                                <option value="KABLOGR">KABLOGR</option>
+                                <option value="KALIPHANE">KALIPHANE</option>
+                                <option value="CERKEZKOY">CERKEZKOY</option>
+                                <option value="MANISA ORTAK">MANISA ORTAK</option>
+                                {% endfor %}
                             </select>
                         </div>
 
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-muted">Satış ve Pazarlama Müdürü (A)</label>
-                            <input type="text" name="sorumlu_satis_muduru" class="form-control" value="Satış ve Pazarlama Müdürü" required>
+                            <select name="sorumlu_satis_muduru" class="form-select" required>
+                                {% for p in satis_mudurleri %}
+                                <option value="{{ p.ad_soyad }}" {% if p.ad_soyad == 'ONUR TUNCER' or forloop.first %}selected{% endif %}>
+                                    {{ p.ad_soyad }}
+                                </option>
+                                {% endfor %}
+                            </select>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-muted">Sorumlu Satış / Pazarlama Uzmanı (R)</label>
-                            <input type="text" name="sorumlu_satis_uzmani" class="form-control" value="Buse Nur Baltacıoğlu" required>
+                            <select name="sorumlu_satis_uzmani" class="form-select" required>
+                                {% for p in pazarlama_uzmanlari %}
+                                <option value="{{ p.ad_soyad }}" {% if forloop.first %}selected{% endif %}>
+                                    {{ p.ad_soyad }}
+                                </option>
+                                {% endfor %}
+                            </select>
                         </div>
 
                         <div class="col-md-4">

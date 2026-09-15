@@ -446,62 +446,70 @@
                     <div class="row g-3">
                         <div class="col-md-4">
                             <label class="form-label small fw-bold text-muted">Proje / Fırsat Kodu</label>
-                            <input type="text" name="kod" class="form-control" placeholder="Örn: PRJ-2026-001 (Boşsa otomatik)">
+                            <input type="text" name="kod" class="form-control" placeholder="PZR26000001">
                         </div>
                         <div class="col-md-8">
                             <label class="form-label small fw-bold text-muted">Proje / Fırsat Başlığı <span class="text-danger">*</span></label>
-                            <input type="text" name="ad" class="form-control" placeholder="Örn: Batarya Muhafazası Pazarlama Fırsatı" required>
+                            <input type="text" name="ad" class="form-control" placeholder="Örn: BSH Yeni Nesil Kondanser Pazarlama Fırsatı" required>
                         </div>
                         
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-muted">Hedef Müşteri / Firma <span class="text-danger">*</span></label>
-                            <input type="text" name="musteri_adi" class="form-control" placeholder="Örn: BSH, Electrolux, Miele, Whirlpool vb." required>
+                            <input type="text" name="musteri_adi" class="form-control" placeholder="Örn: BSH Ev Aletleri San. ve Tic. A.Ş." required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-muted">Hedef Ülke / Pazar <span class="text-danger">*</span></label>
                             <select name="hedef_ulke" class="form-select" required>
-                                <option value="Almanya">Almanya (Birincil Pazar)</option>
-                                <option value="Polonya">Polonya (Üretim Üssü)</option>
-                                <option value="İtalya">İtalya (Tasarım & Montaj)</option>
-                                <option value="İspanya">İspanya (Stratejik Pazar)</option>
-                                <option value="Portekiz">Portekiz (Entegre Pazar)</option>
+                                <option value="Almanya">Almanya</option>
+                                <option value="Polonya">Polonya</option>
+                                <option value="İtalya">İtalya</option>
+                                <option value="İspanya">İspanya</option>
+                                <option value="Portekiz">Portekiz</option>
                                 <option value="Fransa">Fransa</option>
                                 <option value="Romanya">Romanya</option>
-                                <option value="Diğer">Diğer Ülke</option>
+                                <option value="Diğer">Diğer</option>
                             </select>
                         </div>
 
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-muted">Ürün Grubu</label>
                             <select name="urun_grubu" class="form-select">
-                                <option value="Metal Parca & Sac">Metal Parça & Sac Şekillendirme</option>
-                                <option value="Kondenser & Sogutma">Kondenser & Soğutma</option>
+                                <option value="Metal Parca & Sac">Metal Parça</option>
+                                <option value="Kondanser & Sogutma">Kondanser</option>
                                 <option value="Kablo Grubu">Kablo Grubu</option>
                                 <option value="Kalıp & Fikstür">Kalıp & Fikstür</option>
                                 <option value="Montaj ve Kaynak">Montaj ve Kaynak</option>
-                                <option value="Plastik Enjeksiyon">Plastik Enjeksiyon</option>
-                                <option value="Batarya & EV Bilesenleri">Batarya & EV Bileşenleri</option>
                                 <option value="Genel / Diger">Genel / Diğer</option>
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold text-muted">İlgili Fabrika</label>
+                            <label class="form-label small fw-bold text-muted">Ana Departman / Fabrika</label>
                             <select name="ilgili_fabrika" class="form-select">
-                                <option value="Teleset 1 (Manisa)">Teleset 1 (Manisa)</option>
-                                <option value="Teleset 2 (Manisa)">Teleset 2 (Manisa)</option>
-                                <option value="Teleset 3 (Kocaeli)">Teleset 3 (Kocaeli)</option>
-                                <option value="Teleset Otomotiv">Teleset Otomotiv</option>
-                                <option value="Teleset Global">Teleset Global</option>
+                                {% for s in intranet_sirketler %}
+                                <option value="{{ s }}" {% if s == 'PRESHANE' %}selected{% endif %}>{{ s }}</option>
+                                {% endfor %}
                             </select>
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold text-muted">Sorumlu Pazarlama Uzmanı (R)</label>
-                            <input type="text" name="sorumlu_pazarlama_uzmani" class="form-control" value="Pazarlama Uzmanı" required>
+                            <label class="form-label small fw-bold text-muted">Sorumlu Pazarlama Uzmanı</label>
+                            <select name="sorumlu_pazarlama_uzmani" class="form-select" required>
+                                {% for p in pazarlama_uzmanlari %}
+                                <option value="{{ p.ad_soyad }}" {% if forloop.first %}selected{% endif %}>
+                                    {{ p.ad_soyad }}
+                                </option>
+                                {% endfor %}
+                            </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold text-muted">Satış ve Pazarlama Müdürü (A)</label>
-                            <input type="text" name="sorumlu_satis_muduru" class="form-control" value="Satış ve Pazarlama Müdürü" required>
+                            <label class="form-label small fw-bold text-muted">Satış & Pazarlama Müdürü</label>
+                            <select name="sorumlu_satis_muduru" class="form-select" required>
+                                {% for p in satis_mudurleri %}
+                                <option value="{{ p.ad_soyad }}" {% if p.ad_soyad == 'ALİ OKSAY CANLI' %}selected{% endif %}>
+                                    {{ p.ad_soyad }}
+                                </option>
+                                {% endfor %}
+                            </select>
                         </div>
 
                         <div class="col-md-6">

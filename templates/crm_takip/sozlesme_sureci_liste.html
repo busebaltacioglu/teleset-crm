@@ -319,10 +319,10 @@
                             <input type="text" name="donem" class="form-control form-control-sm" value="2026 Yıllık">
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label small fw-bold">İlgili Fabrika</label>
+                            <label class="form-label small fw-bold">Ana Departman / Fabrika</label>
                             <select name="ilgili_fabrika" class="form-select form-select-sm">
-                                {% for fab_val, fab_lbl in fabrikalar %}
-                                    <option value="{{ fab_val }}">{{ fab_lbl }}</option>
+                                {% for s in intranet_sirketler %}
+                                <option value="{{ s }}" {% if s == 'PRESHANE' %}selected{% endif %}>{{ s }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -336,12 +336,24 @@
                             <input type="date" name="bitis_tarihi" class="form-control form-control-sm">
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label small fw-bold">Satış Uzmanı</label>
-                            <input type="text" name="sorumlu_satis_uzmani" class="form-control form-control-sm" value="Buse Nur Baltacıoğlu">
+                            <label class="form-label small fw-bold">Satış Sorumlusu (R)</label>
+                            <select name="sorumlu_satis_uzmani" class="form-select form-select-sm">
+                                {% for p in pazarlama_uzmanlari %}
+                                <option value="{{ p.ad_soyad }}" {% if forloop.first %}selected{% endif %}>
+                                    {{ p.ad_soyad }}
+                                </option>
+                                {% endfor %}
+                            </select>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label small fw-bold">Hukuk Müşaviri / Avukat</label>
-                            <input type="text" name="sorumlu_hukuk" class="form-control form-control-sm" value="Şirket Hukuk Müşaviri">
+                            <label class="form-label small fw-bold">Hukuk / Sözleşme Sorumlusu (C)</label>
+                            <select name="sorumlu_hukuk" class="form-select form-select-sm">
+                                {% for p in proje_liderleri %}
+                                <option value="{{ p.ad_soyad }}" {% if p.ad_soyad == 'YİĞİT EFE BİLİR' %}selected{% endif %}>
+                                    {{ p.ad_soyad }}
+                                </option>
+                                {% endfor %}
+                            </select>
                         </div>
 
                         <div class="col-12">
