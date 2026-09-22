@@ -62,7 +62,7 @@
     <div class="portal-card p-3 shadow-sm mb-4 bg-white d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2">
         <div class="d-flex align-items-center gap-2">
             <h6 class="fw-bold mb-0 text-dark">
-                <i class="bi bi-receipt-cutoff text-primary me-2"></i>Ürün Teklif Süreç Listesi (15 Adım)
+                <i class="bi bi-receipt-cutoff text-primary me-2"></i>Ürün Teklif Süreç Listesi (16 Master Adım & Dallanmalar)
             </h6>
             <span id="teklifKayitSayisi" class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1">
                 {{ surecler|length }} Kayıt
@@ -95,21 +95,46 @@
                         <th class="py-3">
                             <select id="filterTeklifIstasyon" class="form-select form-select-sm table-teklif-filter shadow-sm" style="font-size: 0.78rem; border-radius: 6px;">
                                 <option value="">Güncel İstasyon (Tümü)</option>
-                                <option value="1">1. Fiyat Stratejisi</option>
-                                <option value="2">2. Bölüm Yöneticileri Paylaşımı</option>
-                                <option value="3">3. Üst Yönetim Onayı</option>
-                                <option value="4">4. RFQ Alımı & İletim</option>
-                                <option value="5">5. Satış Koşulu Kontrolü</option>
-                                <option value="6">6. Detaylı Maliyet Analizi</option>
-                                <option value="7">7. Makine / Kalıp Maliyeti</option>
-                                <option value="8">8. Teklif Özet & Yönetim</option>
-                                <option value="9">9. Teklif Müşteriye İletim</option>
-                                <option value="10">10. Geri Bildirim & Hedef Fiyat</option>
-                                <option value="11">11. Teklif Güncelleme Kararı</option>
-                                <option value="12">12. Revize Teklif İletim</option>
-                                <option value="13">13. Gerçekleşen Maliyet Kontrol</option>
-                                <option value="14">14. Süreç Kapatma & Rapor</option>
-                                <option value="15">15. Öğrenilmiş Dersler</option>
+                                <option value="1">1. RFQ / Teklif Talebinin Alınması</option>
+                                <option value="2">2. Teklif Çalışma Takvimi & İş Bölümü</option>
+                                <option value="3">3. Teklif Talebinin Sınıflandırılması</option>
+                                <option value="3A">3A. Mevcut Ürün Fiyat Revizyonu</option>
+                                <option value="3B">3B. Mevcut Müşteri Yeni/Revize Parça</option>
+                                <option value="3C">3C. Yeni Müşteri / Yeni İş Teklifi</option>
+                                <option value="4">4. Fizibilite ve Risk Değerlendirmesi</option>
+                                <option value="4A">4A. Fizibilite Olumlu</option>
+                                <option value="4B">4B. Fizibilite Uygun Değil</option>
+                                <option value="4C">4C. İlave Bilgi / Risk İyileştirme</option>
+                                <option value="5">5. Detaylı Maliyet Analizi</option>
+                                <option value="6">6. Teklif Özet Tablosu</option>
+                                <option value="7">7. Maliyet ve Fiyat Doğrulama</option>
+                                <option value="7A">7A. Maliyet Doğrulandı</option>
+                                <option value="7B">7B. Düzeltme / Yeniden Hesaplama</option>
+                                <option value="8">8. Satış Fiyatlandırması</option>
+                                <option value="9">9. Hedef Çarpan & Kârlılık Kontrolü</option>
+                                <option value="9A">9A. Hedef Çarpana Uygun</option>
+                                <option value="9B">9B. Özel Yetki Onayı</option>
+                                <option value="9C">9C. Fiyat Revizyonu</option>
+                                <option value="10">10. Teklif Dosyası ve Yönetim Onayı</option>
+                                <option value="11">11. Yönetim Nihai Teklif Onayı</option>
+                                <option value="11A">11A. Yönetim Onayladı</option>
+                                <option value="11B">11B. Şartlı Onay / Revizyon</option>
+                                <option value="11C">11C. Teklif Onaylanmadı</option>
+                                <option value="12">12. Teklifin Müşteriye Sunulması</option>
+                                <option value="13">13. Müşteri Nezdinde Takip</option>
+                                <option value="14">14. Müşteri Kararının Değerlendirilmesi</option>
+                                <option value="14A">14A. Müşteri Kabul Etti</option>
+                                <option value="14B">14B. Revizyon / Karşı Teklif</option>
+                                <option value="14C">14C. Ret / İptal</option>
+                                <option value="14D">14D. Müşteri Kararı Bekleniyor</option>
+                                <option value="15">15. Revizyon / Müzakere Değerlendirmesi</option>
+                                <option value="15A">15A. Yetki Sınırları İçinde</option>
+                                <option value="15B">15B. Yeniden Yönetim Onayı</option>
+                                <option value="15C">15C. Talepler Karşılanamıyor</option>
+                                <option value="16">16. Teklif Sonuçlandırma & Devir</option>
+                                <option value="16A">16A. Fiyat Revizyon Kapanışı</option>
+                                <option value="16B">16B. Devreye Alma Devir Kapanışı</option>
+                                <option value="16C">16C. Olumsuz Kapanış</option>
                             </select>
                         </th>
                         <th class="py-3" style="min-width: 120px;">
@@ -152,7 +177,7 @@
                             data-kod-musteri="{{ s.kod }} {{ s.musteri_adi }}"
                             data-konu="{{ s.ad }} {{ s.sorumlu_satis_uzmani }}"
                             data-donem-fabrika="{{ s.donem }} {{ s.ilgili_fabrika }} {{ s.get_urun_grubu_display }}"
-                            data-istasyon-no="{{ s.guncel_adim_no }}"
+                            data-istasyon-no="{{ s.guncel_adim_kodu }}"
                             data-ilerleme="{{ s.tamamlanma_yuzdesi }}"
                             data-tutar="{{ s.teklif_tutari|default:'0' }}"
                             data-durum="{{ s.get_durum_display }}">
@@ -188,8 +213,8 @@
                             <!-- 4. Güncel İstasyon -->
                             <td class="py-3">
                                 <div class="d-flex align-items-center">
-                                    <span class="badge bg-primary text-white rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 26px; height: 26px; font-size: 0.75rem;">
-                                        {{ s.guncel_adim_no }}
+                                    <span class="badge bg-primary text-white rounded-pill px-2.5 py-1 me-2 d-flex align-items-center justify-content-center" style="min-width: 32px; height: 26px; font-size: 0.75rem;">
+                                        {{ s.guncel_adim_kodu }}
                                     </span>
                                     <div>
                                         <span class="fw-bold text-dark d-block" style="font-size: 0.85rem;">{{ s.guncel_adim.adim.baslik }}</span>
@@ -288,7 +313,7 @@
                 </div>
                 <div class="modal-body p-4">
                     <div class="alert alert-info py-2 px-3 small mb-4">
-                        <i class="bi bi-info-circle-fill me-1"></i> Yeni teklif süreci oluşturulduğunda resmi <strong>15 Adımlık Ürün Teklif İş Akışı</strong> ve karar kapıları otomatik devreye alınır.
+                        <i class="bi bi-info-circle-fill me-1"></i> Yeni teklif süreci oluşturulduğunda resmi <strong>16 Master Adımlık Ürün Teklif İş Akışı</strong> ve karar kapıları otomatik devreye alınır.
                     </div>
 
                     <div class="row g-3">

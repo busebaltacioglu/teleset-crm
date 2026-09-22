@@ -41,7 +41,7 @@ class Migration(migrations.Migration):
                 ('ilgili_fabrika', models.CharField(choices=[('Teleset 1 (Manisa)', 'Teleset 1 (Manisa)'), ('Teleset 2 (Manisa)', 'Teleset 2 (Manisa)'), ('Teleset 3 (Kocaeli)', 'Teleset 3 (Kocaeli)'), ('Teleset Otomotiv', 'Teleset Otomotiv'), ('Teleset Global', 'Teleset Global')], default='Teleset 1 (Manisa)', max_length=100, verbose_name='İlgili Fabrika')),
                 ('sorumlu_eys', models.CharField(default='EYS Sorumlusu', max_length=100, verbose_name='EYS Sorumlusu')),
                 ('sorumlu_surec_sahibi', models.CharField(default='Süreç Sahibi / İyileştirme Ekibi', max_length=100, verbose_name='Süreç Sahibi / İyileştirme Ekibi')),
-                ('durum', models.CharField(choices=[('DEVAM_EDIYOR', 'Devam Ediyor'), ('UYGUNSUZLUK_YONETIMINDE', '️ Uygunsuzluk Yönetimi Sürecinde'), ('BASARIYLA_TAMAMLANDI', 'Başarıyla Tamamlandı'), ('ASKIDA', 'Askıda / Beklemede')], default='DEVAM_EDIYOR', max_length=30, verbose_name='Süreç Durumu')),
+                ('durum', models.CharField(choices=[('DEVAM_EDIYOR', 'Devam Ediyor'), ('UYGUNSUZLUK_YONETIMINDE', 'Uygunsuzluk Yönetimi Sürecinde'), ('BASARIYLA_TAMAMLANDI', 'Başarıyla Tamamlandı'), ('ASKIDA', 'Askıda / Beklemede')], default='DEVAM_EDIYOR', max_length=30, verbose_name='Süreç Durumu')),
                 ('guncel_adim_no', models.PositiveSmallIntegerField(default=1, verbose_name='Güncel Adım No')),
                 ('memnuniyet_puani', models.DecimalField(blank=True, decimal_places=1, max_digits=4, null=True, verbose_name='Müşteri Memnuniyet Puanı (0-100)')),
                 ('aciklama', models.TextField(blank=True, null=True, verbose_name='Süreç Özeti / İlk Notlar')),

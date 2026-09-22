@@ -149,6 +149,13 @@
             font-size: 0.75rem;
         }
 
+        .badge-teklif {
+            background-color: #ede9fe !important;
+            color: #5b21b6 !important;
+            border: 1px solid #c4b5fd !important;
+            font-weight: 600;
+        }
+
         .platform-tag {
             background-color: #f8fafc;
             border: 1px solid #e2e8f0;
@@ -270,8 +277,13 @@
             <div class="collapse show" id="musteriYonetimiMenu">
                 <ul class="nav flex-column mb-3 ps-2">
                     <li class="nav-item">
-                        <a class="nav-link py-2 {% if request.resolver_match.url_name == 'kartlar' and request.GET.tab == 'musteriler' or request.resolver_match.url_name == 'kartlar' and not request.GET.tab %}active{% endif %}" href="{% url 'kartlar' %}?tab=musteriler">
-                            Müşteri Kartları
+                        <a class="nav-link py-2 {% if request.resolver_match.url_name in 'musteri_adaylari_liste,musteri_adayi_detay' %}active{% endif %}" href="{% url 'musteri_adaylari_liste' %}">
+                            Müşteri Adayları
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link py-2 {% if request.resolver_match.url_name == 'kartlar' and request.GET.tab == 'musteriler' or request.resolver_match.url_name == 'kartlar' and not request.GET.tab or request.resolver_match.url_name == 'musteri_360_detay' %}active{% endif %}" href="{% url 'kartlar' %}?tab=musteriler">
+                            Müşteri Kartları & Portföy
                         </a>
                     </li>
                     <li class="nav-item">
@@ -538,60 +550,649 @@
     </div>
 </div>
 
-<!-- SÜREÇ AKIŞ ŞEMASI BİLGİ MODALI -->
-<div class="modal fade" id="flowchartModal" tabindex="-1" aria-labelledby="flowchartModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+<!-- UNIFIED YENİ MÜŞTERİ / ADAY KAYIT MODALI (KONSOLİDE FORM) -->
+<div class="modal fade" id="yeniKayitModal" tabindex="-1" aria-labelledby="yeniKayitModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
-            <div class="modal-header bg-dark text-white" style="border-radius: 16px 16px 0 0;">
-                <h5 class="modal-title fw-bold" id="flowchartModalLabel">
-                    <i class="bi bi-diagram-3-fill me-2 text-info"></i>Pazarlama Süreci Standart Akış Şeması & Karar Ağacı
+            <div class="modal-header bg-primary text-white" style="border-radius: 16px 16px 0 0; background: linear-gradient(135deg, #184775 0%, #22609d 100%) !important;">
+                <div>
+                    <h5 class="modal-title fw-bold mb-0" id="yeniKayitModalLabel">
+                        <i class="bi bi-person-plus-fill me-2"></i>Yeni Kayıt Ekle
+                    </h5>
+                    <small class="text-white-50" style="font-size: 0.78rem;">Müşteri adayı (Lead) veya resmi portföy kartı (Kurumsal Müşteri) kaydı</small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            
+            <!-- SEGMENTED KONTROL / SEÇİCİ -->
+            <div class="p-3 pb-0 bg-light border-bottom">
+                <div class="nav nav-pills nav-fill p-1 bg-white border rounded-pill shadow-sm" id="kayitTipiPills" role="tablist">
+                    <button class="nav-link active rounded-pill fw-semibold py-2" id="tab-kayit-aday-btn" data-bs-toggle="pill" data-bs-target="#tab-kayit-aday-pane" type="button" role="tab" aria-controls="tab-kayit-aday-pane" aria-selected="true" style="font-size: 0.85rem;">
+                        <i class="bi bi-person-lines-fill me-1.5 text-primary"></i> 1. Müşteri Adayı
+                    </button>
+                    <button class="nav-link rounded-pill fw-semibold py-2" id="tab-kayit-musteri-btn" data-bs-toggle="pill" data-bs-target="#tab-kayit-musteri-pane" type="button" role="tab" aria-controls="tab-kayit-musteri-pane" aria-selected="false" style="font-size: 0.85rem;">
+                        <i class="bi bi-buildings me-1.5 text-primary"></i> 2. Kurumsal Müşteri
+                    </button>
+                </div>
+            </div>
+
+            <div class="tab-content" id="kayitTipiTabContent">
+                <!-- 1. FORM: MÜŞTERİ ADAYI (LEAD) -->
+                <div class="tab-pane fade show active" id="tab-kayit-aday-pane" role="tabpanel" aria-labelledby="tab-kayit-aday-btn">
+                    <form action="{% url 'musteri_adayi_olustur' %}" method="POST">
+                        {% csrf_token %}
+                        <div class="modal-body p-4">
+                            <div class="alert alert-info border-0 rounded-3 small py-2 mb-3">
+                                <i class="bi bi-info-circle-fill me-1"></i>
+                                Eklenen adaylar CRM Aday Havuzunda toplanır. Nitelendirme sonrasında tek tıkla resmi müşteri portföyüne dönüştürülebilir.
+                            </div>
+
+                            <div class="row g-3">
+                                <!-- Şirket ve Yetkili -->
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-muted">Şirket / Firma Adı <span class="text-danger">*</span></label>
+                                    <input type="text" name="sirket_adi" class="form-control" placeholder="Örn: Miele Die Werkzeugfabrik" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-muted">Yetkili Adı Soyadı <span class="text-danger">*</span></label>
+                                    <input type="text" name="ad_soyad" class="form-control" placeholder="Örn: Markus Weber" required>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-muted">Yetkili Unvanı / Görevi</label>
+                                    <input type="text" name="unvan" class="form-control" placeholder="Örn: Satınalma Müdürü">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-muted">Sektör</label>
+                                    <select name="sektor" class="form-select">
+                                        <option value="Beyaz Eşya">Beyaz Eşya</option>
+                                        <option value="Otomotiv">Otomotiv</option>
+                                        <option value="İklimlendirme & Soğutma">İklimlendirme & Soğutma</option>
+                                        <option value="Elektronik & Enerji">Elektronik & Enerji</option>
+                                        <option value="Genel Endüstri">Genel Endüstri</option>
+                                        <option value="Diğer">Diğer</option>
+                                    </select>
+                                </div>
+
+                                <!-- Lokasyon -->
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-muted">Ülke <span class="text-danger">*</span></label>
+                                    <select name="ulke" class="form-select" required>
+                                        <option value="Almanya" selected>Almanya</option>
+                                        <option value="Polonya">Polonya</option>
+                                        <option value="İtalya">İtalya</option>
+                                        <option value="İspanya">İspanya</option>
+                                        <option value="Fransa">Fransa</option>
+                                        <option value="Romanya">Romanya</option>
+                                        <option value="Türkiye">Türkiye</option>
+                                        <option value="Diğer">Diğer</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-muted">Şehir / Bölge</label>
+                                    <input type="text" name="sehir" class="form-control" placeholder="Örn: Gütersloh">
+                                </div>
+
+                                <!-- İletişim -->
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold text-muted">E-Posta Adresi</label>
+                                    <input type="email" name="eposta" class="form-control" placeholder="m.weber@miele.de">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold text-muted">Telefon</label>
+                                    <input type="text" name="telefon" class="form-control" placeholder="+49 5241 89-0">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold text-muted">Web Sitesi</label>
+                                    <input type="text" name="web_sitesi" class="form-control" placeholder="www.miele.de">
+                                </div>
+
+                                <!-- CRM Nitelendirme -->
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold text-muted">Temas Kanalı</label>
+                                    <select name="kanal" class="form-select">
+                                        <option value="Pazar Ziyareti" selected>Pazar Ziyareti</option>
+                                        <option value="Fuar & Etkinlik">Fuar & Etkinlik</option>
+                                        <option value="Web Sitesi / Dijital">Web Sitesi / Dijital</option>
+                                        <option value="Müşteri Referansı">Müşteri Referansı</option>
+                                        <option value="Doğrudan Temas">Doğrudan Temas / Soğuk Arama</option>
+                                        <option value="LinkedIn / Sosyal Medya">LinkedIn / Sosyal Medya</option>
+                                        <option value="B2B Portal">B2B Portal</option>
+                                        <option value="Diğer">Diğer</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold text-muted">Detay Kaynak / Kampanya</label>
+                                    <input type="text" name="kaynak" class="form-control" placeholder="Örn: IFA Berlin 2026">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold text-muted">Öncelik / Sıcaklık</label>
+                                    <select name="oncelik" class="form-select">
+                                        <option value="SICAK">Yüksek</option>
+                                        <option value="ILIK" selected>Orta</option>
+                                        <option value="SOGUK">Düşük</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-muted">Tahmini Potansiyel Ciro €</label>
+                                    <input type="number" step="0.01" name="tahmini_potansiyel_ciro" class="form-control" placeholder="Örn: 500000">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-muted">İlgilenilen Ürün Grupları</label>
+                                    <input type="text" name="ilgili_urun_gruplari" class="form-control" placeholder="Örn: Kondanser, Sac Parça, Kablo">
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-muted">Etiketler (Virgülle Ayırın)</label>
+                                    <input type="text" name="etiketler" class="form-control" placeholder="Örn: Almanya, Pres Parça, Fuar 2026">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-muted">Atanan Sorumlu</label>
+                                    <select name="atanan_sorumlu" class="form-select">
+                                        {% for p in pazarlama_uzmanlari %}
+                                        <option value="{{ p.ad_soyad }}" {% if forloop.first %}selected{% endif %}>{{ p.ad_soyad }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <div class="col-12">
+                                    <label class="form-label small fw-bold text-muted">İlk Notlar / Görüşme Özeti</label>
+                                    <textarea name="aciklama" rows="2" class="form-control" placeholder="Müşteriyle ilk temas detayları, ihtiyaçlar, talepler..."></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer bg-light" style="border-radius: 0 0 16px 16px;">
+                            <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">İptal</button>
+                            <button type="submit" class="btn btn-primary rounded-pill px-4 fw-semibold">
+                                <i class="bi bi-check-circle me-1"></i> Adayı Kaydet
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- 2. FORM: KURUMSAL MÜŞTERİ (PORTFÖY) -->
+                <div class="tab-pane fade" id="tab-kayit-musteri-pane" role="tabpanel" aria-labelledby="tab-kayit-musteri-btn">
+                    <form action="{% url 'musteri_karti_olustur' %}" method="POST">
+                        {% csrf_token %}
+                        <div class="modal-body p-4">
+                            <div class="alert alert-primary border-0 rounded-3 small py-2 mb-3">
+                                <i class="bi bi-shield-check me-1"></i>
+                                Bu form doğrudan Teleset resmi <strong>Müşteri Portföy Kartı (360° Tek Müşteri Görünümü)</strong> oluşturur ve otomatik FRM kodu atar.
+                            </div>
+
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold text-muted">Müşteri Kodu</label>
+                                    <input type="text" name="kod" class="form-control" placeholder="Otomatik FRM kodu atanır">
+                                </div>
+                                <div class="col-md-8">
+                                    <label class="form-label small fw-bold text-muted">Firma Resmi Unvanı <span class="text-danger">*</span></label>
+                                    <input type="text" name="ad" class="form-control" placeholder="Örn: BSH Ev Aletleri Sanayi ve Ticaret A.Ş." required>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-muted">Kısa / Marka Adı</label>
+                                    <input type="text" name="kisa_ad" class="form-control" placeholder="Örn: BSH">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-muted">Ülke <span class="text-danger">*</span></label>
+                                    <select name="ulke" class="form-select" required>
+                                        <option value="Almanya" selected>Almanya</option>
+                                        <option value="Polonya">Polonya</option>
+                                        <option value="İtalya">İtalya</option>
+                                        <option value="İspanya">İspanya</option>
+                                        <option value="Fransa">Fransa</option>
+                                        <option value="Romanya">Romanya</option>
+                                        <option value="Türkiye">Türkiye</option>
+                                        <option value="Diğer">Diğer</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-muted">Müşteri Segmenti</label>
+                                    <select name="tier" class="form-select">
+                                        <option value="Tier 1 - KAM">Tier 1 - Stratejik Ana Müşteri</option>
+                                        <option value="Tier 2 - Growth" selected>Tier 2 - Büyüme Odaklı Müşteri</option>
+                                        <option value="Tier 3 - Standart">Tier 3 - Standart Müşteri</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-muted">Müşteri Yönetim Stratejisi</label>
+                                    <select name="strateji" class="form-select">
+                                        <option value="Protect">İlişkiyi Koru ve Derinleştir</option>
+                                        <option value="Grow" selected>Hacmi ve Cüzdan Payını Büyüt</option>
+                                        <option value="Start">Yeni Başlangıç ve Geliştirme</option>
+                                        <option value="Harvest">Kârlılık Odaklı Yönetim</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-muted">Yıllık Ciro Hedefi €</label>
+                                    <input type="number" step="0.01" name="yillik_ciro_eur" class="form-control" placeholder="Örn: 2500000">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-muted">Satış Lideri</label>
+                                    <input type="text" name="kam_satis_lideri" class="form-control" value="Buse Nur BALTACIOĞLU">
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-muted">İlgili Kişi Adı Soyadı</label>
+                                    <input type="text" name="yetkili_kisi" class="form-control" placeholder="Örn: Hans Gruber">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-muted">Yetkili E-Posta</label>
+                                    <input type="email" name="yetkili_email" class="form-control" placeholder="hans.gruber@company.com">
+                                </div>
+
+                                <div class="col-12">
+                                    <label class="form-label small fw-bold text-muted">Stratejik Notlar / Açıklama</label>
+                                    <textarea name="notlar" rows="2" class="form-control" placeholder="Müşteri profili, stratejik hedefler..."></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer bg-light" style="border-radius: 0 0 16px 16px;">
+                            <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">İptal</button>
+                            <button type="submit" class="btn btn-primary rounded-pill px-4 fw-semibold">
+                                <i class="bi bi-buildings me-1"></i> Müşteri Kartını Oluştur
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- GLOBAL YENİ MÜŞTERİ ADAYI EKLEME MODALI -->
+<div class="modal fade" id="yeniAdayModal" tabindex="-1" aria-labelledby="yeniAdayModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+            <div class="modal-header bg-primary text-white" style="border-radius: 16px 16px 0 0; background: linear-gradient(135deg, #184775 0%, #22609d 100%) !important;">
+                <h5 class="modal-title fw-bold" id="yeniAdayModalLabel">
+                    <i class="bi bi-person-plus-fill me-2"></i>Yeni Müşteri Adayı Ekle (Lead / Prospect)
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
             </div>
-            <div class="modal-body p-4 bg-light">
-                <div class="card border-0 shadow-sm p-3 mb-3 bg-white">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h6 class="fw-bold text-primary mb-0"><i class="bi bi-shuffle me-1"></i> 15 Adım Karar ve Geri Yönlendirme Özeti</h6>
-                        <span class="badge bg-primary">Teleset Süreç Yönetimi</span>
+            <form action="{% url 'musteri_adayi_olustur' %}" method="POST">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <div class="alert alert-info border-0 rounded-3 small py-2 mb-3">
+                        <i class="bi bi-info-circle-fill me-1"></i>
+                        Eklenen adaylar CRM Aday Havuzunda toplanır. Nitelendirme sonrasında tek tıkla resmi müşteri portföyüne dönüştürülebilir.
                     </div>
-                    <ul class="small text-muted mb-0 ps-3">
-                        <li><strong>Adım 6 (Bütçe & Plan Onayı):</strong> <span class="badge bg-success">EVET</span> -> 7. Adıma Geçer | <span class="badge bg-warning text-dark">HAYIR (Revizyon)</span> -> 4. Adıma Döndürür.</li>
-                        <li><strong>Adım 9 (Karşılanabilirlik):</strong> <span class="badge bg-success">Değerlendirme Tamam</span> -> 10. Adıma Geçer | <span class="badge bg-info text-dark">İlave Bilgi</span> -> 8. Adıma Döndürür.</li>
-                        <li><strong>Adım 10 (Müşteri Bildirimi):</strong> <span class="badge bg-success">Mutabakata Hazır</span> -> 11. Adıma Geçer | <span class="badge bg-warning text-dark">Müşteri Değişiklik İstedi</span> -> 8. Adıma Döndürür.</li>
-                        <li><strong>Adım 11 (Karşılıklı Ön Mutabakat):</strong> <span class="badge bg-success">EVET</span> -> 12. Adıma Geçer | <span class="badge bg-danger">HAYIR</span> -> 15. Adımda Kapatılır | <span class="badge bg-info text-dark">İlave Bilgi</span> -> 8. Adıma Döndürür.</li>
-                        <li><strong>Adım 12 (Tedarikçi Değerlendirme Kontrolü):</strong> <span class="badge bg-primary">EVET (Gerekli)</span> -> 13. Adıma Geçer | <span class="badge bg-success">HAYIR / GEÇERLİ ONAY VAR</span> ->  <strong>Doğrudan Ürün Teklif Sürecine Aktarılır</strong>.</li>
-                        <li><strong>Adım 14 (Tedarikçi Değerlendirme Sonucu):</strong> <span class="badge bg-success">OLUMLU</span> ->  <strong>Ürün Teklif Sürecine Aktarılır</strong> | <span class="badge bg-warning text-dark">Koşullu Onay (Aksiyon)</span> -> 13. Adıma Döndürür | <span class="badge bg-danger">OLUMSUZ</span> -> 15. Adımda Kapatılır.</li>
-                    </ul>
+
+                    <div class="row g-3">
+                        <!-- Şirket ve Yetkili -->
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Şirket / Firma Adı <span class="text-danger">*</span></label>
+                            <input type="text" name="sirket_adi" class="form-control" placeholder="Örn: Miele Die Werkzeugfabrik" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Yetkili Adı Soyadı <span class="text-danger">*</span></label>
+                            <input type="text" name="ad_soyad" class="form-control" placeholder="Örn: Markus Weber" required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Yetkili Unvanı / Görevi</label>
+                            <input type="text" name="unvan" class="form-control" placeholder="Örn: Satınalma Müdürü / Procurement Lead">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Sektör</label>
+                            <select name="sektor" class="form-select">
+                                <option value="Beyaz Eşya">Beyaz Eşya</option>
+                                <option value="Otomotiv">Otomotiv</option>
+                                <option value="İklimlendirme & Soğutma">İklimlendirme & Soğutma</option>
+                                <option value="Elektronik & Enerji">Elektronik & Enerji</option>
+                                <option value="Genel Endüstri">Genel Endüstri</option>
+                                <option value="Diğer">Diğer</option>
+                            </select>
+                        </div>
+
+                        <!-- Lokasyon -->
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Ülke <span class="text-danger">*</span></label>
+                            <select name="ulke" class="form-select" required>
+                                <option value="Almanya" selected>Almanya</option>
+                                <option value="Polonya">Polonya</option>
+                                <option value="İtalya">İtalya</option>
+                                <option value="İspanya">İspanya</option>
+                                <option value="Fransa">Fransa</option>
+                                <option value="Romanya">Romanya</option>
+                                <option value="Türkiye">Türkiye</option>
+                                <option value="Diğer">Diğer</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Şehir / Bölge</label>
+                            <input type="text" name="sehir" class="form-control" placeholder="Örn: Gütersloh">
+                        </div>
+
+                        <!-- İletişim -->
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted">E-Posta Adresi</label>
+                            <input type="email" name="eposta" class="form-control" placeholder="m.weber@miele.de">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted">Telefon</label>
+                            <input type="text" name="telefon" class="form-control" placeholder="+49 5241 89-0">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted">Web Sitesi</label>
+                            <input type="text" name="web_sitesi" class="form-control" placeholder="www.miele.de">
+                        </div>
+
+                        <!-- CRM Nitelendirme -->
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted">Temas Kanalı</label>
+                            <select name="kanal" class="form-select">
+                                <option value="Pazar Ziyareti" selected>Pazar Ziyareti</option>
+                                <option value="Fuar & Etkinlik">Fuar & Etkinlik</option>
+                                <option value="Web Sitesi / Dijital">Web Sitesi / Dijital</option>
+                                <option value="Müşteri Referansı">Müşteri Referansı</option>
+                                <option value="Doğrudan Temas">Doğrudan Temas / Soğuk Arama</option>
+                                <option value="LinkedIn / Sosyal Medya">LinkedIn / Sosyal Medya</option>
+                                <option value="B2B Portal">B2B Portal</option>
+                                <option value="Diğer">Diğer</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted">Detay Kaynak / Kampanya</label>
+                            <input type="text" name="kaynak" class="form-control" placeholder="Örn: IFA Berlin 2026 / Hedef Pazar Ziyareti">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted">Öncelik / Sıcaklık</label>
+                            <select name="oncelik" class="form-select">
+                                <option value="SICAK">Yüksek (Sıcak)</option>
+                                <option value="ILIK" selected>Orta (Ilık)</option>
+                                <option value="SOGUK">Düşük (Soğuk)</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Tahmini Potansiyel Ciro (€)</label>
+                            <input type="number" step="0.01" name="tahmini_potansiyel_ciro" class="form-control" placeholder="Örn: 500000">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">İlgilenilen Ürün Grupları</label>
+                            <input type="text" name="ilgili_urun_gruplari" class="form-control" placeholder="Örn: Kondanser, Sac Parça, Kablo">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Etiketler (Virgülle Ayırın)</label>
+                            <input type="text" name="etiketler" class="form-control" placeholder="Örn: Almanya, Pres Parça, Fuar 2026">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Atanan Sorumlu</label>
+                            <select name="atanan_sorumlu" class="form-select">
+                                {% for p in pazarlama_uzmanlari %}
+                                <option value="{{ p.ad_soyad }}" {% if forloop.first %}selected{% endif %}>{{ p.ad_soyad }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted">İlk Notlar / Görüşme Özeti</label>
+                            <textarea name="aciklama" rows="2" class="form-control" placeholder="Müşteriyle ilk temas detayları, ihtiyaçlar, talepler..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light" style="border-radius: 0 0 16px 16px;">
+                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-semibold">
+                        <i class="bi bi-check-circle me-1"></i> Adayı Kaydet
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- GLOBAL YENİ MÜŞTERİ KARTI EKLEME MODALI -->
+<div class="modal fade" id="yeniMusteriModal" tabindex="-1" aria-labelledby="yeniMusteriModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+            <div class="modal-header bg-dark text-white" style="border-radius: 16px 16px 0 0; background: linear-gradient(135deg, #184775 0%, #22609d 100%) !important;">
+                <h5 class="modal-title fw-bold" id="yeniMusteriModalLabel">
+                    <i class="bi bi-buildings me-2"></i>Portföye Yeni Kurumsal Müşteri Ekle
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <form action="{% url 'musteri_karti_olustur' %}" method="POST">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <div class="alert alert-primary border-0 rounded-3 small py-2 mb-3">
+                        <i class="bi bi-shield-check me-1"></i>
+                        Bu form doğrudan Teleset resmi <strong>Müşteri Portföy Kartı (360° Tek Müşteri Görünümü)</strong> oluşturur ve otomatik FRM kodu atar.
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted">Müşteri Kodu (Opsiyonel)</label>
+                            <input type="text" name="kod" class="form-control" placeholder="Otomatik (FRM-XX)">
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label small fw-bold text-muted">Firma Resmi Unvanı <span class="text-danger">*</span></label>
+                            <input type="text" name="ad" class="form-control" placeholder="Örn: BSH Ev Aletleri Sanayi ve Ticaret A.Ş." required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Kısa / Marka Adı</label>
+                            <input type="text" name="kisa_ad" class="form-control" placeholder="Örn: BSH">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Ülke <span class="text-danger">*</span></label>
+                            <select name="ulke" class="form-select" required>
+                                <option value="Almanya" selected>Almanya</option>
+                                <option value="Polonya">Polonya</option>
+                                <option value="İtalya">İtalya</option>
+                                <option value="İspanya">İspanya</option>
+                                <option value="Fransa">Fransa</option>
+                                <option value="Romanya">Romanya</option>
+                                <option value="Türkiye">Türkiye</option>
+                                <option value="Diğer">Diğer</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Müşteri Segmenti (Tier)</label>
+                            <select name="tier" class="form-select">
+                                <option value="Tier 1 - KAM">Tier 1 - Stratejik Ana Müşteri</option>
+                                <option value="Tier 2 - Growth" selected>Tier 2 - Büyüme Odaklı Müşteri</option>
+                                <option value="Tier 3 - Standart">Tier 3 - Standart Müşteri</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Müşteri Yönetim Stratejisi</label>
+                            <select name="strateji" class="form-select">
+                                <option value="Protect">İlişkiyi Koru ve Derinleştir</option>
+                                <option value="Grow" selected>Hacmi ve Cüzdan Payını Büyüt</option>
+                                <option value="Start">Yeni Başlangıç ve Geliştirme</option>
+                                <option value="Harvest">Kârlılık Odaklı Yönetim</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Yıllık Ciro Hedefi (€)</label>
+                            <input type="number" step="0.01" name="yillik_ciro_eur" class="form-control" placeholder="Örn: 2500000">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Satış Lideri</label>
+                            <input type="text" name="kam_satis_lideri" class="form-control" value="Buse Nur BALTACIOĞLU">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">İlgili Kişi Adı Soyadı</label>
+                            <input type="text" name="yetkili_kisi" class="form-control" placeholder="Örn: Hans Gruber">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Yetkili E-Posta</label>
+                            <input type="email" name="yetkili_email" class="form-control" placeholder="hans.gruber@company.com">
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted">Stratejik Notlar / Açıklama</label>
+                            <textarea name="notlar" rows="2" class="form-control" placeholder="Müşteri profili, stratejik hedefler..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light" style="border-radius: 0 0 16px 16px;">
+                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-semibold">
+                        <i class="bi bi-buildings me-1"></i> Müşteri Kartını Oluştur
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- SÜREÇ AKIŞ ŞEMASI BİLGİ MODALI -->
+<div class="modal fade" id="flowchartModal" tabindex="-1" aria-labelledby="flowchartModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen modal-dialog-scrollable p-3">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+            <div class="modal-header bg-dark text-white" style="border-radius: 16px 16px 0 0; background: linear-gradient(135deg, #184775 0%, #22609d 100%) !important;">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-diagram-3-fill fs-4 text-white"></i>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0 text-white" id="flowchartModalLabel">PAZARLAMA SÜRECİ STANDART PROSEDÜRÜ & AKIŞ ŞEMASI</h5>
+                        <small class="text-white-50">15 Adımlık Entegre Satış ve Pazarlama İş Akışı, RACI Sorumluluk Matrisi ve Karar Ağacı</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <div class="modal-body p-4 bg-light">
+                <!-- 1. FAZLAR VE KARAR AĞACI ÖZET KARTI -->
+                <div class="card border-0 shadow-sm p-3 mb-4 bg-white rounded-3">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold text-primary mb-0"><i class="bi bi-shuffle me-1"></i> Karar Kapıları ve Yönlendirme Kuralları</h6>
+                        <span class="badge bg-primary px-3 py-1 rounded-pill">Teleset Standart Prosedürü</span>
+                    </div>
+                    <div class="row g-2 mb-3 text-center small">
+                        <div class="col-md-3">
+                            <div class="p-2 border rounded-3 bg-light h-100 text-start">
+                                <span class="badge bg-primary mb-1">Faz 1: Adım 1 - 6</span>
+                                <div class="fw-bold text-dark">Pazar & Strateji Planlama</div>
+                                <div class="text-muted" style="font-size: 0.75rem;">Girdi toplama, pazar/ülke puanlama, detay analiz, bütçe taslağı ve yönetim onayı.</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-2 border rounded-3 bg-light h-100 text-start">
+                                <span class="badge bg-info text-dark mb-1">Faz 2: Adım 7 - 10</span>
+                                <div class="fw-bold text-dark">Müşteri Teması & Talep</div>
+                                <div class="text-muted" style="font-size: 0.75rem;">İlk temas, kurumsal tanıtım, talep/beklenti alma, fizibilite ve müşteriye bildirim.</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-2 border rounded-3 bg-light h-100 text-start">
+                                <span class="badge bg-warning text-dark mb-1">Faz 3: Adım 11 - 12</span>
+                                <div class="fw-bold text-dark">Ön Mutabakat & RFQ Öncesi</div>
+                                <div class="text-muted" style="font-size: 0.75rem;">Karşılıklı mutabakat, RFQ öncesi tedarikçi denetim ve onay gerekliliği kontrolü.</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-2 border rounded-3 bg-light h-100 text-start">
+                                <span class="badge bg-success mb-1">Faz 4: Adım 13 - 15</span>
+                                <div class="fw-bold text-dark">Tedarikçi Onayı & Kapanış</div>
+                                <div class="text-muted" style="font-size: 0.75rem;">Tedarikçi denetimi/onayı, teklif sürecine aktarma veya kapatma ve raporlama.</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-3 bg-light rounded-3 border">
+                        <h6 class="small fw-bold text-dark mb-2"><i class="bi bi-signpost-split me-1 text-primary"></i> Karar Adımları Dallanma Mantığı:</h6>
+                        <ul class="small text-secondary mb-0 ps-3">
+                            <li class="mb-1"><strong>Adım 6 (Bütçe & Plan Onayı):</strong> <span class="badge bg-success">EVET</span> &rarr; 7. Adıma Geçer | <span class="badge bg-warning text-dark">HAYIR (Revizyon)</span> &rarr; 4. Adıma Döndürür.</li>
+                            <li class="mb-1"><strong>Adım 9 (Karşılanabilirlik):</strong> <span class="badge bg-success">Değerlendirme Tamamlandı</span> &rarr; 10. Adıma Geçer | <span class="badge bg-info text-dark">İlave Bilgi / Revizyon</span> &rarr; 8. Adıma Döndürür.</li>
+                            <li class="mb-1"><strong>Adım 10 (Müşteri Bildirimi):</strong> <span class="badge bg-success">Mutabakata Hazır</span> &rarr; 11. Adıma Geçer | <span class="badge bg-warning text-dark">Müşteri Değişiklik İstedi</span> &rarr; 8. Adıma Döndürür.</li>
+                            <li class="mb-1"><strong>Adım 11 (Karşılıklı Ön Mutabakat):</strong> <span class="badge bg-success">EVET</span> &rarr; 12. Adıma Geçer | <span class="badge bg-info text-dark">İlave Bilgi</span> &rarr; 8. Adıma Döndürür | <span class="badge bg-danger">HAYIR</span> &rarr; 15. Adımda Kapatılır.</li>
+                            <li class="mb-1"><strong>Adım 12 (Tedarikçi Değerlendirme Kontrolü):</strong> <span class="badge bg-primary">EVET (Gerekli)</span> &rarr; 13. Adıma Geçer | <span class="badge bg-success">HAYIR / GEÇERLİ ONAY VAR</span> &rarr; <strong>Doğrudan Ürün Teklif Sürecine Aktarılır</strong>.</li>
+                            <li><strong>Adım 14 (Tedarikçi Değerlendirme Sonucu):</strong> <span class="badge bg-success">OLUMLU / GEÇERLİ ONAY</span> &rarr; <strong>Ürün Teklif Sürecine Aktarılır</strong> | <span class="badge bg-warning text-dark">Koşullu Onay (Aksiyon)</span> &rarr; 13. Adıma Döndürür | <span class="badge bg-danger">OLUMSUZ</span> &rarr; 15. Adımda Kapatılır.</li>
+                        </ul>
+                    </div>
                 </div>
 
-                <div class="row g-2 text-center small">
-                    <div class="col-md-3">
-                        <div class="p-2 border rounded bg-white">
-                            <span class="badge bg-primary mb-1">Faz 1 (Adım 1-6)</span>
-                            <div class="fw-bold">Pazar & Strateji Planlama</div>
-                        </div>
+                <!-- 2. 15 ADIM DETAYLI MASTER PROSEDÜR TABLOSU -->
+                <div class="card border-0 shadow-sm bg-white rounded-3 overflow-hidden">
+                    <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                        <h6 class="fw-bold text-dark mb-0"><i class="bi bi-table text-primary me-2"></i>Pazarlama Süreci Master Tablosu (15 Adım)</h6>
+                        <span class="badge bg-secondary-subtle text-secondary border">15 Adım &bull; Doküman &bull; RACI &bull; Dijital Platform</span>
                     </div>
-                    <div class="col-md-3">
-                        <div class="p-2 border rounded bg-white">
-                            <span class="badge bg-info text-dark mb-1">Faz 2 (Adım 7-10)</span>
-                            <div class="fw-bold">Müşteri Teması & Talep</div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="p-2 border rounded bg-white">
-                            <span class="badge bg-warning text-dark mb-1">Faz 3 (Adım 11-12)</span>
-                            <div class="fw-bold">Ön Mutabakat & Değerlendirme</div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="p-2 border rounded bg-white">
-                            <span class="badge bg-success mb-1">Faz 4 (Adım 13-15)</span>
-                            <div class="fw-bold">Tedarikçi Onayı & Teklif</div>
-                        </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" style="font-size: 0.82rem;">
+                            <thead class="table-light text-uppercase fw-bold text-muted border-bottom" style="font-size: 0.75rem; letter-spacing: 0.5px;">
+                                <tr>
+                                    <th style="width: 70px;" class="text-center">Adım</th>
+                                    <th style="width: 220px;">Süreç Adımı</th>
+                                    <th style="min-width: 320px;">Faaliyet Tanımı</th>
+                                    <th style="width: 240px;">Sorumlu (RACI)</th>
+                                    <th style="width: 220px;">İlgili Dokümanlar</th>
+                                    <th style="width: 180px;">Dijital Platform</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for a in pazarlama_master_adimlari %}
+                                <tr class="{% if a.karar_adimi_mi %}table-warning-subtle{% endif %}">
+                                    <td class="text-center align-top pt-3">
+                                        <span class="badge {% if a.karar_adimi_mi %}bg-warning text-dark border border-warning{% else %}bg-primary text-white{% endif %} font-monospace px-2 py-1 fs-6 shadow-sm">
+                                            {{ a.adim_no }}
+                                        </span>
+                                        {% if a.karar_adimi_mi %}
+                                        <div class="mt-1"><span class="badge bg-warning-subtle text-dark border border-warning" style="font-size: 0.65rem;">Karar</span></div>
+                                        {% endif %}
+                                    </td>
+                                    <td class="align-top pt-3">
+                                        <div class="fw-bold text-dark mb-1">{{ a.baslik }}</div>
+                                        <span class="badge bg-light text-muted border" style="font-size: 0.70rem;">{{ a.get_faz_display }}</span>
+                                    </td>
+                                    <td class="align-top pt-3 text-secondary lh-base">
+                                        {{ a.faaliyet_tanimi }}
+                                    </td>
+                                    <td class="align-top pt-3">
+                                        <div class="d-flex flex-column gap-1">
+                                            {% for r in a.raci_parsed %}
+                                            <div class="d-flex align-items-center gap-1">
+                                                {% if r.rol == 'A' %}<span class="badge bg-danger text-white px-1.5 py-0.5" style="font-size: 0.65rem;">A</span>
+                                                {% elif r.rol == 'R' %}<span class="badge bg-primary text-white px-1.5 py-0.5" style="font-size: 0.65rem;">R</span>
+                                                {% elif r.rol == 'C' %}<span class="badge bg-warning text-dark px-1.5 py-0.5" style="font-size: 0.65rem;">C</span>
+                                                {% elif r.rol == 'I' %}<span class="badge bg-info text-dark px-1.5 py-0.5" style="font-size: 0.65rem;">I</span>
+                                                {% endif %}
+                                                <span class="text-dark fw-semibold" style="font-size: 0.75rem;">{{ r.unvan }}</span>
+                                            </div>
+                                            {% empty %}
+                                            <span class="text-muted">-</span>
+                                            {% endfor %}
+                                        </div>
+                                    </td>
+                                    <td class="align-top pt-3">
+                                        <div class="d-flex flex-wrap gap-1">
+                                            {% for doc in a.dokuman_listesi %}
+                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-1" style="font-size: 0.70rem; white-space: normal; text-align: left;">
+                                                <i class="bi bi-file-earmark-text me-1"></i>{{ doc }}
+                                            </span>
+                                            {% empty %}
+                                            <span class="text-muted">-</span>
+                                            {% endfor %}
+                                        </div>
+                                    </td>
+                                    <td class="align-top pt-3">
+                                        <div class="d-flex flex-wrap gap-1">
+                                            {% for plat in a.platform_listesi %}
+                                            <span class="badge bg-dark-subtle text-dark border border-dark-subtle rounded-pill px-2 py-1" style="font-size: 0.70rem;">
+                                                <i class="bi bi-display me-1"></i>{{ plat }}
+                                            </span>
+                                            {% empty %}
+                                            <span class="text-muted">-</span>
+                                            {% endfor %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer bg-white">
+            <div class="modal-footer bg-white border-top">
                 <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Kapat</button>
             </div>
         </div>
@@ -629,7 +1230,7 @@
                         <div class="col-sm-7 fw-semibold text-dark">Teleset Manisa Kampüsü</div>
                         
                         <div class="col-sm-5 text-muted"><i class="bi bi-shield-check me-1"></i> CRM Yetkisi:</div>
-                        <div class="col-sm-7 fw-semibold text-success">Süreç Yöneticisi & KAM</div>
+                        <div class="col-sm-7 fw-semibold text-success">Süreç Yöneticisi & Müşteri Lideri</div>
                     </div>
                 </div>
 

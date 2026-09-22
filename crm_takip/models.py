@@ -54,6 +54,43 @@ class SurecAdimTanimi(models.Model):
                     items.append(cleaned)
         return items
 
+    @property
+    def raci_listesi(self):
+        if not self.sorumlular_raci:
+            return []
+        items = []
+        for line in self.sorumlular_raci.replace('\r\n', '\n').split('\n'):
+            cleaned = line.strip()
+            if cleaned:
+                items.append(cleaned)
+        return items
+
+    @property
+    def raci_parsed(self):
+        if not self.sorumlular_raci:
+            return []
+        parsed = []
+        for line in self.sorumlular_raci.replace('\r\n', '\n').split('\n'):
+            cleaned = line.strip()
+            if not cleaned:
+                continue
+            rol = ''
+            unvan = cleaned
+            renk = 'secondary'
+            for r_char, r_color in [('A', 'danger'), ('R', 'primary'), ('C', 'warning'), ('I', 'info')]:
+                if cleaned.startswith(f"{r_char} –") or cleaned.startswith(f"{r_char} -") or cleaned.startswith(f"{r_char} "):
+                    rol = r_char
+                    renk = r_color
+                    unvan = cleaned[1:].lstrip(' –-').strip()
+                    break
+            parsed.append({
+                'rol': rol,
+                'unvan': unvan,
+                'renk': renk,
+                'raw': cleaned
+            })
+        return parsed
+
 
 class HedefPazarKanvas(models.Model):
     """
@@ -113,25 +150,25 @@ class HedefPazarKanvas(models.Model):
         verbose_name_plural = "Hedef Pazar Kanvasları"
 
     def __str__(self):
-        return f"{self.bayrak_emoji} {self.ulke_adi} ({self.oncelik_sinifi})"
+        return f"{self.ulke_adi} ({self.oncelik_sinifi})"
 
 
 class MusteriKarti(models.Model):
     """
-    Stratejik Müşteri Portföy Kartı (CPM & 360° Müşteri Görünümü)
+    Stratejik Müşteri Portföy Kartı (360° Tek Müşteri Görünümü)
     """
     TIER_CHOICES = [
-        ('Tier 1 - KAM', 'Tier 1 - KAM (Stratejik Ana Müşteri)'),
-        ('Tier 2 - Growth', 'Tier 2 - Growth (Büyüme Odaklı Müşteri)'),
+        ('Tier 1 - KAM', 'Tier 1 - Stratejik Ana Müşteri'),
+        ('Tier 2 - Growth', 'Tier 2 - Büyüme Odaklı Müşteri'),
         ('Tier 3 - Standart', 'Tier 3 - Standart Müşteri'),
     ]
 
     STRATEGY_CHOICES = [
-        ('Protect', 'Protect (İlişkiyi Koru & Derinleştir)'),
-        ('Grow', 'Grow (Cüzdan Payını ve Hacmi Büyüt)'),
-        ('Harvest', 'Harvest (Kârlılık Odaklı Yönet)'),
-        ('Re-engineer', 'Re-engineer (Süreç & Maliyet İyileştirme)'),
-        ('Start', 'Start (Yeni Başlangıç / Geliştirme)'),
+        ('Protect', 'İlişkiyi Koru ve Derinleştir'),
+        ('Grow', 'Hacmi ve Cüzdan Payını Büyüt'),
+        ('Harvest', 'Kârlılık Odaklı Yönetim'),
+        ('Re-engineer', 'Süreç ve Maliyet İyileştirme'),
+        ('Start', 'Yeni Başlangıç ve Geliştirme'),
     ]
 
     kod = models.CharField(max_length=20, unique=True, verbose_name="Müşteri Kodu (FRM-XX)")
@@ -141,18 +178,18 @@ class MusteriKarti(models.Model):
     sehir = models.CharField(max_length=100, blank=True, null=True, verbose_name="Şehir / Tesis Lokasyonu")
     
     tier = models.CharField(max_length=30, choices=TIER_CHOICES, default='Tier 1 - KAM', verbose_name="Müşteri Segmenti (Tier)")
-    strateji = models.CharField(max_length=30, choices=STRATEGY_CHOICES, default='Protect', verbose_name="CPM Stratejisi")
+    strateji = models.CharField(max_length=30, choices=STRATEGY_CHOICES, default='Protect', verbose_name="Müşteri Yönetim Stratejisi")
     
     yillik_ciro_eur = models.DecimalField(max_digits=14, decimal_places=2, default=0, verbose_name="Yıllık Ciro (€)")
-    cuzdan_payi_yuzde = models.PositiveSmallIntegerField(default=50, verbose_name="Cüzdan Payı (SOW %)")
+    cuzdan_payi_yuzde = models.PositiveSmallIntegerField(default=50, verbose_name="Cüzdan Payı (%)")
     aktif_proje_sayisi = models.PositiveSmallIntegerField(default=1, verbose_name="Aktif Proje Sayısı")
     
-    kam_satis_lideri = models.CharField(max_length=100, default="Buse Nur BALTACIOĞLU", verbose_name="KAM Satış Lideri")
-    kam_muhendislik_lideri = models.CharField(max_length=100, default="Ahmet AK (Kalıp & Projeci Md.)", verbose_name="KAM Projeci Lideri")
-    kam_kalite_lideri = models.CharField(max_length=100, default="Mehmet YILMAZ (Kalite Güvence Md.)", verbose_name="KAM Kalite Lideri")
+    kam_satis_lideri = models.CharField(max_length=100, default="Buse Nur BALTACIOĞLU", verbose_name="Satış Lideri")
+    kam_muhendislik_lideri = models.CharField(max_length=100, default="Ahmet AK (Kalıp & Projeci Md.)", verbose_name="Projeci Lideri")
+    kam_kalite_lideri = models.CharField(max_length=100, default="Mehmet YILMAZ (Kalite Güvence Md.)", verbose_name="Kalite Lideri")
     
     aktif_urunler = models.TextField(blank=True, null=True, verbose_name="Aktif Üretilen Parçalar / Ürünler")
-    sozlesme_durumu = models.CharField(max_length=150, default="STG-TL-001 (Aktif)", verbose_name="Sözleşme & Onay Durumu")
+    sozlesme_durumu = models.CharField(max_length=150, default="Aktif Sözleşme (Geçerli)", verbose_name="Sözleşme & Onay Durumu")
     churn_riski = models.CharField(max_length=50, default="0.05 (Düşük Risk)", verbose_name="Müşteri Kayıp Riski")
     notlar = models.TextField(blank=True, null=True, verbose_name="Stratejik Notlar / Özet")
 
@@ -550,30 +587,35 @@ class MusteriIliskileriGecmisLog(models.Model):
 
 class UrunTeklifAdimTanimi(models.Model):
     """
-    15 Adımlık Ürün Teklif Süreci Master Verisi
+    16 Adımlık Ürün Teklif Süreci Master Verisi (Resmi Prosedür ve Dallanmalar)
     """
-    adim_no = models.PositiveSmallIntegerField(unique=True, verbose_name="Adım Numarası")
+    adim_kodu = models.CharField(max_length=10, unique=True, default='1', verbose_name="Adım Kodu")
+    sira_no = models.PositiveSmallIntegerField(default=1, verbose_name="Sıra Numarası")
+    adim_no = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name="Adım Numarası")
     baslik = models.CharField(max_length=255, verbose_name="Süreç Adımı Başlığı")
     faaliyet_tanimi = models.TextField(verbose_name="Faaliyet Tanımı")
-    sorumlular = models.TextField(verbose_name="Sorumlular")
+    sorumlular_raci = models.TextField(verbose_name="Sorumlular (RACI)", blank=True, null=True)
+    sorumlular = models.TextField(verbose_name="Sorumlular (Eski Uyum)", blank=True, null=True)
     ilgili_dokumanlar = models.TextField(verbose_name="İlgili Dokümanlar", blank=True, null=True)
+    dijital_platformlar = models.TextField(verbose_name="Dijital Platformlar", blank=True, null=True)
     karar_adimi_mi = models.BooleanField(default=False, verbose_name="Karar / Kriter Adımı mı?")
+    ana_adim_mi = models.BooleanField(default=True, verbose_name="Ana Adım mı?")
 
     FAZ_CHOICES = [
-        ('FAZ1', 'Faz 1: Fiyat Stratejisi & Yönetim Onayı (Adım 1-3)'),
-        ('FAZ2', 'Faz 2: RFQ Alımı, Maliyet Analizi & Teklif Değerlendirme (Adım 4-8)'),
-        ('FAZ3', 'Faz 3: Teklif İletimi, Müşteri Geri Bildirimi & Revizyon (Adım 9-12)'),
-        ('FAZ4', 'Faz 4: Fiyat Stratejisi Kontrolü, Kapanış & Sürekli İyileştirme (Adım 13-15)'),
+        ('FAZ1', 'Faz 1: RFQ Alımı & Ön Fizibilite (Adım 1-4C)'),
+        ('FAZ2', 'Faz 2: Maliyet & Fiyatlandırma (Adım 5-9C)'),
+        ('FAZ3', 'Faz 3: Yönetim Onayı & Müşteri Müzakeresi (Adım 10-15C)'),
+        ('FAZ4', 'Faz 4: Teklif Sonucu, Devreye Alma & Kapanış (Adım 16-16C)'),
     ]
     faz = models.CharField(max_length=10, choices=FAZ_CHOICES, default='FAZ1', verbose_name="Süreç Fazı")
 
     class Meta:
-        ordering = ['adim_no']
+        ordering = ['sira_no']
         verbose_name = "Ürün Teklif Adım Tanımı"
         verbose_name_plural = "Ürün Teklif Adım Tanımları"
 
     def __str__(self):
-        return f"{self.adim_no}. {self.baslik}"
+        return f"{self.adim_kodu}. {self.baslik}"
 
     @property
     def dokuman_listesi(self):
@@ -587,10 +629,61 @@ class UrunTeklifAdimTanimi(models.Model):
                     items.append(cleaned)
         return items
 
+    @property
+    def platform_listesi(self):
+        if not self.dijital_platformlar:
+            return []
+        items = []
+        for line in self.dijital_platformlar.replace('\r\n', '\n').split('\n'):
+            for part in line.split(','):
+                cleaned = part.strip()
+                if cleaned:
+                    items.append(cleaned)
+        return items
+
+    @property
+    def raci_listesi(self):
+        raci_text = self.sorumlular_raci or self.sorumlular
+        if not raci_text:
+            return []
+        items = []
+        for line in raci_text.replace('\r\n', '\n').split('\n'):
+            cleaned = line.strip()
+            if cleaned:
+                items.append(cleaned)
+        return items
+
+    @property
+    def raci_parsed(self):
+        raci_text = self.sorumlular_raci or self.sorumlular
+        if not raci_text:
+            return []
+        parsed = []
+        for line in raci_text.replace('\r\n', '\n').split('\n'):
+            cleaned = line.strip()
+            if not cleaned:
+                continue
+            rol = ''
+            unvan = cleaned
+            renk = 'secondary'
+            for r_char, r_color in [('A', 'danger'), ('R', 'primary'), ('C', 'warning'), ('I', 'info')]:
+                if cleaned.startswith(f"{r_char} –") or cleaned.startswith(f"{r_char} -") or cleaned.startswith(f"{r_char} "):
+                    rol = r_char
+                    renk = r_color
+                    unvan = cleaned[1:].lstrip(' –-').strip()
+                    break
+            parsed.append({
+                'rol': rol,
+                'unvan': unvan,
+                'renk': renk,
+                'raw': cleaned
+            })
+        return parsed
+
 
 class UrunTeklifSureci(models.Model):
     """
-    Ürün Teklif Süreci Takip Kaydı (15 Adım)
+    Ürün Teklif Süreci Takip Kaydı (16 Adım ve Alt İstasyonlar)
     """
     DURUM_CHOICES = [
         ('DEVAM_EDIYOR', 'Devam Ediyor'),
@@ -615,6 +708,7 @@ class UrunTeklifSureci(models.Model):
     sorumlu_satis_yoneticisi = models.CharField(max_length=100, default='ONUR TUNCER', verbose_name="Satış Yöneticisi")
     
     durum = models.CharField(max_length=30, choices=DURUM_CHOICES, default='DEVAM_EDIYOR', verbose_name="Teklif Durumu")
+    guncel_adim_kodu = models.CharField(max_length=10, default='1', verbose_name="Güncel Adım Kodu")
     guncel_adim_no = models.PositiveSmallIntegerField(default=1, verbose_name="Güncel Adım No")
     
     teklif_tutari = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True, verbose_name="Toplam Teklif Tutarı / Ciro (EUR)")
@@ -633,13 +727,24 @@ class UrunTeklifSureci(models.Model):
 
     @property
     def tamamlanma_yuzdesi(self):
-        toplam_adim = 15
-        tamamlanan = self.adim_kayitlari.filter(durum__in=['TAMAMLANDI', 'PAS_GECILDI']).count()
-        return int((tamamlanan / toplam_adim) * 100)
+        if self.durum == 'BASARIYLA_TAMAMLANDI':
+            return 100
+        toplam_ana_adim = 16
+        tamamlanan_kayitlar = self.adim_kayitlari.filter(durum__in=['TAMAMLANDI', 'PAS_GECILDI']).select_related('adim')
+        tamamlanan_ana = set()
+        for k in tamamlanan_kayitlar:
+            num_str = ''.join(filter(str.isdigit, k.adim.adim_kodu))
+            if num_str:
+                tamamlanan_ana.add(int(num_str))
+        count = len(tamamlanan_ana)
+        return min(int(round((count / toplam_ana_adim) * 100)), 100)
 
     @property
     def guncel_adim(self):
-        return self.adim_kayitlari.filter(adim__adim_no=self.guncel_adim_no).first()
+        adim = self.adim_kayitlari.filter(adim__adim_kodu=self.guncel_adim_kodu).first()
+        if not adim:
+            adim = self.adim_kayitlari.filter(adim__adim_no=self.guncel_adim_no).first()
+        return adim
 
 
 class UrunTeklifAdimKaydi(models.Model):
@@ -652,7 +757,7 @@ class UrunTeklifAdimKaydi(models.Model):
     ]
 
     surec = models.ForeignKey(UrunTeklifSureci, on_delete=models.CASCADE, related_name='adim_kayitlari', verbose_name="Ürün Teklif Süreci")
-    adim = models.ForeignKey(UrunTeklifAdimTanimi, on_delete=models.PROTECT, verbose_name="Süreç Adımı")
+    adim = models.ForeignKey(UrunTeklifAdimTanimi, on_delete=models.CASCADE, verbose_name="Süreç Adımı")
     durum = models.CharField(max_length=30, choices=DURUM_CHOICES, default='BEKLIYOR', verbose_name="Durum")
     
     tamamlayan = models.CharField(max_length=100, blank=True, null=True, verbose_name="İşlemi Yapan")
@@ -663,13 +768,13 @@ class UrunTeklifAdimKaydi(models.Model):
     dokuman_referansi = models.CharField(max_length=255, blank=True, null=True, verbose_name="Doküman Linki / Form No")
 
     class Meta:
-        ordering = ['adim__adim_no']
+        ordering = ['adim__sira_no']
         unique_together = ('surec', 'adim')
         verbose_name = "Ürün Teklif Adım Kaydı"
         verbose_name_plural = "Ürün Teklif Adım Kayıtları"
 
     def __str__(self):
-        return f"{self.surec.kod} - Adım {self.adim.adim_no} ({self.get_durum_display()})"
+        return f"{self.surec.kod} - Adım {self.adim.adim_kodu} ({self.get_durum_display()})"
 
 
 class UrunTeklifGecmisLog(models.Model):
@@ -694,20 +799,22 @@ class UrunTeklifGecmisLog(models.Model):
 
 class SozlesmeAdimTanimi(models.Model):
     """
-    15 Adımlık Sözleşmenin Değerlendirilmesi Süreci Master Verisi
+    9 Adımlık Sözleşmenin Değerlendirilmesi Süreci Master Verisi
     """
     adim_no = models.PositiveSmallIntegerField(unique=True, verbose_name="Adım Numarası")
     baslik = models.CharField(max_length=255, verbose_name="Süreç Adımı Başlığı")
     faaliyet_tanimi = models.TextField(verbose_name="Faaliyet Tanımı")
     sorumlular = models.TextField(verbose_name="Sorumlular")
+    sorumlular_raci = models.TextField(verbose_name="Sorumlular (RACI)", blank=True, null=True)
     ilgili_dokumanlar = models.TextField(verbose_name="İlgili Dokümanlar", blank=True, null=True)
+    dijital_platformlar = models.TextField(verbose_name="Dijital Platformlar", blank=True, null=True)
     karar_adimi_mi = models.BooleanField(default=False, verbose_name="Karar / Kriter Adımı mı?")
 
     FAZ_CHOICES = [
-        ('FAZ1', 'Faz 1: Sözleşme Kabulü, Hukuki İnceleme & Uygunluk (Adım 1-4)'),
-        ('FAZ2', 'Faz 2: Şartlar, Risk Değerlendirmesi & Yönetim Onayı (Adım 5-8)'),
-        ('FAZ3', 'Faz 3: Müşteri Bilgilendirmesi, Müzakere & Karşılıklı İmza (Adım 9-12)'),
-        ('FAZ4', 'Faz 4: EYS Entegrasyonu, Kapanış & Öğrenilmiş Dersler (Adım 13-15)'),
+        ('FAZ1', 'Faz 1: Talep Kaydı & İnceleme (Adım 1-3)'),
+        ('FAZ2', 'Faz 2: Değerlendirme & Yetkili Makam Kararı (Adım 4-5)'),
+        ('FAZ3', 'Faz 3: Müşteri Müzakeresi & Mutabakat Kontrolü (Adım 6-7)'),
+        ('FAZ4', 'Faz 4: Yetkili İmza & Yürürlük Takibi (Adım 8-9)'),
     ]
     faz = models.CharField(max_length=10, choices=FAZ_CHOICES, default='FAZ1', verbose_name="Süreç Fazı")
 
@@ -731,10 +838,67 @@ class SozlesmeAdimTanimi(models.Model):
                     items.append(cleaned)
         return items
 
+    @property
+    def platform_listesi(self):
+        if not self.dijital_platformlar:
+            return []
+        items = []
+        for line in self.dijital_platformlar.replace('\r\n', '\n').split('\n'):
+            for part in line.split(','):
+                cleaned = part.strip()
+                if cleaned:
+                    items.append(cleaned)
+        return items
+
+    @property
+    def raci_listesi(self):
+        raci_text = self.sorumlular_raci or self.sorumlular
+        if not raci_text:
+            return []
+        items = []
+        for line in raci_text.replace('\r\n', '\n').split('\n'):
+            cleaned = line.strip()
+            if cleaned:
+                items.append(cleaned)
+        return items
+
+    @property
+    def raci_parsed(self):
+        raci_text = self.sorumlular_raci or self.sorumlular
+        if not raci_text:
+            return []
+        parsed = []
+        # Support semicolon separated or newline separated RACI definitions
+        lines = []
+        for row in raci_text.replace('\r\n', '\n').split('\n'):
+            for sub in row.split(';'):
+                if sub.strip():
+                    lines.append(sub.strip())
+
+        for cleaned in lines:
+            if not cleaned:
+                continue
+            rol = ''
+            unvan = cleaned
+            renk = 'secondary'
+            for r_char, r_color in [('A', 'danger'), ('R', 'primary'), ('C', 'warning'), ('I', 'info')]:
+                if cleaned.startswith(f"{r_char} –") or cleaned.startswith(f"{r_char} -") or cleaned.startswith(f"{r_char} "):
+                    rol = r_char
+                    renk = r_color
+                    unvan = cleaned[1:].lstrip(' –-').strip()
+                    break
+            parsed.append({
+                'rol': rol,
+                'unvan': unvan,
+                'renk': renk,
+                'raw': cleaned
+            })
+        return parsed
+
 
 class SozlesmeSureci(models.Model):
     """
-    Sözleşmenin Değerlendirilmesi Süreci Takip Kaydı (15 Adım)
+    Sözleşmenin Değerlendirilmesi Süreci Takip Kaydı (9 Adım)
     """
     SOZLESME_TIPI_CHOICES = [
         ('GIZLILIK', 'Gizlilik Sözleşmesi (NDA)'),
@@ -790,9 +954,9 @@ class SozlesmeSureci(models.Model):
 
     @property
     def tamamlanma_yuzdesi(self):
-        toplam_adim = 15
+        toplam_adim = self.adim_kayitlari.count() or 9
         tamamlanan = self.adim_kayitlari.filter(durum__in=['TAMAMLANDI', 'PAS_GECILDI']).count()
-        return int((tamamlanan / toplam_adim) * 100)
+        return int((tamamlanan / toplam_adim) * 100) if toplam_adim > 0 else 0
 
     @property
     def guncel_adim(self):
@@ -1882,7 +2046,7 @@ class AnaProje(models.Model):
         
         # 1. Aktif sürecin güncel adımı (Birincil Kritik Yol)
         aksiyonlar.append({
-            'surec_kodu': f"S{self.aktif_surec_no}",
+            'surec_kodu': self.aktif_surec_adi,
             'surec_adi': self.aktif_surec_adi,
             'adim_no': self.aktif_adim_no,
             'adim_basligi': self.aktif_adim_basligi,
@@ -1899,7 +2063,7 @@ class AnaProje(models.Model):
         for eco in self.get_eco_revizyonlari():
             if eco.durum in ['DEVAM_EDIYOR', 'REVIZYONDA']:
                 aksiyonlar.append({
-                    'surec_kodu': 'S7 (ECO)',
+                    'surec_kodu': 'Mühendislik Değişikliği (ECO)',
                     'surec_adi': f"ECO Revizyonu: {eco.kod}",
                     'adim_no': eco.guncel_adim_no,
                     'adim_basligi': f"{eco.ad} - {eco.revizyon_no}",
@@ -1915,7 +2079,7 @@ class AnaProje(models.Model):
         for prt in self.get_prototip_iterasyonlari():
             if prt.durum in ['DEVAM_EDIYOR', 'REVIZYONDA']:
                 aksiyonlar.append({
-                    'surec_kodu': 'S5 (PRT)',
+                    'surec_kodu': 'Prototip Süreci',
                     'surec_adi': f"Prototip İterasyonu: {prt.kod}",
                     'adim_no': prt.guncel_adim_no,
                     'adim_basligi': f"{prt.ad} - {prt.revizyon_no}",
@@ -1951,6 +2115,266 @@ class SistemKodSayaci(models.Model):
 
     def __str__(self):
         return f"{self.surec_tipi}-{self.yil}: {self.son_sira_no}"
+
+
+class MusteriAdayi(models.Model):
+    """
+    Müşteri Adayı / Lead / Prospect Havuzu Modeli
+    """
+    DURUM_CHOICES = [
+        ('YENI', 'Yeni Aday'),
+        ('ILETISIMDE', 'İletişimde'),
+        ('NITELIKLI', 'Nitelikli Aday'),
+        ('TEKLIF_ASAMASINDA', 'Teklif Aşamasında'),
+        ('DONUSTURULDU', 'Dönüştürüldü'),
+        ('KAYBEDILDI', 'Kayıp / Pasif'),
+    ]
+
+    KANAL_CHOICES = [
+        ('Pazar Ziyareti', 'Pazar Ziyareti'),
+        ('Fuar & Etkinlik', 'Fuar & Etkinlik'),
+        ('Web Sitesi / Dijital', 'Web Sitesi / Dijital'),
+        ('Müşteri Referansı', 'Müşteri Referansı'),
+        ('Doğrudan Temas', 'Doğrudan Temas / Soğuk Arama'),
+        ('LinkedIn / Sosyal Medya', 'LinkedIn / Sosyal Medya'),
+        ('B2B Portal', 'B2B Portal'),
+        ('Diğer', 'Diğer'),
+    ]
+
+    ONCELIK_CHOICES = [
+        ('SICAK', 'Yüksek'),
+        ('ILIK', 'Orta'),
+        ('SOGUK', 'Düşük'),
+    ]
+
+    SEKTOR_CHOICES = [
+        ('Beyaz Eşya', 'Beyaz Eşya'),
+        ('Otomotiv', 'Otomotiv'),
+        ('İklimlendirme & Soğutma', 'İklimlendirme & Soğutma'),
+        ('Elektronik & Enerji', 'Elektronik & Enerji'),
+        ('Genel Endüstri', 'Genel Endüstri'),
+        ('Diğer', 'Diğer'),
+    ]
+
+    # Kişi ve Şirket Bilgileri
+    ad_soyad = models.CharField(max_length=150, verbose_name="Yetkili Adı Soyadı")
+    unvan = models.CharField(max_length=150, blank=True, null=True, verbose_name="Yetkili Unvanı / Görevi")
+    sirket_adi = models.CharField(max_length=200, verbose_name="Firma / Şirket Adı")
+    sektor = models.CharField(max_length=100, choices=SEKTOR_CHOICES, default='Beyaz Eşya', verbose_name="Sektör")
+    
+    # Lokasyon
+    ulke = models.CharField(max_length=100, default='Almanya', verbose_name="Ülke")
+    sehir = models.CharField(max_length=100, blank=True, null=True, verbose_name="Şehir / Bölge")
+    adres = models.TextField(blank=True, null=True, verbose_name="Adres Detayı")
+
+    # İletişim
+    eposta = models.EmailField(blank=True, null=True, verbose_name="E-Posta Adresi")
+    telefon = models.CharField(max_length=50, blank=True, null=True, verbose_name="Telefon")
+    web_sitesi = models.CharField(max_length=200, blank=True, null=True, verbose_name="Web Sitesi")
+
+    # CRM Nitelendirme
+    kanal = models.CharField(max_length=100, choices=KANAL_CHOICES, default='Pazar Ziyareti', verbose_name="Temas Kanalı")
+    kaynak = models.CharField(max_length=200, blank=True, null=True, verbose_name="Detay Kaynak / Kampanya")
+    durum = models.CharField(max_length=30, choices=DURUM_CHOICES, default='YENI', verbose_name="Aday Durumu")
+    oncelik = models.CharField(max_length=20, choices=ONCELIK_CHOICES, default='ILIK', verbose_name="Öncelik Seviyesi")
+    
+    # Finansal & Potansiyel
+    tahmini_potansiyel_ciro = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True, verbose_name="Tahmini Yıllık Potansiyel €")
+    ilgili_urun_gruplari = models.CharField(max_length=255, blank=True, null=True, verbose_name="İlgilendiği Ürün Grupları")
+    etiketler = models.CharField(max_length=255, blank=True, null=True, verbose_name="Etiketler (virgülle ayırın)")
+
+    # Sorumlu & Açıklama
+    atanan_sorumlu = models.CharField(max_length=100, default='Buse Nur BALTACIOĞLU', verbose_name="Atanan Pazarlama/Satış Sorumlusu")
+    aciklama = models.TextField(blank=True, null=True, verbose_name="Açıklama / İlk Notlar")
+
+    # Dönüştürme (Conversion) Alanları
+    donusturulen_musteri = models.ForeignKey(
+        MusteriKarti, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name="kaynak_adaylar", 
+        verbose_name="Dönüştürülen Müşteri Portföy Kartı"
+    )
+    donusturme_tarihi = models.DateTimeField(null=True, blank=True, verbose_name="Dönüştürme Tarihi")
+
+    # Sistem Zaman Damgaları
+    olusturma_tarihi = models.DateTimeField(auto_now_add=True, verbose_name="Kayıt Tarihi")
+    guncelleme_tarihi = models.DateTimeField(auto_now=True, verbose_name="Son Güncelleme")
+
+    class Meta:
+        ordering = ['-olusturma_tarihi']
+        verbose_name = "Müşteri Adayı"
+        verbose_name_plural = "Müşteri Adayları (Leads)"
+
+    def __str__(self):
+        return f"{self.sirket_adi} - {self.ad_soyad} ({self.get_durum_display()})"
+
+    @property
+    def etiket_listesi(self):
+        if not self.etiketler:
+            return []
+        return [tag.strip() for tag in self.etiketler.split(',') if tag.strip()]
+
+    @property
+    def durum_badge_info(self):
+        mapping = {
+            'YENI': {'badge': 'bg-primary-subtle text-primary border border-primary-subtle', 'text': 'Yeni Aday', 'icon': 'bi-sparkles'},
+            'ILETISIMDE': {'badge': 'bg-warning-subtle text-warning-emphasis border border-warning-subtle', 'text': 'İletişimde', 'icon': 'bi-telephone-outbound'},
+            'NITELIKLI': {'badge': 'bg-info-subtle text-info-emphasis border border-info-subtle', 'text': 'Nitelikli Aday', 'icon': 'bi-check2-circle'},
+            'TEKLIF_ASAMASINDA': {'badge': 'badge-teklif', 'text': 'Teklif Aşamasında', 'icon': 'bi-file-earmark-text'},
+            'DONUSTURULDU': {'badge': 'bg-success-subtle text-success border border-success-subtle', 'text': 'Dönüştürüldü', 'icon': 'bi-check-all'},
+            'KAYBEDILDI': {'badge': 'bg-secondary-subtle text-secondary border border-secondary-subtle', 'text': 'Kayıp / Pasif', 'icon': 'bi-x-circle'},
+        }
+        return mapping.get(self.durum, {'badge': 'bg-light text-dark border', 'text': self.get_durum_display(), 'icon': 'bi-circle'})
+
+    @property
+    def oncelik_badge_info(self):
+        mapping = {
+            'SICAK': {'badge': 'bg-danger-subtle text-danger border border-danger-subtle', 'text': 'Yüksek'},
+            'ILIK': {'badge': 'bg-warning-subtle text-warning-emphasis border border-warning-subtle', 'text': 'Orta'},
+            'SOGUK': {'badge': 'bg-secondary-subtle text-secondary border border-secondary-subtle', 'text': 'Düşük'},
+        }
+        return mapping.get(self.oncelik, {'badge': 'bg-light text-muted border', 'text': self.get_oncelik_display()})
+
+    def donustur_musteri_kartina(self, tier='Tier 2 - Growth', strateji='Start', firma_kodu=None, user='Buse Nur BALTACIOĞLU'):
+        """
+        Adayı resmi MüşteriKarti ve MusteriTesisi kaydına dönüştürür.
+        """
+        if self.donusturulen_musteri:
+            return self.donusturulen_musteri
+
+        # Otomatik Müşteri Kodu Üretimi (FRM-XX)
+        if not firma_kodu:
+            mevcut_sayi = MusteriKarti.objects.count() + 1
+            firma_kodu = f"FRM-{mevcut_sayi:02d}"
+            # Çakışma önleme
+            while MusteriKarti.objects.filter(kod=firma_kodu).exists():
+                mevcut_sayi += 1
+                firma_kodu = f"FRM-{mevcut_sayi:02d}"
+
+        # Kısa ad oluştur
+        kisa_ad = self.sirket_adi.split()[0] if self.sirket_adi else "Firma"
+        if len(kisa_ad) > 50:
+            kisa_ad = kisa_ad[:50]
+
+        musteri = MusteriKarti.objects.create(
+            kod=firma_kodu,
+            ad=self.sirket_adi,
+            kisa_ad=kisa_ad,
+            ulke=self.ulke,
+            sehir=self.sehir or "",
+            tier=tier,
+            strateji=strateji,
+            yillik_ciro_eur=self.tahmini_potansiyel_ciro or 0,
+            cuzdan_payi_yuzde=15,
+            aktif_proje_sayisi=1,
+            kam_satis_lideri=self.atanan_sorumlu or user,
+            aktif_urunler=self.ilgili_urun_gruplari or "Potansiyel Ürün Grubu",
+            sozlesme_durumu="Adaylıktan Yeni Dönüştürüldü",
+            churn_riski="0.05 (Yeni Müşteri)",
+            notlar=f"Müşteri Adayı ({self.ad_soyad}) havuzundan dönüştürüldü. Kanal: {self.kanal}, Kaynak: {self.kaynak or '-'}"
+        )
+
+        # Müşteri Tesisi / İletişim Kişisi Ekle
+        MusteriTesisi.objects.create(
+            musteri=musteri,
+            sira=1,
+            tesis_adi=f"{musteri.kisa_ad} Merkez / Tesis",
+            lokasyon=f"{self.sehir or ''}, {self.ulke}".strip(', '),
+            kod=f"{musteri.kisa_ad}-HQ",
+            clv_m=f"{(float(musteri.yillik_ciro_eur or 0) * 3.76) / 1000000.0:.1f} M€",
+            churn_skoru="0.05",
+            churn_durumu="Düşük Risk",
+            yillik_ciro_str=f"€ {float(musteri.yillik_ciro_eur or 0)/1000000.0:.2f}M",
+            ciro_alt_bilgi="Yeni Kazanım",
+            cuzdan_payi_yuzde=15,
+            cuzdan_alt_bilgi=self.ilgili_urun_gruplari or "Sac & Montaj",
+            destek_sayisi=1,
+            npi_proje_sayisi=1,
+            teklif_sayisi=1,
+            sevkiyat_sayisi=0,
+            kam_satis_lideri=musteri.kam_satis_lideri,
+            yetkili_adi=self.ad_soyad,
+            yetkili_unvan=self.unvan or "Yetkili",
+            yetkili_email=self.eposta or f"contact@{musteri.kisa_ad.lower().replace(' ', '')}.com",
+            yetkili_telefon=self.telefon or "",
+            son_etkilesim=f"{timezone.now().strftime('%d.%m.%Y')} - Müşteri Portföyüne Dönüştürüldü"
+        )
+
+        # Müşteri Zaman Tüneline Aktivite Ekle
+        MusteriEtkilesimZamanTuneli.objects.create(
+            musteri=musteri,
+            kod="CRM-DONUSUM",
+            baslik="Aday Havuzundan Müşteri Portföyüne Dönüştürüldü",
+            aciklama=f"{self.ad_soyad} ({self.unvan or 'Yetkili'}) ile {self.kanal} üzerinden kurulan temas başarıyla müşteri portföyüne aktarıldı.",
+            sorumlu=user,
+            tarih=timezone.now().date(),
+            donem_ay_yil=f"{timezone.now().strftime('%B %Y').upper()} (YENİ MÜŞTERİ)",
+            ikon="bi-stars",
+            ikon_bg="bg-success text-white"
+        )
+
+        # Aday durumunu güncelle
+        self.durum = 'DONUSTURULDU'
+        self.donusturulen_musteri = musteri
+        self.donusturme_tarihi = timezone.now()
+        self.save()
+
+        # Aday aktivite kaydı ekle
+        MusteriAdayiNotu.objects.create(
+            adayi=self,
+            not_tipi='DONUSTURME',
+            baslik='Müşteri Portföyüne Dönüştürüldü',
+            icerik=f"Aday başarıyla resmi Müşteri Portföy Kartı ({musteri.kod} - {musteri.ad}) olarak sisteme kaydedildi.",
+            ekleyen=user
+        )
+
+        return musteri
+
+
+class MusteriAdayiNotu(models.Model):
+    """
+    Müşteri Adayı Etkileşim ve Aktivite Günlüğü
+    """
+    NOT_TIPI_CHOICES = [
+        ('NOT', 'Genel Not'),
+        ('TELEFON', 'Telefon Görüşmesi'),
+        ('TOPLANTI', 'Toplantı / Görüşme'),
+        ('EPOSTA', 'E-Posta Gönderimi / Yanıtı'),
+        ('ZIYARET', 'Saha / Fabrika Ziyareti'),
+        ('DURUM_DEGISIKLIGI', 'Durum Güncellemesi'),
+        ('DONUSTURME', 'Müşteriye Dönüştürme'),
+    ]
+
+    adayi = models.ForeignKey(MusteriAdayi, on_delete=models.CASCADE, related_name='notlar', verbose_name="Müşteri Adayı")
+    not_tipi = models.CharField(max_length=30, choices=NOT_TIPI_CHOICES, default='NOT', verbose_name="Aktivite Tipi")
+    baslik = models.CharField(max_length=200, verbose_name="Aktivite Başlığı")
+    icerik = models.TextField(verbose_name="Detay / İçerik")
+    ekleyen = models.CharField(max_length=100, default='Buse Nur BALTACIOĞLU', verbose_name="Ekleyen Kişi")
+    tarih = models.DateTimeField(default=timezone.now, verbose_name="Aktivite Tarihi")
+
+    class Meta:
+        ordering = ['-tarih', '-id']
+        verbose_name = "Müşteri Adayı Aktivite Notu"
+        verbose_name_plural = "Müşteri Adayı Aktivite Notları"
+
+    def __str__(self):
+        return f"{self.adayi.sirket_adi} - {self.baslik} ({self.tarih.strftime('%d.%m.%Y')})"
+
+    @property
+    def tip_badge_info(self):
+        mapping = {
+            'NOT': {'badge': 'bg-light text-dark border', 'icon': 'bi-sticky'},
+            'TELEFON': {'badge': 'bg-info-subtle text-info border border-info-subtle', 'icon': 'bi-telephone-inbound'},
+            'TOPLANTI': {'badge': 'bg-primary-subtle text-primary border border-primary-subtle', 'icon': 'bi-calendar-event'},
+            'EPOSTA': {'badge': 'bg-secondary-subtle text-secondary border border-secondary-subtle', 'icon': 'bi-envelope'},
+            'ZIYARET': {'badge': 'bg-warning-subtle text-warning-emphasis border border-warning-subtle', 'icon': 'bi-geo-alt'},
+            'DURUM_DEGISIKLIGI': {'badge': 'bg-dark-subtle text-dark border border-dark-subtle', 'icon': 'bi-arrow-repeat'},
+            'DONUSTURME': {'badge': 'bg-success-subtle text-success border border-success-subtle', 'icon': 'bi-check-all'},
+        }
+        return mapping.get(self.not_tipi, {'badge': 'bg-light text-dark', 'icon': 'bi-chat-left-text'})
+
 
 
 

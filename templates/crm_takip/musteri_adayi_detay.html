@@ -1,0 +1,452 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block sayfa_basligi %}Müşteri Adayı Detayı{% endblock %}
+
+{% block extra_css %}
+<style>
+    .lead-detail-card {
+        border-radius: 16px;
+        border: 1px solid #e2e8f0;
+        background: #ffffff;
+    }
+    .info-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        color: #64748b;
+        margin-bottom: 2px;
+    }
+    .info-value {
+        font-size: 0.90rem;
+        font-weight: 600;
+        color: #1e293b;
+    }
+    .timeline-item {
+        position: relative;
+        padding-left: 28px;
+        padding-bottom: 20px;
+    }
+    .timeline-item:last-child {
+        padding-bottom: 0;
+    }
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: 9px;
+        top: 24px;
+        bottom: 0;
+        width: 2px;
+        background-color: #e2e8f0;
+    }
+    .timeline-item:last-child::before {
+        display: none;
+    }
+    .timeline-icon {
+        position: absolute;
+        left: 0;
+        top: 2px;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.65rem;
+    }
+    .conversion-box {
+        background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%);
+        border: 1.5px dashed #3b82f6;
+        border-radius: 16px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- BREADCRUMB & ÜST AKSİYONLAR -->
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-1" style="font-size: 0.80rem;">
+                <li class="breadcrumb-item"><a href="{% url 'ana_sayfa' %}" class="text-decoration-none">Ana Sayfa</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'musteri_adaylari_liste' %}" class="text-decoration-none">Aday Havuzu</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{{ adayi.sirket_adi }}</li>
+            </ol>
+        </nav>
+        <div class="d-flex align-items-center gap-2">
+            <h4 class="fw-bold mb-0 text-dark">{{ adayi.sirket_adi }}</h4>
+            <span class="badge {{ adayi.durum_badge_info.badge }} px-3 py-1 rounded-pill fw-semibold" style="font-size: 0.80rem;">
+                <i class="bi {{ adayi.durum_badge_info.icon }} me-1"></i>{{ adayi.get_durum_display }}
+            </span>
+            <span class="badge {{ adayi.oncelik_badge_info.badge }} px-2.5 py-1 rounded-pill fw-semibold" style="font-size: 0.75rem;">
+                {{ adayi.get_oncelik_display }}
+            </span>
+        </div>
+    </div>
+    
+    <div class="d-flex align-items-center gap-2">
+        <a href="{% url 'musteri_adaylari_liste' %}" class="btn btn-outline-secondary btn-sm rounded-3 px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-1.5 bg-white shadow-sm">
+            <i class="bi bi-arrow-left"></i> Aday Havuzuna Dön
+        </a>
+        <button type="button" class="btn btn-outline-danger btn-sm rounded-3 px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-1.5 bg-white shadow-sm" data-bs-toggle="modal" data-bs-target="#silModal">
+            <i class="bi bi-trash"></i> Sil
+        </button>
+    </div>
+</div>
+
+<div class="row g-4">
+    
+    <!-- SOL KOLON: ADAY DETAY BİLGİLERİ, ETİKETLER & ETKİLEŞİM GÜNLÜĞÜ -->
+    <div class="col-lg-8">
+        
+        <!-- 1. KART: TEMEL ADAY & ŞİRKET BİLGİLERİ -->
+        <div class="lead-detail-card shadow-sm p-4 mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                    <i class="bi bi-person-lines-fill text-primary"></i> Aday Bilgileri
+                </h6>
+                <small class="text-muted">Kayıt: {{ adayi.olusturma_tarihi|date:"d.m.Y H:i" }}</small>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="info-label">Şirket / Firma Adı</div>
+                    <div class="info-value">{{ adayi.sirket_adi }}</div>
+                </div>
+                <div class="col-md-6">
+                    <div class="info-label">Sektör</div>
+                    <div class="info-value">
+                        <span class="badge bg-light text-dark border">{{ adayi.sektor }}</span>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="info-label">Yetkili Adı Soyadı</div>
+                    <div class="info-value">{{ adayi.ad_soyad }}</div>
+                </div>
+                <div class="col-md-6">
+                    <div class="info-label">Yetkili Görevi / Unvanı</div>
+                    <div class="info-value">{{ adayi.unvan|default:"Belirtilmedi" }}</div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="info-label">Telefon</div>
+                    <div class="info-value">
+                        {% if adayi.telefon %}
+                        <a href="tel:{{ adayi.telefon }}" class="text-decoration-none text-dark d-inline-flex align-items-center gap-1">
+                            <i class="bi bi-telephone text-success"></i> {{ adayi.telefon }}
+                        </a>
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="info-label">E-Posta Adresi</div>
+                    <div class="info-value">
+                        {% if adayi.eposta %}
+                        <a href="mailto:{{ adayi.eposta }}" class="text-decoration-none text-primary d-inline-flex align-items-center gap-1">
+                            <i class="bi bi-envelope"></i> {{ adayi.eposta }}
+                        </a>
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="info-label">Ülke / Şehir</div>
+                    <div class="info-value">
+                        <i class="bi bi-geo-alt text-danger me-1"></i>{{ adayi.ulke }}{% if adayi.sehir %}, {{ adayi.sehir }}{% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="info-label">Web Sitesi</div>
+                    <div class="info-value">
+                        {% if adayi.web_sitesi %}
+                        <a href="http://{{ adayi.web_sitesi|lower }}" target="_blank" class="text-decoration-none text-secondary d-inline-flex align-items-center gap-1">
+                            <i class="bi bi-globe"></i> {{ adayi.web_sitesi }}
+                        </a>
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="info-label">Temas Kanalı</div>
+                    <div class="info-value">{{ adayi.kanal }}</div>
+                </div>
+                <div class="col-md-6">
+                    <div class="info-label">Detay Kaynak / Kampanya</div>
+                    <div class="info-value">{{ adayi.kaynak|default:"-" }}</div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="info-label">Tahmini Potansiyel Hacim (€)</div>
+                    <div class="info-value text-primary fs-6 fw-bold">
+                        {% if adayi.tahmini_potansiyel_ciro %}
+                        € {{ adayi.tahmini_potansiyel_ciro|floatformat:2|intcomma }}
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="info-label">Atanan Sorumlu</div>
+                    <div class="info-value">{{ adayi.atanan_sorumlu }}</div>
+                </div>
+
+                {% if adayi.ilgili_urun_gruplari %}
+                <div class="col-12">
+                    <div class="info-label">İlgilenilen Ürün Grupları</div>
+                    <div class="info-value">{{ adayi.ilgili_urun_gruplari }}</div>
+                </div>
+                {% endif %}
+
+                {% if adayi.aciklama %}
+                <div class="col-12">
+                    <div class="info-label">Açıklama / İlk Görüşme Notu</div>
+                    <div class="p-3 bg-light rounded-3 text-secondary" style="font-size: 0.85rem; line-height: 1.5;">
+                        {{ adayi.aciklama }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- 2. KART: ETİKETLER (TAGS) -->
+        <div class="lead-detail-card shadow-sm p-3 px-4 mb-4">
+            <h6 class="fw-bold text-dark mb-2 d-flex align-items-center gap-2" style="font-size: 0.88rem;">
+                <i class="bi bi-tags text-primary"></i> Etiketler ve Anahtar Kelimeler
+            </h6>
+            <div class="d-flex flex-wrap gap-1.5">
+                {% for tag in adayi.etiket_listesi %}
+                <span class="badge bg-light text-dark border px-2.5 py-1.5 rounded-pill" style="font-size: 0.78rem;">
+                    #{{ tag }}
+                </span>
+                {% empty %}
+                <small class="text-muted">Bu aday için henüz etiket tanımlanmamış.</small>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- 3. KART: ETKİLEŞİM ZAMAN TÜNELİ VE YENİ NOT EKLEME -->
+        <div class="lead-detail-card shadow-sm p-4 mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                    <i class="bi bi-clock-history text-primary"></i> Etkileşim & Aktivite Geçmişi
+                </h6>
+                <span class="badge bg-secondary-subtle text-secondary border px-2 py-0.5" style="font-size: 0.72rem;">
+                    {{ notlar.count }} Kayıt
+                </span>
+            </div>
+
+            <!-- Yeni Not / Aktivite Ekleme Formu -->
+            <form action="{% url 'musteri_adayi_not_ekle' adayi.pk %}" method="POST" class="mb-4 p-3 bg-light rounded-3 border">
+                {% csrf_token %}
+                <div class="row g-2">
+                    <div class="col-md-3">
+                        <select name="not_tipi" class="form-select form-select-sm bg-white" required>
+                            <option value="NOT">Genel Not</option>
+                            <option value="TELEFON">Telefon Görüşmesi</option>
+                            <option value="TOPLANTI">Toplantı</option>
+                            <option value="EPOSTA">E-Posta</option>
+                            <option value="ZIYARET">Saha Ziyareti</option>
+                        </select>
+                    </div>
+                    <div class="col-md-9">
+                        <input type="text" name="baslik" class="form-control form-control-sm bg-white" placeholder="Aktivite Başlığı (Örn: Simpac Kalıp Talebi Görüşüldü)">
+                    </div>
+                    <div class="col-12">
+                        <textarea name="icerik" rows="2" class="form-control form-control-sm bg-white" placeholder="Görüşme detayları, alınan kararlar, sonraki adımlar..." required></textarea>
+                    </div>
+                    <div class="col-12 text-end">
+                        <button type="submit" class="btn btn-primary btn-sm rounded-pill px-3 fw-semibold">
+                            <i class="bi bi-plus-lg me-1"></i> Aktiviteyi Kaydet
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Zaman Tüneli Listesi -->
+            <div class="timeline mt-3">
+                {% for n in notlar %}
+                <div class="timeline-item">
+                    <div class="timeline-icon {{ n.tip_badge_info.badge }}">
+                        <i class="bi {{ n.tip_badge_info.icon }}"></i>
+                    </div>
+                    <div class="card border rounded-3 p-3 bg-white shadow-sm">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge {{ n.tip_badge_info.badge }} px-2 py-0.5" style="font-size: 0.70rem;">
+                                    {{ n.get_not_tipi_display }}
+                                </span>
+                                <strong class="text-dark" style="font-size: 0.86rem;">{{ n.baslik }}</strong>
+                            </div>
+                            <small class="text-muted" style="font-size: 0.72rem;">{{ n.tarih|date:"d.m.Y H:i" }}</small>
+                        </div>
+                        <div class="text-secondary small mt-1 lh-sm" style="white-space: pre-line;">
+                            {{ n.icerik }}
+                        </div>
+                        <div class="text-muted mt-2 pt-1 border-top" style="font-size: 0.70rem;">
+                            <i class="bi bi-person me-1"></i> Ekleyen: <strong>{{ n.ekleyen }}</strong>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-4 text-muted small">
+                    <i class="bi bi-chat-left-dots fs-3 d-block mb-1 text-secondary"></i>
+                    Henüz aktivite kaydı bulunmuyor. Yukarıdaki formdan ilk notu ekleyebilirsiniz.
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- SAĞ KOLON: DURUM YÖNETİMİ & DÖNÜŞTÜRME MERKEZİ -->
+    <div class="col-lg-4">
+        
+        <!-- 1. KUTU: DURUM YÖNETİMİ (LEAD PIPELINE) -->
+        <div class="lead-detail-card shadow-sm p-4 mb-4">
+            <h6 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
+                <i class="bi bi-sliders text-primary"></i> Durum ve Öncelik Yönetimi
+            </h6>
+            
+            <form action="{% url 'musteri_adayi_durum_guncelle' adayi.pk %}" method="POST">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted">Adayın Güncel Durumu</label>
+                    <select name="durum" class="form-select">
+                        {% for d_val, d_label in durum_choices %}
+                        <option value="{{ d_val }}" {% if adayi.durum == d_val %}selected{% endif %}>{{ d_label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted">Öncelik / Sıcaklık</label>
+                    <select name="oncelik" class="form-select">
+                        {% for o_val, o_label in oncelik_choices %}
+                        <option value="{{ o_val }}" {% if adayi.oncelik == o_val %}selected{% endif %}>{{ o_label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted">Durum Değişiklik Notu</label>
+                    <textarea name="not_metni" rows="2" class="form-control form-control-sm" placeholder="Durum değişikliğinin gerekçesi..."></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-outline-primary w-100 rounded-pill fw-semibold btn-sm py-2">
+                    <i class="bi bi-check2 me-1"></i> Durumu Güncelle
+                </button>
+            </form>
+        </div>
+
+        <!-- 2. KUTU: FİRMA VE KİŞİYE DÖNÜŞTÜR (LEAD CONVERSION CENTER) -->
+        {% if adayi.donusturulen_musteri %}
+        <div class="lead-detail-card shadow-sm p-4 mb-4 border-success bg-success-subtle">
+            <div class="d-flex align-items-center gap-2 mb-2 text-success">
+                <i class="bi bi-check-circle-fill fs-4"></i>
+                <h6 class="fw-bold mb-0">Müşteriye Dönüştürüldü</h6>
+            </div>
+            <p class="small text-secondary mb-3">
+                Bu aday resmi <strong>Müşteri Portföy Kartı</strong> olarak dönüştürülmüştür.
+            </p>
+            <div class="p-3 bg-white rounded-3 border mb-3">
+                <div class="info-label">Müşteri Kartı Kodu</div>
+                <div class="fw-bold text-dark fs-6">{{ adayi.donusturulen_musteri.kod }} - {{ adayi.donusturulen_musteri.ad }}</div>
+                <div class="text-muted small mt-1">Dönüşüm Tarihi: {{ adayi.donusturme_tarihi|date:"d.m.Y H:i" }}</div>
+            </div>
+            <a href="{% url 'musteri_360_detay' adayi.donusturulen_musteri.pk %}" class="btn btn-success w-100 rounded-pill fw-semibold py-2">
+                <i class="bi bi-buildings me-1"></i> 360° Müşteri Kartını Aç
+            </a>
+        </div>
+        {% else %}
+        <div class="conversion-box p-4 shadow-sm mb-4">
+            <div class="d-flex align-items-center gap-2 mb-2 text-primary">
+                <i class="bi bi-person-check-fill fs-4"></i>
+                <h6 class="fw-bold mb-0">Firma ve Kişiye Dönüştür</h6>
+            </div>
+            <p class="small text-muted mb-3">
+                Adayı Teleset resmi <strong>Müşteri Portföy Kartı</strong> ve <strong>İletişim Kişisi</strong> olarak sisteme kaydedin.
+            </p>
+
+            <form action="{% url 'musteri_adayi_donustur' adayi.pk %}" method="POST">
+                {% csrf_token %}
+                
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted">Önerilen Müşteri Kodu</label>
+                    <input type="text" name="firma_kodu" class="form-control form-control-sm" value="{{ onerilen_firma_kodu }}" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted">Müşteri Segmenti (Tier)</label>
+                    <select name="tier" class="form-select form-select-sm">
+                        {% for t_val, t_label in tier_choices %}
+                        <option value="{{ t_val }}" {% if 'Tier 2' in t_val %}selected{% endif %}>{{ t_label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted">Müşteri Yönetim Stratejisi</label>
+                    <select name="strateji" class="form-select form-select-sm">
+                        {% for s_val, s_label in strategy_choices %}
+                        <option value="{{ s_val }}" {% if s_val == 'Start' %}selected{% endif %}>{{ s_label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-muted">Otomatik Süreç Başlat</label>
+                    <select name="surec_baslat" class="form-select form-select-sm">
+                        <option value="YOK" selected>Sadece Müşteri Kartı Oluştur</option>
+                        <option value="URUN_TEKLIF">Ürün Teklif Süreci (RFQ) Başlat</option>
+                        <option value="PAZARLAMA">15 Adımlık Pazarlama Süreci Başlat</option>
+                    </select>
+                    <small class="text-muted d-block mt-1" style="font-size: 0.70rem;">Seçilen süreç otomatik olarak müşteri kartıyla ilişkilendirilir.</small>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100 rounded-pill fw-semibold py-2.5 shadow-sm" style="background: linear-gradient(135deg, #184775 0%, #22609d 100%) !important;">
+                    <i class="bi bi-arrow-repeat me-1"></i> Firma ve Kişiye Dönüştür
+                </button>
+            </form>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+
+<!-- SİLME ONAY MODALI -->
+<div class="modal fade" id="silModal" tabindex="-1" aria-labelledby="silModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+            <div class="modal-header bg-danger text-white" style="border-radius: 16px 16px 0 0;">
+                <h5 class="modal-title fw-bold" id="silModalLabel">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>Aday Kaydını Sil
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <form action="{% url 'musteri_adayi_sil' adayi.pk %}" method="POST">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <p class="mb-0">
+                        <strong>{{ adayi.sirket_adi }} - {{ adayi.ad_soyad }}</strong> müşteri adayı ve tüm aktivite geçmişi kalıcı olarak silinecektir. Bu işlemi onaylıyor musunuz?
+                    </p>
+                </div>
+                <div class="modal-footer bg-light" style="border-radius: 0 0 16px 16px;">
+                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-danger rounded-pill px-4 fw-semibold">
+                        <i class="bi bi-trash me-1"></i> Evet, Sil
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

@@ -54,50 +54,34 @@
 <!-- ========================================================================= -->
 {% if aktif_sekme == 'musteriler' %}
 
-<!-- Başlık ve Üst Aksiyonlar -->
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
-    <div>
-        <h4 class="fw-bold mb-1 text-dark" style="letter-spacing: -0.3px;">Müşteri Portföyü ve Cari Hesaplar</h4>
-        <small class="text-muted">Buttle & Maklan Müşteri Portföy Yönetimi ve 360° Tek Müşteri Görünümü</small>
-    </div>
+<!-- ÜST EYLEM & ÖZET ÇUBUĞU (TEK BAŞLIK VE KONSOLİDE AKSİYON) -->
+<div class="portal-card p-3 shadow-sm mb-4 bg-white d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2">
     <div class="d-flex align-items-center gap-2">
-        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary btn-sm rounded-3 px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-1.5 bg-white shadow-sm">
-            <i class="bi bi-diagram-3"></i> Süreç Haritası
-        </a>
-        <a href="{% url 'urun_teklif_olustur' %}" class="btn btn-primary btn-sm rounded-3 px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-1.5 shadow-sm" style="background-color: #2563eb; border-color: #2563eb;">
-            <i class="bi bi-plus-lg"></i> Yeni Teklif
-        </a>
+        <h6 class="fw-bold mb-0 text-dark">
+            <i class="bi bi-buildings text-primary me-2"></i>Müşteri Portföyü ve Cari Hesaplar
+        </h6>
+        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1">
+            {{ musteriler|length }} Müşteri
+        </span>
+    </div>
+
+    <div>
+        <button type="button" class="btn btn-primary rounded-pill btn-sm px-3.5 py-1.5 shadow-sm fw-semibold d-inline-flex align-items-center gap-1.5" style="background-color: #2563eb; border-color: #2563eb;" data-bs-toggle="modal" data-bs-target="#yeniKayitModal">
+            <i class="bi bi-plus-lg"></i> Yeni Kayıt Ekle
+        </button>
     </div>
 </div>
 
-<!-- Filtreleme ve Arama Çubuğu (Tek Satır Minimal Tasarım) -->
+<!-- ARAMA ÇUBUĞU (TEK SATIR MİNİMAL TASARIM) -->
 <div class="card border rounded-4 shadow-sm bg-white p-3 px-4 mb-4">
-    <form method="GET" class="d-flex flex-wrap align-items-center justify-content-between gap-2 px-1">
+    <form method="GET" class="row g-2 align-items-center">
         <input type="hidden" name="tab" value="musteriler">
-        
-        <!-- Segment / Tier Filtre Butonları -->
-        <div class="d-flex flex-wrap align-items-center gap-2 ps-1">
-            <a href="?tab=musteriler&tier=ALL" class="btn btn-sm {% if tier_filtre == 'ALL' %}btn-primary text-white{% else %}btn-light text-secondary border{% endif %} rounded-pill px-3 py-1 fw-semibold" style="font-size: 0.80rem;">
-                Tümü
-            </a>
-            <a href="?tab=musteriler&tier=Tier 1" class="btn btn-sm {% if 'Tier 1' in tier_filtre %}btn-primary text-white{% else %}btn-light text-secondary border{% endif %} rounded-pill px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1" style="font-size: 0.80rem;">
-                <i class="bi bi-shield-shaded text-primary"></i> Tier 1 - KAM
-            </a>
-            <a href="?tab=musteriler&tier=Tier 2" class="btn btn-sm {% if 'Tier 2' in tier_filtre %}btn-primary text-white{% else %}btn-light text-secondary border{% endif %} rounded-pill px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1" style="font-size: 0.80rem;">
-                <i class="bi bi-graph-up-arrow text-success"></i> Tier 2 - Growth
-            </a>
-            <a href="?tab=musteriler&tier=Tier 3" class="btn btn-sm {% if 'Tier 3' in tier_filtre %}btn-primary text-white{% else %}btn-light text-secondary border{% endif %} rounded-pill px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1" style="font-size: 0.80rem;">
-                <i class="bi bi-box-seam text-danger"></i> Tier 3 - Standart
-            </a>
-        </div>
-
-        <!-- Arama Kutusu -->
-        <div class="flex-grow-1" style="max-width: 400px; min-width: 260px;">
+        <div class="col-12">
             <div class="input-group input-group-sm">
                 <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-search"></i></span>
-                <input type="text" name="q_m" value="{{ q_m }}" class="form-control bg-light border-start-0 py-1" placeholder="Müşteri adı, ülke veya strateji ara..." style="font-size: 0.82rem;">
+                <input type="text" name="q_m" id="customerSearchInput" value="{{ q_m }}" class="form-control bg-light border-start-0 py-1.5" placeholder="Müşteri adı, kısa ad, ülke, şehir veya strateji ara..." style="font-size: 0.85rem;">
                 {% if q_m %}
-                <a href="?tab=musteriler" class="btn btn-sm btn-light border border-start-0 text-muted"><i class="bi bi-x-lg"></i></a>
+                <a href="?tab=musteriler" class="btn btn-light border border-start-0 text-muted d-flex align-items-center"><i class="bi bi-x-lg"></i></a>
                 {% endif %}
             </div>
         </div>
@@ -135,7 +119,7 @@
                     </div>
                     <div class="col-4 border-end">
                         <div class="text-muted text-uppercase fw-semibold" style="font-size: 0.62rem; letter-spacing: 0.3px;">CÜZDAN PAYI</div>
-                        <div class="fw-bold text-success" style="font-size: 0.82rem;">%{{ m.cuzdan_payi_yuzde }} Cüzdan Payı</div>
+                        <div class="fw-bold text-success" style="font-size: 0.82rem;">%{{ m.cuzdan_payi_yuzde }}</div>
                     </div>
                     <div class="col-4">
                         <div class="text-muted text-uppercase fw-semibold" style="font-size: 0.62rem; letter-spacing: 0.3px;">AKTİF PROJE</div>

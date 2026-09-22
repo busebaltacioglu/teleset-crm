@@ -368,15 +368,10 @@
                     1. Bölüm / Departman Seçin
                 </label>
                 <select name="fabrika" class="form-select form-select-sm bg-light border" onchange="this.form.submit()">
-                    <option value="">Tüm Bölümler ({{ toplam_proje_sayisi }})</option>
+                    <option value="">Tüm Bölümler</option>
                     {% for b_kod, b_ad in bolumler_listesi %}
                     <option value="{{ b_kod }}" {% if secili_fabrika == b_kod %}selected{% endif %}>{{ b_ad }}</option>
                     {% endfor %}
-                    <optgroup label="Teleset Şirketleri">
-                        {% for sirket in intranet_sirketler %}
-                        <option value="{{ sirket }}" {% if secili_fabrika == sirket %}selected{% endif %}>{{ sirket }}</option>
-                        {% endfor %}
-                    </optgroup>
                 </select>
             </div>
 
@@ -401,7 +396,7 @@
                 <select name="proje_id" class="form-select form-select-sm bg-light border fw-semibold" onchange="this.form.submit()">
                     {% for p in ana_projeler_qs %}
                     <option value="{{ p.id }}" {% if secili_proje and secili_proje.id == p.id %}selected{% endif %}>
-                        {{ p.proje_kodu }} | {{ p.musteri.kisa_ad }} - {{ p.bolum }} - {{ p.parca_adi|default:p.proje_adi }} {% if p.parca_kodu %}({{ p.parca_kodu }}){% endif %}
+                        {{ p.proje_kodu }} | {{ p.musteri.kisa_ad }} - {{ p.bolum }} - {{ p.parca_adi|default:p.proje_adi }} {% if p.parca_kodu %}- {{ p.parca_kodu }}{% endif %}
                     </option>
                     {% empty %}
                     <option value="">Seçilen filtreye uygun proje bulunamadı</option>
@@ -473,7 +468,7 @@
                 </div>
 
                 <div class="text-secondary small d-flex flex-wrap align-items-center gap-3">
-                    <span><strong>Müşteri (Cari):</strong> {{ secili_proje.musteri.ad }}</span>
+                    <span><strong>Müşteri:</strong> {{ secili_proje.musteri.ad }}</span>
                     <span class="text-muted">•</span>
                     <span><strong>Lider:</strong> {{ secili_proje.sorumlu_lider }}</span>
                     <span class="text-muted">•</span>
@@ -586,7 +581,7 @@
                     <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
                         <div>
                             <h6 class="fw-bold mb-0 text-dark" style="font-size: 0.95rem;">
-                                Dijital İplik (Digital Thread)
+                                Dijital İplik
                             </h6>
                             <small class="text-muted" style="font-size: 0.76rem;">Teklif, Sözleşme ve APQP Tek Kaynak Bütünlüğü</small>
                         </div>
@@ -736,7 +731,7 @@
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3 pb-3 border-bottom">
             <div>
                 <h5 class="fw-bold mb-1 text-dark">
-                    Tüm Projeler Portföy Tablosu ({{ toplam_proje_sayisi }} Proje)
+                    Tüm Projeler Portföy Tablosu
                 </h5>
                 <small class="text-muted">Kalıphane, Preshane, Kondanser ve Kablo Gruplama operasyonel takip listesi</small>
             </div>
@@ -1250,7 +1245,7 @@
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-muted">İlişkili Müşteri / Firma</label>
                             <select name="musteri_id" class="form-select">
-                                <option value="">Müşteri Seçin (Opsiyonel)</option>
+                                <option value="">Müşteri Seçin</option>
                                 {% for m in musteriler %}
                                 <option value="{{ m.id }}">{{ m.ad }}</option>
                                 {% endfor %}
@@ -1368,11 +1363,11 @@
                             <input type="text" name="parca_kodu" class="form-control form-control-sm" placeholder="Örn: 4200055984">
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label small fw-bold text-muted mb-1">Hedef Bütçe (EUR)</label>
+                            <label class="form-label small fw-bold text-muted mb-1">Hedef Bütçe EUR</label>
                             <input type="number" name="hedef_butce" class="form-control form-control-sm" placeholder="125000" value="125000">
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label small fw-bold text-muted mb-1">Yıllık Hacim (Adet)</label>
+                            <label class="form-label small fw-bold text-muted mb-1">Yıllık Hacim Adet</label>
                             <input type="number" name="yillik_hacim_adet" class="form-control form-control-sm" placeholder="50000" value="50000">
                         </div>
                     </div>
@@ -1438,14 +1433,14 @@
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-muted">İterasyon Tipi</label>
                         <select name="iterasyon_tipi" class="form-select" required>
-                            <option value="ECO">Mühendislik Değişikliği (ECO / ECN Revizyonu)</option>
-                            <option value="PROTOTIP">Prototip / Kalıp Deneme Turu (T0 / T1 / Numune)</option>
+                            <option value="ECO">Mühendislik Değişikliği ECO / ECN Revizyonu</option>
+                            <option value="PROTOTIP">Prototip / Kalıp Deneme Turu T0 / T1 / Numune</option>
                         </select>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-muted">Revizyon / Tur Kodu</label>
-                        <input type="text" name="revizyon_no" class="form-control" placeholder="Örn: Rev.03 (T2) veya Rev.C" value="Rev.02" required>
+                        <input type="text" name="revizyon_no" class="form-control" placeholder="Örn: Rev.03 - T2 veya Rev.C" value="Rev.02" required>
                     </div>
 
                     <div class="mb-3">

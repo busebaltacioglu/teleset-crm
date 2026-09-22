@@ -43,7 +43,9 @@ from .models import (
     EOPGecmisLog,
     FaaliyetKaydi,
     AnaProje,
-    SistemKodSayaci
+    SistemKodSayaci,
+    MusteriAdayi,
+    MusteriAdayiNotu
 )
 from .services.intranet_service import get_intranet_sirketler, get_proje_liderleri
 from .services.inckey_service import inckey_uret, siradaki_inckey_goruntule
@@ -106,7 +108,7 @@ def dashboard(request):
 def kartlar_view(request):
     """
     Birleşik Müşteri Yönetimi ve Stratejik Kartlar:
-    1. Müşteri Kartları (Tier 1 KAM, Tier 2 Growth, Tier 3) + 360° Müşteri Profili
+    1. Müşteri Kartları (Tier 1 Stratejik, Tier 2 Büyüme, Tier 3 Standart) + 360° Müşteri Profili
     2. Ülke Kartları (Hedef Pazar Kanvasları) + 360° Ülke Profili
     3. Ürün Grubu Kartları (Kapasite & Kabiliyetler) + 360° Ürün Profili
     """
@@ -187,7 +189,7 @@ def kartlar_view(request):
 
 def musteri_360_view(request, pk):
     """
-    360° Tek Müşteri Görünümü (SVOC) ve Tesis / Lokasyon Bazlı Yönetim Paneli
+    360° Tek Müşteri Görünümü ve Tesis / Lokasyon Bazlı Yönetim Paneli
     """
     musteri = get_object_or_404(MusteriKarti, pk=pk)
     tesisler = musteri.tesisler.all()
@@ -1171,7 +1173,7 @@ def musteri_iliskileri_sil(request, pk):
 
 def urun_teklif_liste(request):
     """
-    Ürün Teklif Süreci Listesi & İstatistik Paneli (15 Adım)
+    Ürün Teklif Süreci Listesi & İstatistik Paneli (16 Master Adım ve Dallanmalar)
     """
     surecler = UrunTeklifSureci.objects.all()
 
@@ -1203,6 +1205,9 @@ def urun_teklif_liste(request):
     
     toplam_teklif_tutari = UrunTeklifSureci.objects.aggregate(Sum('teklif_tutari'))['teklif_tutari__sum'] or 0
 
+    pazarlama_uzmanlari = get_proje_liderleri()
+    intranet_sirketler = get_intranet_sirketler()
+
     context = {
         'surecler': surecler,
         'musteriler': MusteriKarti.objects.all(),
@@ -1220,18 +1225,21 @@ def urun_teklif_liste(request):
         'fabrikalar': PazarlamaProjesi.FABRIKA_CHOICES,
         'urun_gruplari': PazarlamaProjesi.URUN_GRUBU_CHOICES,
         'durum_listesi': UrunTeklifSureci.DURUM_CHOICES,
+        'pazarlama_uzmanlari': pazarlama_uzmanlari,
+        'intranet_sirketler': intranet_sirketler,
     }
     return render(request, 'crm_takip/urun_teklif_liste.html', context)
 
 
 def urun_teklif_olustur(request):
     """
-    Yeni Ürün Teklif Süreci Başlatma (15 Standart Adım)
+    Yeni Ürün Teklif Süreci Başlatma (Resmi Prosedür 16 Master Adım ve Dallanmalar)
     """
     if request.method == 'POST':
         kod = request.POST.get('kod', '').strip()
         ad = request.POST.get('ad', '').strip()
         musteri_adi = request.POST.get('musteri_adi', '').strip()
+        musteri_karti_id = request.POST.get('musteri_karti_id', '').strip()
         donem = request.POST.get('donem', '2026 Yıllık').strip()
         ilgili_fabrika = request.POST.get('ilgili_fabrika', 'PRESHANE')
         urun_grubu = request.POST.get('urun_grubu', 'Metal Parca & Sac')
@@ -1243,7 +1251,6 @@ def urun_teklif_olustur(request):
 
         year = timezone.now().year
 
-        # Otomatik ve çakışmasız kod üretimi
         if not kod:
             counter = 1
             while True:
@@ -1264,10 +1271,13 @@ def urun_teklif_olustur(request):
                     counter += 1
                 messages.warning(request, f"Belirttiğiniz teklif kodu mevcut olduğu için benzersiz olarak '{kod}' atandı.")
 
-        # İlişkili Müşteri Kartı
-        musteri_karti = MusteriKarti.objects.filter(
-            Q(ad__icontains=musteri_adi) | Q(kisa_ad__icontains=musteri_adi)
-        ).first()
+        musteri_karti = None
+        if musteri_karti_id:
+            musteri_karti = MusteriKarti.objects.filter(pk=musteri_karti_id).first()
+        if not musteri_karti and musteri_adi:
+            musteri_karti = MusteriKarti.objects.filter(
+                Q(ad__icontains=musteri_adi) | Q(kisa_ad__icontains=musteri_adi)
+            ).first()
 
         try:
             surec = UrunTeklifSureci.objects.create(
@@ -1284,17 +1294,17 @@ def urun_teklif_olustur(request):
                 teklif_tutari=float(teklif_tutari_val) if teklif_tutari_val else None,
                 aciklama=aciklama,
                 durum='DEVAM_EDIYOR',
+                guncel_adim_kodu='1',
                 guncel_adim_no=1
             )
         except Exception as e:
             messages.error(request, f"Ürün teklif süreci oluşturulurken bir hata oluştu: {str(e)}")
             return redirect('urun_teklif_liste')
 
-        # 15 Standart Adım Kaydının Oluşturulması
-        master_adimlar = UrunTeklifAdimTanimi.objects.all().order_by('adim_no')
+        master_adimlar = UrunTeklifAdimTanimi.objects.all().order_by('sira_no')
         for adim in master_adimlar:
-            durum = 'DEVAM_EDIYOR' if adim.adim_no == 1 else 'BEKLIYOR'
-            dokuman = adim.ilgili_dokumanlar.split(',')[0] if adim.ilgili_dokumanlar else ""
+            durum = 'DEVAM_EDIYOR' if adim.adim_kodu == '1' else 'BEKLIYOR'
+            dokuman = adim.ilgili_dokumanlar.split(',')[0].strip() if adim.ilgili_dokumanlar else ""
             UrunTeklifAdimKaydi.objects.create(
                 surec=surec,
                 adim=adim,
@@ -1302,11 +1312,10 @@ def urun_teklif_olustur(request):
                 dokuman_referansi=dokuman
             )
 
-        # İlk Log Kaydı
         UrunTeklifGecmisLog.objects.create(
             surec=surec,
             islem="Ürün Teklif Süreci Başlatıldı",
-            detay=f"15 adımlık standart ürün teklif süreci başlatıldı. Başlangıç Adımı: 1. Fiyat Stratejisinin Oluşturulması. (Dönem: {donem})",
+            detay=f"Resmi Ürün Teklif Süreci başlatıldı. Başlangıç Adımı: 1. RFQ/Teklif Talebinin Alınması ve Ön Kontrolü. (Dönem: {donem})",
             yapan=sorumlu_satis_uzmani
         )
 
@@ -1318,36 +1327,38 @@ def urun_teklif_olustur(request):
 
 def urun_teklif_detay(request, pk):
     """
-    15 Adımlık İnteraktif Ürün Teklif Süreci Takip ve Karar Ekranı
+    16 Adımlık İnteraktif Ürün Teklif Süreci Takip ve Karar Ekranı (Master Modal & Faz Bazlı)
     """
     surec = get_object_or_404(UrunTeklifSureci, pk=pk)
-    adim_kayitlari = surec.adim_kayitlari.select_related('adim').order_by('adim__adim_no')
+    adim_kayitlari = surec.adim_kayitlari.select_related('adim').order_by('adim__sira_no')
 
-    # Faz grupları (15 Adımlık Akışa Uygun 4 Faz)
+    # Faz grupları (4 Faz)
     fazlar = [
         {
             'faz_kodu': 'FAZ1',
-            'baslik': 'FAZ 1: Fiyat Stratejisi & Yönetim Onayı (Adım 1-3)',
+            'baslik': 'FAZ 1: RFQ Alımı & Ön Fizibilite (Adım 1-4C)',
             'adimlar': [k for k in adim_kayitlari if k.adim.faz == 'FAZ1']
         },
         {
             'faz_kodu': 'FAZ2',
-            'baslik': 'FAZ 2: RFQ Alımı, Maliyet Analizi & Teklif Değerlendirme (Adım 4-8)',
+            'baslik': 'FAZ 2: Maliyet & Fiyatlandırma (Adım 5-9C)',
             'adimlar': [k for k in adim_kayitlari if k.adim.faz == 'FAZ2']
         },
         {
             'faz_kodu': 'FAZ3',
-            'baslik': 'FAZ 3: Teklif İletimi, Müşteri Geri Bildirimi & Revizyon (Adım 9-12)',
+            'baslik': 'FAZ 3: Yönetim Onayı & Müşteri Müzakeresi (Adım 10-15C)',
             'adimlar': [k for k in adim_kayitlari if k.adim.faz == 'FAZ3']
         },
         {
             'faz_kodu': 'FAZ4',
-            'baslik': 'FAZ 4: Fiyat Stratejisi Kontrolü, Kapanış & Sürekli İyileştirme (Adım 13-15)',
+            'baslik': 'FAZ 4: Teklif Sonucu, Devreye Alma & Kapanış (Adım 16-16C)',
             'adimlar': [k for k in adim_kayitlari if k.adim.faz == 'FAZ4']
         }
     ]
 
     tarihce = surec.tarihce_kayitlari.all().order_by('-tarih')
+    proje_liderleri = get_proje_liderleri()
+    master_adimlar = UrunTeklifAdimTanimi.objects.all().order_by('sira_no')
 
     context = {
         'surec': surec,
@@ -1355,20 +1366,24 @@ def urun_teklif_detay(request, pk):
         'fazlar': fazlar,
         'tarihce': tarihce,
         'musteri_karti': surec.musteri_karti,
+        'proje_liderleri': proje_liderleri,
+        'master_adimlar': master_adimlar,
     }
     return render(request, 'crm_takip/urun_teklif_detay.html', context)
 
 
 def urun_teklif_adim_aksiyon(request, pk, adim_id):
     """
-    Ürün Teklif Süreci Adım İlerletme, Karar Kapıları ve İlgili Adıma Geri Dönüş Yönetimi
+    Ürün Teklif Süreci Adım İlerletme, Karar Kapıları ve İlgili Adıma Geri Dönüş Yönetimi (40 İstasyon)
     """
     surec = get_object_or_404(UrunTeklifSureci, pk=pk)
     adim_kaydi = UrunTeklifAdimKaydi.objects.filter(pk=adim_id, surec=surec).first()
     if not adim_kaydi:
+        adim_kaydi = UrunTeklifAdimKaydi.objects.filter(adim__adim_kodu=str(adim_id), surec=surec).first()
+    if not adim_kaydi:
         adim_kaydi = get_object_or_404(UrunTeklifAdimKaydi, adim__adim_no=adim_id, surec=surec)
     
-    adim_no = adim_kaydi.adim.adim_no
+    adim_kodu = adim_kaydi.adim.adim_kodu
 
     if request.method == 'POST':
         aksiyon = request.POST.get('aksiyon', '').strip() or request.POST.get('karar', '').strip() or 'TAMAMLA'
@@ -1388,218 +1403,620 @@ def urun_teklif_adim_aksiyon(request, pk, adim_id):
 
             UrunTeklifGecmisLog.objects.create(
                 surec=surec,
-                islem=f"Adım {adim_no}: Notlar Kaydedildi",
+                islem=f"Adım {adim_kodu}: Notlar Kaydedildi",
                 detay=f"Adım açıklama ve değerlendirme notları güncellendi. Not: {notlar or 'Girilmedi.'}",
                 yapan=tamamlayan
             )
-            messages.success(request, f"Adım {adim_no} not ve değerlendirme bilgileri başarıyla kaydedildi.")
-            return redirect(f"{redirect('urun_teklif_detay', pk=surec.pk).url}#adim-{adim_no}")
+            messages.success(request, f"Adım {adim_kodu} not ve değerlendirme bilgileri başarıyla kaydedildi.")
+            return redirect(f"{redirect('urun_teklif_detay', pk=surec.pk).url}#adim-{adim_kodu}")
 
-        now = timezone.now()
-        adim_kaydi.tamamlanma_tarihi = now
-
-        # 1. STANDART İLERLEME ADIMLARI (Adım 1, 2, 4, 6, 7, 9, 10, 12, 13, 14)
-        if adim_no in [1, 2, 4, 6, 7, 9, 10, 12, 13, 14]:
+        def _gecis(hedef_kod, karar_metni, log_islem, log_detay, yeni_durum=None, msg_type='success', msg_text=None):
             adim_kaydi.durum = 'TAMAMLANDI'
-            adim_kaydi.karar_sonucu = 'Tamamlandı'
+            adim_kaydi.karar_sonucu = karar_metni
+            adim_kaydi.tamamlanma_tarihi = timezone.now()
             adim_kaydi.save()
 
-            sonraki_adim_no = adim_no + 1
-            surec.guncel_adim_no = sonraki_adim_no
-            
-            # Özel durum güncellemeleri
-            if adim_no == 9:
-                surec.durum = 'MUSTERIYE_ILETILDI'
-            elif adim_no == 12:
-                surec.durum = 'MUSTERIYE_ILETILDI'
-            
-            surec.save()
+            hedef = UrunTeklifAdimKaydi.objects.filter(surec=surec, adim__adim_kodu=hedef_kod).first()
+            if hedef:
+                hedef.durum = 'DEVAM_EDIYOR'
+                hedef.save()
 
-            sonraki_adim_kaydi = UrunTeklifAdimKaydi.objects.filter(surec=surec, adim__adim_no=sonraki_adim_no).first()
-            if sonraki_adim_kaydi:
-                sonraki_adim_kaydi.durum = 'DEVAM_EDIYOR'
-                sonraki_adim_kaydi.save()
+            surec.guncel_adim_kodu = hedef_kod
+            num_part = ''.join(filter(str.isdigit, hedef_kod))
+            if num_part:
+                surec.guncel_adim_no = int(num_part)
+            if yeni_durum:
+                surec.durum = yeni_durum
+            surec.save()
 
             UrunTeklifGecmisLog.objects.create(
                 surec=surec,
-                islem=f"Adım {adim_no} Tamamlandı",
-                detay=f"{adim_kaydi.adim.baslik} tamamlandı. {sonraki_adim_no}. Adıma geçildi.",
+                islem=log_islem,
+                detay=log_detay,
                 yapan=tamamlayan
             )
-            messages.success(request, f"Adım {adim_no} başarıyla tamamlandı. Süreç Adım {sonraki_adim_no}'e geçti.")
+            if msg_text:
+                getattr(messages, msg_type)(request, msg_text)
 
-        # 2. ADIM 3: KARAR KAPISI (Fiyat Stratejisi Üst Yönetim Onayı)
-        elif adim_no == 3:
-            if aksiyon in ['OK', 'EVET', 'EVET_ONAYLA', 'ONAYLA']:
-                adim_kaydi.durum = 'TAMAMLANDI'
-                adim_kaydi.karar_sonucu = 'OK (Fiyat Stratejisi Onaylandı -> Adım 4)'
-                adim_kaydi.save()
+        # -------------------------------------------------------------
+        # 1. ADIM 1: RFQ/Teklif Talebinin Alınması ve Ön Kontrolü
+        # -------------------------------------------------------------
+        if adim_kodu == '1':
+            _gecis('2', 'Tamamlandı', 'Adım 1: RFQ Alımı ve Ön Kontrol Tamamlandı',
+                   f"RFQ ve teknik şartnameler incelendi, ön kontroller tamamlandı. Adım 2'ye geçildi. Not: {notlar}",
+                   msg_text="Adım 1 tamamlandı. 2. Adıma (Çalışma Takvimi) geçildi.")
 
-                surec.guncel_adim_no = 4
-                surec.save()
-                UrunTeklifAdimKaydi.objects.filter(surec=surec, adim__adim_no=4).update(durum='DEVAM_EDIYOR')
+        # -------------------------------------------------------------
+        # 2. ADIM 2: Teklif Çalışma Takviminin Belirlenmesi ve İş Bölümü
+        # -------------------------------------------------------------
+        elif adim_kodu == '2':
+            _gecis('3', 'Tamamlandı', 'Adım 2: Çalışma Takvimi Belirlendi',
+                   f"Teklif teslim tarihi ve birim iş bölümü takvime bağlandı. Adım 3'e geçildi. Not: {notlar}",
+                   msg_text="Adım 2 tamamlandı. 3. Adıma (Talebin Sınıflandırılması) geçildi.")
 
-                UrunTeklifGecmisLog.objects.create(
-                    surec=surec,
-                    islem="Adım 3: Fiyat Stratejisi Üst Yönetimce Onaylandı (OK)",
-                    detay=f"Fiyat stratejisi onaylandı. 4. Adıma (RFQ Alımı) geçildi. Not: {notlar}",
-                    yapan=tamamlayan
-                )
-                messages.success(request, "Fiyat stratejisi üst yönetim tarafından onaylandı! 4. Adıma geçildi.")
+        # -------------------------------------------------------------
+        # 3. ADIM 3: Teklif Talebinin Sınıflandırılması ve Yönlendirme
+        # -------------------------------------------------------------
+        elif adim_kodu == '3':
+            if aksiyon == '3A':
+                _gecis('3A', 'Mevcut Ürün Fiyat Revizyonu Talebi (3A)', 'Adım 3: Fiyat Revizyonu Olarak Sınıflandırıldı',
+                       f"Talep mevcut ürün fiyat revizyonu olarak sınıflandırıldı. Adım 3A'ya yönlendirildi. Not: {notlar}",
+                       msg_text="Talep 'Mevcut Ürün Fiyat Revizyonu' (Adım 3A) olarak sınıflandırıldı.")
+            elif aksiyon == '3B':
+                _gecis('3B', 'Mevcut Müşteri Yeni/Revize Parça Teklifi (3B)', 'Adım 3: Mevcut Müşteri Yeni Parça Olarak Sınıflandırıldı',
+                       f"Talep mevcut müşteri yeni/revize parça olarak sınıflandırıldı. Adım 3B'ye yönlendirildi. Not: {notlar}",
+                       msg_text="Talep 'Mevcut Müşteri Yeni/Revize Parça' (Adım 3B) olarak sınıflandırıldı.")
+            elif aksiyon == '3C':
+                _gecis('3C', 'Yeni Müşteri / Yeni İş Teklifi (3C)', 'Adım 3: Yeni Müşteri / Yeni İş Olarak Sınıflandırıldı',
+                       f"Talep yeni müşteri / yeni iş teklifi olarak sınıflandırıldı. Adım 3C'ye yönlendirildi. Not: {notlar}",
+                       msg_text="Talep 'Yeni Müşteri / Yeni İş Teklifi' (Adım 3C) olarak sınıflandırıldı.")
+            else:
+                _gecis('4', 'Tamamlandı', 'Adım 3: Sınıflandırma Tamamlandı', f"Teklif sınıflandırıldı. Not: {notlar}")
 
-            elif aksiyon in ['NOK', 'HAYIR', 'HAYIR_REVIZYON', 'REVIZYON']:
-                adim_kaydi.durum = 'TAMAMLANDI'
-                adim_kaydi.karar_sonucu = 'NOK (Onaylanmadı -> Adım 2 Bölüm Yöneticileri Paylaşımı)'
-                adim_kaydi.save()
+        # -------------------------------------------------------------
+        # 4. ADIM 3A: Mevcut Ürün Fiyat Revizyonu Süreci
+        # -------------------------------------------------------------
+        elif adim_kodu == '3A':
+            if aksiyon in ['TEKNIK_YOK_5', 'ADIM_5', 'EVET']:
+                _gecis('5', 'Teknik Değişiklik Yok -> Adım 5 Detaylı Maliyet Analizi', 'Adım 3A: Teknik Değişiklik Yok',
+                       f"Teknik/üretimsel değişiklik olmadığından doğrudan maliyet güncellemesi için 5. Adıma aktarıldı. Not: {notlar}",
+                       msg_text="Teknik değişiklik bulunmadığından doğrudan 5. Adıma (Maliyet Analizi) geçildi.")
+            elif aksiyon in ['TEKNIK_VAR_3B', 'ADIM_3B', 'HAYIR']:
+                _gecis('3B', 'Teknik Değişiklik Var -> Adım 3B Yeni/Revize Parça', 'Adım 3A: Teknik Değişiklik Var',
+                       f"Kalıp/proses veya teknik değişiklik içerdiğinden 3B Adımına aktarıldı. Not: {notlar}",
+                       msg_text="Teknik/kalıp değişikliği içerdiğinden 3B Adımına yönlendirildi.")
+            else:
+                _gecis('5', 'Tamamlandı', 'Adım 3A: Tamamlandı', f"Fiyat revizyon adımı tamamlandı. Not: {notlar}")
 
-                surec.guncel_adim_no = 2
-                surec.durum = 'REVIZYONDA'
-                surec.save()
-                UrunTeklifAdimKaydi.objects.filter(surec=surec, adim__adim_no=2).update(durum='DEVAM_EDIYOR')
-                UrunTeklifAdimKaydi.objects.filter(surec=surec, adim__adim_no=3).update(durum='BEKLIYOR', karar_sonucu=None)
+        # -------------------------------------------------------------
+        # 5. ADIM 3B: Mevcut Müşteri Yeni / Revize Parça Teklifi
+        # -------------------------------------------------------------
+        elif adim_kodu == '3B':
+            _gecis('4', 'Mevcut Müşteri Parça Talebi Doğrulandı -> Adım 4', 'Adım 3B: Parça Talebi Doğrulandı',
+                   f"Mevcut müşteri parça talebi doğrulandı ve 4. Adım Fizibilite Değerlendirmesine aktarıldı. Not: {notlar}",
+                   msg_text="3B Adımı tamamlandı. 4. Adıma (Fizibilite ve Risk Değerlendirmesi) geçildi.")
 
-                UrunTeklifGecmisLog.objects.create(
-                    surec=surec,
-                    islem="Adım 3: Fiyat Stratejisi Revizyona Gönderildi (NOK -> Adım 2)",
-                    detay=f"Fiyat stratejisi üst yönetim tarafından revizyon amacıyla 2. Adıma geri yönlendirildi. Gerekçe: {notlar or 'Yönetim değerlendirmesi doğrultusunda revizyon.'}",
-                    yapan=tamamlayan
-                )
-                messages.warning(request, "Fiyat stratejisi revizyon için 2. Adıma geri yönlendirildi.")
+        # -------------------------------------------------------------
+        # 6. ADIM 3C: Yeni Müşteri / Yeni İş Teklifi
+        # -------------------------------------------------------------
+        elif adim_kodu == '3C':
+            if aksiyon in ['UYGUN_4', 'ADIM_4', 'EVET', 'TAMAMLA']:
+                _gecis('4', 'Müşteri Şartları Uygun -> Adım 4 Fizibilite', 'Adım 3C: Yeni Müşteri Şartları Uygun',
+                       f"Yeni müşteri onay ve ticari şartları uygun bulundu. 4. Adım Fizibiliteye aktarıldı. Not: {notlar}",
+                       msg_text="Yeni müşteri şartları uygun bulundu. 4. Adıma (Fizibilite) geçildi.")
+            elif aksiyon in ['OLUMSUZ_16C', 'ADIM_16C', 'HAYIR']:
+                _gecis('16C', 'Müşteri Şartları Uygun Değil -> 16C Olumsuz Kapatma', 'Adım 3C: Yeni Müşteri Şartları Uygun Değil',
+                       f"Yeni müşteri ticari/onay şartları karşılanamadığı için süreç 16C Adımında olumsuz kapatıldı. Not: {notlar}",
+                       yeni_durum='OLUMSUZ_KAPATILDI', msg_type='warning',
+                       msg_text="Yeni müşteri şartları karşılanamadı. Süreç 16C Adımına aktarıldı.")
 
-        # 3. ADIM 5: KARAR KAPISI (Satış Koşulları & Parametrelerin Teklif Talebine Uygunluğu)
-        elif adim_no == 5:
-            if aksiyon in ['OK', 'EVET', 'EVET_UYGUN', 'UYGUN']:
-                adim_kaydi.durum = 'TAMAMLANDI'
-                adim_kaydi.karar_sonucu = 'OK (Parametreler Uygun -> Adım 6 Detaylı Maliyet Analizi)'
-                adim_kaydi.save()
+        # -------------------------------------------------------------
+        # 7. ADIM 4: Fizibilite ve Risk Değerlendirmesi
+        # -------------------------------------------------------------
+        elif adim_kodu == '4':
+            if aksiyon in ['4A', 'OLUMLU_5', 'EVET']:
+                _gecis('4A', 'Fizibilite Olumlu (4A)', 'Adım 4: Fizibilite Olumlu Sonuçlandı',
+                       f"Teknik, mali ve operasyonel fizibilite onaylandı. Adım 4A'ya geçildi. Not: {notlar}",
+                       msg_text="Fizibilite değerlendirmesi olumlu sonuçlandı (Adım 4A).")
+            elif aksiyon in ['4B', 'UYGUNSUZ_4B', 'HAYIR']:
+                _gecis('4B', 'Fizibilite Uygun Değil (4B)', 'Adım 4: Fizibilite Uygun Bulunmadı',
+                       f"Kapasite veya teknik kısıtlar nedeniyle uygun bulunmadı. Adım 4B'ye yönlendirildi. Not: {notlar}",
+                       msg_type='warning', msg_text="Fizibilite uygun bulunmadı. Adım 4B'ye yönlendirildi.")
+            elif aksiyon in ['4C', 'ILAVE_CALISMA_4C']:
+                _gecis('4C', 'İlave Bilgi / Risk İyileştirme Gerekli (4C)', 'Adım 4: İlave Bilgi / Risk İyileştirme',
+                       f"Risk iyileştirme veya müşteri netleştirmesi gerektiği belirlendi. Adım 4C'ye geçildi. Not: {notlar}",
+                       msg_type='info', msg_text="İlave bilgi ve risk çalışması için Adım 4C'ye geçildi.")
+            else:
+                _gecis('5', 'Tamamlandı', 'Adım 4: Fizibilite Tamamlandı', f"Fizibilite tamamlandı. Not: {notlar}")
 
-                surec.guncel_adim_no = 6
-                surec.save()
-                UrunTeklifAdimKaydi.objects.filter(surec=surec, adim__adim_no=6).update(durum='DEVAM_EDIYOR')
+        # -------------------------------------------------------------
+        # 8. ADIM 4A: Fizibilite ve Risk Değerlendirmesi Olumlu
+        # -------------------------------------------------------------
+        elif adim_kodu == '4A':
+            _gecis('5', 'Fizibilite Onaylandı -> Adım 5 Detaylı Maliyet Analizi', 'Adım 4A: Fizibilite Onaylandı',
+                   f"Fizibilite olumlu onaylandı. 5. Adım Detaylı Maliyet Analizi başlatıldı. Not: {notlar}",
+                   msg_text="Adım 4A tamamlandı. 5. Adıma (Detaylı Maliyet Analizi) geçildi.")
 
-                UrunTeklifGecmisLog.objects.create(
-                    surec=surec,
-                    islem="Adım 5: Teklif Parametreleri Uygun Bulundu (OK)",
-                    detay="Fiyat ve satış parametreleri RFQ talebine uygun bulundu. 6. Adım (Detaylı Maliyet Analizi) başlatıldı.",
-                    yapan=tamamlayan
-                )
-                messages.success(request, "Teklif parametreleri uygun! 6. Adım Detaylı Maliyet Analizine geçildi.")
+        # -------------------------------------------------------------
+        # 9. ADIM 4B: Fizibilite ve Risk Değerlendirmesi Uygun Değil
+        # -------------------------------------------------------------
+        elif adim_kodu == '4B':
+            if aksiyon in ['ILAVE_CALISMA_4C', '4C']:
+                _gecis('4C', 'Müşteri ile Görüşme / Risk İyileştirme -> Adım 4C', 'Adım 4B: Risk İyileştirme Kararı',
+                       f"Kısıtların aşılması için müşteri ile görüşme kararı alındı. Adım 4C'ye geçildi. Not: {notlar}",
+                       msg_text="Risk iyileştirme ve müşteri görüşmesi için 4C Adımına geçildi.")
+            elif aksiyon in ['OLUMSUZ_16C', '16C', 'KAPAT']:
+                _gecis('16C', 'Fizibilite Reddedildi -> 16C Olumsuz Kapatma', 'Adım 4B: Fizibilite Reddedildi',
+                       f"Fizibilite uygun bulunmadığından teklif çalışması sonlandırıldı. 16C Adımına aktarıldı. Not: {notlar}",
+                       yeni_durum='OLUMSUZ_KAPATILDI', msg_type='warning',
+                       msg_text="Teklif süreci fizibilite yetersizliği nedeniyle 16C Adımında olumsuz kapatıldı.")
 
-            elif aksiyon in ['NOK', 'HAYIR', 'HAYIR_UYGUNSUZ', 'UYGUNSUZ']:
-                adim_kaydi.durum = 'TAMAMLANDI'
-                adim_kaydi.karar_sonucu = 'NOK (Uygun Değil -> Adım 1 Fiyat Stratejisi)'
-                adim_kaydi.save()
+        # -------------------------------------------------------------
+        # 10. ADIM 4C: İlave Bilgi / Müşteri ile Görüşme / Risk İyileştirme
+        # -------------------------------------------------------------
+        elif adim_kodu == '4C':
+            if aksiyon in ['YENIDEN_FIZIBILITE_4', '4']:
+                _gecis('4', 'Bilgiler Tamamlandı -> Yeniden Fizibilite (Adım 4)', 'Adım 4C: Fizibiliteye Geri Dönüldü',
+                       f"Müşteri açıklamaları sonrası yeniden fizibilite değerlendirmesi için 4. Adıma dönüldü. Not: {notlar}",
+                       msg_text="İlave bilgilerle yeniden fizibilite değerlendirmesi için 4. Adıma geçildi.")
+            elif aksiyon in ['TALEP_REVIZYON_3B', '3B']:
+                _gecis('3B', 'Talep Kapsamına Geri Dönüldü (Adım 3B)', 'Adım 4C: Talep Kapsamı Revizyonu',
+                       f"Teknik şartname revizyonu sebebiyle 3B Adımına dönüldü. Not: {notlar}",
+                       msg_text="Talep kapsamı revizyonu için 3B Adımına geri dönüldü.")
+            elif aksiyon in ['OLUMSUZ_16C', '16C', 'KAPAT']:
+                _gecis('16C', 'Riskler Giderilemedi -> 16C Olumsuz Kapatma', 'Adım 4C: Riskler Giderilemedi',
+                       f"Müşteri ile uzlaşılamadı, süreç 16C Adımına yönlendirildi. Not: {notlar}",
+                       yeni_durum='OLUMSUZ_KAPATILDI', msg_type='warning',
+                       msg_text="Riskler giderilemediğinden süreç 16C Adımına aktarıldı.")
 
-                surec.guncel_adim_no = 1
-                surec.durum = 'REVIZYONDA'
-                surec.save()
-                UrunTeklifAdimKaydi.objects.filter(surec=surec, adim__adim_no=1).update(durum='DEVAM_EDIYOR')
-                UrunTeklifAdimKaydi.objects.filter(surec=surec, adim__adim_no__in=[2, 3, 4, 5]).update(durum='BEKLIYOR', karar_sonucu=None)
+        # -------------------------------------------------------------
+        # 11. ADIM 5: Detaylı Maliyet Analizinin Yapılması
+        # -------------------------------------------------------------
+        elif adim_kodu == '5':
+            _gecis('6', 'Maliyet Analizi Tamamlandı -> Adım 6', 'Adım 5: Maliyet Analizi Tamamlandı',
+                   f"Hammadde, işçilik, fason, ambalaj, enerji ve genel gider maliyetleri hesaplandı. Adım 6'ya geçildi. Not: {notlar}",
+                   msg_text="Adım 5 tamamlandı. 6. Adıma (Teklif Özet Tablosu) geçildi.")
 
-                UrunTeklifGecmisLog.objects.create(
-                    surec=surec,
-                    islem="Adım 5: Parametreler Uygun Bulunmadı (NOK -> Adım 1)",
-                    detay=f"Satış koşulları ve parametreler RFQ ile uyuşmadığı için süreç 1. Adıma (Fiyat Stratejisi) geri yönlendirildi. Not: {notlar}",
-                    yapan=tamamlayan
-                )
-                messages.warning(request, "Parametre uyumsuzluğu sebebiyle süreç 1. Adıma geri yönlendirildi.")
+        # -------------------------------------------------------------
+        # 12. ADIM 6: Teklif Özet Tablosunun ve Fiyat Taslağının Hazırlanması
+        # -------------------------------------------------------------
+        elif adim_kodu == '6':
+            _gecis('7', 'Teklif Özet Tablosu Hazırlandı -> Adım 7', 'Adım 6: Teklif Özet Tablosu Hazırlandı',
+                   f"Maliyet kalemleri ve fiyat taslağı özet tabloda konsolide edildi. Adım 7'ye geçildi. Not: {notlar}",
+                   msg_text="Adım 6 tamamlandı. 7. Adıma (Maliyet Doğrulama) geçildi.")
 
-        # 4. ADIM 8: KARAR KAPISI (Teklif Özet Tablosu ve Yönetim Değerlendirmesi)
-        elif adim_no == 8:
-            if aksiyon in ['OK', 'EVET', 'EVET_ONAYLA', 'ONAYLA']:
-                adim_kaydi.durum = 'TAMAMLANDI'
-                adim_kaydi.karar_sonucu = 'OK (Maliyet ve Teklif Onaylandı -> Adım 9)'
-                adim_kaydi.save()
+        # -------------------------------------------------------------
+        # 13. ADIM 7: Maliyet ve Fiyat Verilerinin Doğrulanması
+        # -------------------------------------------------------------
+        elif adim_kodu == '7':
+            if aksiyon in ['7A', 'DOGRULANDI_8', 'EVET', 'TAMAMLA']:
+                _gecis('7A', 'Maliyet ve Fiyat Doğrulandı (7A)', 'Adım 7: Maliyet ve Fiyat Doğrulandı',
+                       f"Maliyet hesaplamaları, birim girdiler ve katsayılar doğrulandı. Adım 7A'ya geçildi. Not: {notlar}",
+                       msg_text="Maliyet ve fiyat verileri doğrulandı (Adım 7A).")
+            elif aksiyon in ['7B', 'DUZELTME_7B', 'HAYIR']:
+                _gecis('7B', 'Düzeltme / Yeniden Hesaplama Gerekli (7B)', 'Adım 7: Düzeltme İhtiyacı Tespit Edildi',
+                       f"Maliyet verilerinde uyumsuzluk belirlendi. Adım 7B'ye yönlendirildi. Not: {notlar}",
+                       msg_type='warning', msg_text="Maliyet verilerinde düzeltme gerektiği tespit edildi (Adım 7B).")
 
-                surec.guncel_adim_no = 9
-                surec.save()
-                UrunTeklifAdimKaydi.objects.filter(surec=surec, adim__adim_no=9).update(durum='DEVAM_EDIYOR')
+        # -------------------------------------------------------------
+        # 14. ADIM 7A: Maliyet ve Fiyat Doğrulandı
+        # -------------------------------------------------------------
+        elif adim_kodu == '7A':
+            _gecis('8', 'Doğrulandı -> Adım 8 Satış Fiyatlandırması', 'Adım 7A: Doğrulama Onaylandı',
+                   f"Doğrulanmış veri seti ile 8. Adım Satış Fiyatlandırmasına geçildi. Not: {notlar}",
+                   msg_text="Adım 7A tamamlandı. 8. Adıma (Satış Fiyatlandırması) geçildi.")
 
-                UrunTeklifGecmisLog.objects.create(
-                    surec=surec,
-                    islem="Adım 8: Teklif Özet Tablosu Yönetimce Onaylandı (OK)",
-                    detay="Maliyet kırılımları, karlılık ve ciro hedefleri onaylandı. 9. Adım (Müşteriye İletim) aşamasına geçildi.",
-                    yapan=tamamlayan
-                )
-                messages.success(request, "Maliyet ve teklif tablosu yönetim tarafından onaylandı! 9. Adıma geçildi.")
+        # -------------------------------------------------------------
+        # 15. ADIM 7B: Maliyet ve Fiyat Düzeltme / Yeniden Hesaplama
+        # -------------------------------------------------------------
+        elif adim_kodu == '7B':
+            if aksiyon in ['MALIYET_5', '5']:
+                _gecis('5', 'Maliyet Analizine Geri Dönüldü (Adım 5)', 'Adım 7B: Maliyet Analizine Revizyon',
+                       f"Girdi maliyeti düzeltmesi için 5. Adıma dönüldü. Not: {notlar}",
+                       msg_text="Maliyet analizi düzeltmesi için 5. Adıma geri dönüldü.")
+            elif aksiyon in ['OZET_6', '6']:
+                _gecis('6', 'Teklif Özet Tablosuna Geri Dönüldü (Adım 6)', 'Adım 7B: Özet Tablo Revizyonu',
+                       f"Konsolidasyon tablosu düzeltmesi için 6. Adıma dönüldü. Not: {notlar}",
+                       msg_text="Teklif özet tablosu düzeltmesi için 6. Adıma geri dönüldü.")
 
-            elif aksiyon in ['NOK', 'HAYIR', 'HAYIR_REVIZYON', 'REVIZYON']:
-                adim_kaydi.durum = 'TAMAMLANDI'
-                adim_kaydi.karar_sonucu = 'NOK (Maliyet Revizyonu Gerekli -> Adım 6)'
-                adim_kaydi.save()
+        # -------------------------------------------------------------
+        # 16. ADIM 8: Satış Fiyatlandırmasının ve Ticari Koşulların Belirlenmesi
+        # -------------------------------------------------------------
+        elif adim_kodu == '8':
+            _gecis('9', 'Fiyatlandırma ve Ticari Koşullar Belirlendi -> Adım 9', 'Adım 8: Fiyatlandırma Tamamlandı',
+                   f"Kâr marjı, ödeme/teslim koşulları ve hedef çarpan hesaplandı. Adım 9'a geçildi. Not: {notlar}",
+                   msg_text="Adım 8 tamamlandı. 9. Adıma (Hedef Çarpan Kontrolü) geçildi.")
 
-                surec.guncel_adim_no = 6
-                surec.durum = 'REVIZYONDA'
-                surec.save()
-                UrunTeklifAdimKaydi.objects.filter(surec=surec, adim__adim_no=6).update(durum='DEVAM_EDIYOR')
-                UrunTeklifAdimKaydi.objects.filter(surec=surec, adim__adim_no__in=[7, 8]).update(durum='BEKLIYOR', karar_sonucu=None)
+        # -------------------------------------------------------------
+        # 17. ADIM 9: Hedef Çarpan ve Kârlılık Uygunluk Kontrolü
+        # -------------------------------------------------------------
+        elif adim_kodu == '9':
+            if aksiyon in ['9A', 'UYGUN_10', 'EVET', 'TAMAMLA']:
+                _gecis('9A', 'Hedef Çarpana ve Kriterlere Uygun (9A)', 'Adım 9: Hedef Çarpana Uygun',
+                       f"Kârlılık ve hedef çarpan kriterleri sağlandı. Adım 9A'ya geçildi. Not: {notlar}",
+                       msg_text="Hedef çarpan ve kârlılık kriterlerine uygun bulundu (Adım 9A).")
+            elif aksiyon in ['9B', 'OZEL_ONAY_9B']:
+                _gecis('9B', 'Hedef Çarpan Dışı / Özel Onay Gerektiren Teklif (9B)', 'Adım 9: Özel Onay Kapsamı',
+                       f"Hedef çarpan altında kaldığından yetki matrisi ilave onayına sevk edildi. Adım 9B'ye geçildi. Not: {notlar}",
+                       msg_type='info', msg_text="Özel yetki matrisi onayı gerektiren durum (Adım 9B).")
+            elif aksiyon in ['9C', 'REVIZYON_9C', 'HAYIR']:
+                _gecis('9C', 'Fiyat ve Koşulların Revizyonu Gerekli (9C)', 'Adım 9: Revizyon Gereksinimi',
+                       f"Kârlılık hedeflerine ulaşılamadığı için revizyon kararı alındı. Adım 9C'ye geçildi. Not: {notlar}",
+                       msg_type='warning', msg_text="Fiyat revizyonu gerekliliği tespit edildi (Adım 9C).")
 
-                UrunTeklifGecmisLog.objects.create(
-                    surec=surec,
-                    islem="Adım 8: Teklif Maliyet Revizyonuna Gönderildi (NOK -> Adım 6)",
-                    detay=f"Maliyet veya karlılık hesaplamaları revizyon için 6. Adıma geri gönderildi. Gerekçe: {notlar}",
-                    yapan=tamamlayan
-                )
-                messages.warning(request, "Maliyet revizyonu için 6. Adıma geri yönlendirildi.")
+        # -------------------------------------------------------------
+        # 18. ADIM 9A: Hedef Çarpana ve Kârlılık Kriterlerine Uygun
+        # -------------------------------------------------------------
+        elif adim_kodu == '9A':
+            _gecis('10', 'Uygunluk Onaylandı -> Adım 10 Teklif Dosyası', 'Adım 9A: Uygunluk Onaylandı',
+                   f"Hedef çarpan uygunluğu ile 10. Adım Teklif Dosyası hazırlığına geçildi. Not: {notlar}",
+                   msg_text="Adım 9A tamamlandı. 10. Adıma (Teklif Dosyası ve Yönetim Onayı) geçildi.")
 
-        # 5. ADIM 11: KARAR KAPISI (Teklifte Güncelleme Yapılacak mı?)
-        elif adim_no == 11:
-            if aksiyon in ['EVET', 'EVET_GUNCELLE', 'GUNCELLE']:
-                adim_kaydi.durum = 'TAMAMLANDI'
-                adim_kaydi.karar_sonucu = 'EVET (Teklifte Güncelleme Yapılacak -> Adım 12)'
-                adim_kaydi.save()
+        # -------------------------------------------------------------
+        # 19. ADIM 9B: Hedef Çarpan Dışı / Özel Onay Gerektiren Teklif
+        # -------------------------------------------------------------
+        elif adim_kodu == '9B':
+            _gecis('10', 'Özel Yetki Onayı ile Uygun -> Adım 10 Teklif Dosyası', 'Adım 9B: Özel Yetki Onayı Alındı',
+                   f"Stratejik gerekçeler ve yetki matrisi onayı ile 10. Adıma aktarıldı. Not: {notlar}",
+                   msg_text="Özel yetki onayı sağlandı. 10. Adıma (Teklif Dosyası) geçildi.")
 
-                surec.guncel_adim_no = 12
-                surec.durum = 'REVIZYONDA'
-                surec.save()
-                UrunTeklifAdimKaydi.objects.filter(surec=surec, adim__adim_no=12).update(durum='DEVAM_EDIYOR')
+        # -------------------------------------------------------------
+        # 20. ADIM 9C: Fiyat ve Koşulların Revizyonu
+        # -------------------------------------------------------------
+        elif adim_kodu == '9C':
+            if aksiyon in ['FIYAT_8', '8']:
+                _gecis('8', 'Fiyatlandırmaya Geri Dönüldü (Adım 8)', 'Adım 9C: Fiyatlandırma Revizyonu',
+                       f"Kâr marjı veya ticari koşul düzeltmesi için 8. Adıma dönüldü. Not: {notlar}",
+                       msg_text="Fiyatlandırma revizyonu için 8. Adıma dönüldü.")
+            elif aksiyon in ['MALIYET_5', '5']:
+                _gecis('5', 'Maliyet Analizine Geri Dönüldü (Adım 5)', 'Adım 9C: Maliyet İyileştirme',
+                       f"Maliyet optimizasyonu için 5. Adıma dönüldü. Not: {notlar}",
+                       msg_text="Maliyet optimizasyonu için 5. Adıma dönüldü.")
+            elif aksiyon in ['RFQ_3B', '3B']:
+                _gecis('3B', 'Müşteri RFQ Kapsamına Geri Dönüldü (Adım 3B)', 'Adım 9C: Kapsam Değişikliği',
+                       f"Talep kapsamı netleştirmesi için 3B Adımına dönüldü. Not: {notlar}",
+                       msg_text="Talep kapsamı netleştirmesi için 3B Adımına dönüldü.")
 
-                UrunTeklifGecmisLog.objects.create(
-                    surec=surec,
-                    islem="Adım 11: Teklif Güncelleme Kararı Alındı (EVET)",
-                    detay=f"Müşteri geri bildirimleri doğrultusunda teklif revizyonu kararlaştırıldı. 12. Adıma (Revize Teklif İletimi) geçildi. Not: {notlar}",
-                    yapan=tamamlayan
-                )
-                messages.info(request, "Teklif güncelleme kararı alındı. Revize teklif için 12. Adıma geçildi.")
+        # -------------------------------------------------------------
+        # 21. ADIM 10: Teklif Dosyasının Nihai Hale Getirilmesi ve Yönetim Onayı
+        # -------------------------------------------------------------
+        elif adim_kodu == '10':
+            _gecis('11', 'Teklif Dosyası Hazırlandı -> Adım 11 Yönetim Nihai Onayı', 'Adım 10: Teklif Dosyası Tamamlandı',
+                   f"Teklif mektubu ve ekleri hazırlandı, yönetim nihai onayına sunuldu. Adım 11'e geçildi. Not: {notlar}",
+                   yeni_durum='YONETIM_ONAYINDA', msg_text="Adım 10 tamamlandı. 11. Adıma (Yönetim Nihai Onayı) geçildi.")
 
-            elif aksiyon in ['HAYIR', 'HAYIR_GUNCELLEME_YOK', 'GUNCELLEME_YOK']:
-                adim_kaydi.durum = 'TAMAMLANDI'
-                adim_kaydi.karar_sonucu = 'HAYIR (Güncelleme Yok -> Doğrudan Adım 13)'
-                adim_kaydi.save()
+        # -------------------------------------------------------------
+        # 22. ADIM 11: Yönetim Nihai Teklif Onayı
+        # -------------------------------------------------------------
+        elif adim_kodu == '11':
+            if aksiyon in ['11A', 'ONAYLANDI_12', 'EVET', 'TAMAMLA']:
+                _gecis('11A', 'Teklif Yönetim Tarafından Onaylandı (11A)', 'Adım 11: Yönetim Onayı Alındı',
+                       f"Teklif Genel Müdürlük / Yönetimce onaylandı. Adım 11A'ya geçildi. Not: {notlar}",
+                       msg_text="Teklif üst yönetim tarafından onaylandı (Adım 11A).")
+            elif aksiyon in ['11B', 'SARTLI_ONAY_11B']:
+                _gecis('11B', 'Şartlı Onay / Revizyon Talebi (11B)', 'Adım 11: Şartlı Onay / Revizyon',
+                       f"Yönetim koşullu onay vererek revizyon istedi. Adım 11B'ye geçildi. Not: {notlar}",
+                       yeni_durum='REVIZYONDA', msg_type='warning',
+                       msg_text="Yönetim şartlı onay vererek revizyon talep etti (Adım 11B).")
+            elif aksiyon in ['11C', 'RET_11C', 'HAYIR']:
+                _gecis('11C', 'Teklif Onaylanmadı (11C)', 'Adım 11: Teklif Onaylanmadı',
+                       f"Yönetim teklifi mevcut haliyle onaylamadı. Adım 11C'ye aktarıldı. Not: {notlar}",
+                       yeni_durum='REVIZYONDA', msg_type='danger',
+                       msg_text="Teklif onaylanmadı (Adım 11C).")
 
-                # 12. Adım pas geçilir, doğrudan 13. Adıma atlanır
-                UrunTeklifAdimKaydi.objects.filter(surec=surec, adim__adim_no=12).update(durum='PAS_GECILDI')
-                surec.guncel_adim_no = 13
-                surec.save()
-                UrunTeklifAdimKaydi.objects.filter(surec=surec, adim__adim_no=13).update(durum='DEVAM_EDIYOR')
+        # -------------------------------------------------------------
+        # 23. ADIM 11A: Teklif Yönetim Tarafından Onaylandı
+        # -------------------------------------------------------------
+        elif adim_kodu == '11A':
+            _gecis('12', 'Yönetim Onayladı -> Adım 12 Müşteriye Sunum', 'Adım 11A: Yönetim Onayı Kesinleşti',
+                   f"Resmi yönetim onayı ile 12. Adım Müşteriye Sunum aşamasına geçildi. Not: {notlar}",
+                   msg_text="Adım 11A tamamlandı. 12. Adıma (Müşteriye Sunum) geçildi.")
 
-                UrunTeklifGecmisLog.objects.create(
-                    surec=surec,
-                    islem="Adım 11: Teklif Güncellemesi Yapılmayacak (HAYIR -> Adım 13)",
-                    detay="Mevcut teklif korunarak 12. Adım pas geçildi ve 13. Adıma geçildi.",
-                    yapan=tamamlayan
-                )
-                messages.success(request, "Teklif güncellemesi yapılmadan doğrudan 13. Adıma ilerlendi.")
+        # -------------------------------------------------------------
+        # 24. ADIM 11B: Şartlı Onay / Revizyon Talebi
+        # -------------------------------------------------------------
+        elif adim_kodu == '11B':
+            if aksiyon in ['FIYAT_8', '8']:
+                _gecis('8', 'Fiyatlandırmaya Geri Dönüldü (Adım 8)', 'Adım 11B: Fiyatlandırma Revizyonu',
+                       f"Yönetim koşulları doğrultusunda 8. Adıma dönüldü. Not: {notlar}",
+                       msg_text="Fiyatlandırma revizyonu için 8. Adıma dönüldü.")
+            elif aksiyon in ['MALIYET_5', '5']:
+                _gecis('5', 'Maliyet Analizine Geri Dönüldü (Adım 5)', 'Adım 11B: Maliyet Revizyonu',
+                       f"Maliyet girdisi revizyonu için 5. Adıma dönüldü. Not: {notlar}",
+                       msg_text="Maliyet analizi revizyonu için 5. Adıma dönüldü.")
+            elif aksiyon in ['DOSYA_10', '10']:
+                _gecis('10', 'Teklif Dosyasına Geri Dönüldü (Adım 10)', 'Adım 11B: Dosya Revizyonu',
+                       f"Mektup / şart revizyonu için 10. Adıma dönüldü. Not: {notlar}",
+                       msg_text="Teklif dosyası düzenlemesi için 10. Adıma dönüldü.")
+            elif aksiyon in ['RFQ_3B', '3B']:
+                _gecis('3B', 'RFQ Adımına Geri Dönüldü (Adım 3B)', 'Adım 11B: Kapsam Revizyonu',
+                       f"Talep kapsamı değişikliği için 3B Adımına dönüldü. Not: {notlar}",
+                       msg_text="Talep kapsamı değişikliği için 3B Adımına dönüldü.")
 
-        # 6. ADIM 15: Süreç Kapanışı ve Öğrenilmiş Dersler (Nihai İstasyon)
-        elif adim_no == 15:
+        # -------------------------------------------------------------
+        # 25. ADIM 11C: Teklif Onaylanmadı
+        # -------------------------------------------------------------
+        elif adim_kodu == '11C':
+            if aksiyon in ['REVIZE_11B', '11B']:
+                _gecis('11B', 'Revizyon Kararı Alındı -> Adım 11B', 'Adım 11C: Revizyon Kararı',
+                       f"Teklif üzerinde yeniden çalışılması kararlaştırıldı. Adım 11B'ye geçildi. Not: {notlar}",
+                       msg_text="Revizyon kararı alındı. Adım 11B'ye geçildi.")
+            elif aksiyon in ['OLUMSUZ_16C', '16C', 'KAPAT']:
+                _gecis('16C', 'Yönetim Reddetti -> 16C Olumsuz Kapatma', 'Adım 11C: Teklif Reddedildi',
+                       f"Yönetim tarafından süreç sonlandırıldı. 16C Adımında olumsuz kapatıldı. Not: {notlar}",
+                       yeni_durum='OLUMSUZ_KAPATILDI', msg_type='warning',
+                       msg_text="Yönetim reddi ile süreç 16C Adımında olumsuz kapatıldı.")
+
+        # -------------------------------------------------------------
+        # 26. ADIM 12: Teklifin Müşteriye Sunulması ve Resmi İletim
+        # -------------------------------------------------------------
+        elif adim_kodu == '12':
+            _gecis('13', 'Teklif Müşteriye İletildi -> Adım 13 Takip', 'Adım 12: Teklif Resmi Olarak İletildi',
+                   f"Teklif dosyası resmi yollarla müşteriye sunuldu. 13. Adım Takip süreci başlatıldı. Not: {notlar}",
+                   yeni_durum='MUSTERIYE_ILETILDI',
+                   msg_text="Adım 12 tamamlandı! Teklif müşteriye iletildi. 13. Adıma geçildi.")
+
+        # -------------------------------------------------------------
+        # 27. ADIM 13: Teklifin Müşteri Nezdinde Takibi ve Değerlendirme Süreci
+        # -------------------------------------------------------------
+        elif adim_kodu == '13':
+            _gecis('14', 'Müşteri Takibi Yapıldı -> Adım 14 Karar Değerlendirme', 'Adım 13: Müşteri Takibi Yapıldı',
+                   f"Müşteri ile iletişim kuruldu, karar aşaması için 14. Adıma geçildi. Not: {notlar}",
+                   msg_text="Adım 13 tamamlandı. 14. Adıma (Müşteri Kararının Değerlendirilmesi) geçildi.")
+
+        # -------------------------------------------------------------
+        # 28. ADIM 14: Müşteri Kararının Alınması ve Değerlendirilmesi
+        # -------------------------------------------------------------
+        elif adim_kodu == '14':
+            if aksiyon in ['14A', 'KABUL_14A', 'EVET']:
+                _gecis('14A', 'Müşteri Teklifi Kabul Etti (14A)', 'Adım 14: Müşteri Teklifi Kabul Etti',
+                       f"Müşteri resmi onay/kabul bildiriminde bulundu. Adım 14A'ya geçildi. Not: {notlar}",
+                       msg_text="Müşteri teklifi kabul etti! (Adım 14A)")
+            elif aksiyon in ['14B', 'REVIZYON_14B']:
+                _gecis('14B', 'Müşteri Revizyon / Karşı Teklif İstedi (14B)', 'Adım 14: Revizyon Talebi Alındı',
+                       f"Müşteri fiyat indirimi veya ticari şart revizyonu talep etti. Adım 14B'ye geçildi. Not: {notlar}",
+                       yeni_durum='REVIZYONDA', msg_type='info',
+                       msg_text="Müşteri revizyon/karşı teklif talep etti (Adım 14B).")
+            elif aksiyon in ['14C', 'RET_14C', 'HAYIR']:
+                _gecis('14C', 'Müşteri Teklifi Reddetti / İptal (14C)', 'Adım 14: Teklif Reddedildi / İptal',
+                       f"Müşteri teklifi reddetti veya proje iptal edildi. Adım 14C'ye geçildi. Not: {notlar}",
+                       yeni_durum='OLUMSUZ_KAPATILDI', msg_type='warning',
+                       msg_text="Müşteri teklifi reddetti veya proje iptal edildi (Adım 14C).")
+            elif aksiyon in ['14D', 'BEKLIYOR_14D']:
+                _gecis('14D', 'Müşteri Kararı Bekleniyor (14D)', 'Adım 14: Müşteri Kararı Bekleniyor',
+                       f"Müşteri değerlendirmesi devam ediyor. Adım 14D'ye geçildi. Not: {notlar}",
+                       msg_type='info', msg_text="Müşteri kararı bekleniyor (Adım 14D).")
+            else:
+                _gecis('16', 'Tamamlandı', 'Adım 14: Tamamlandı', f"Müşteri kararı işlendi. Not: {notlar}")
+
+        # -------------------------------------------------------------
+        # 29. ADIM 14A: Müşteri Teklifi Kabul Etti
+        # -------------------------------------------------------------
+        elif adim_kodu == '14A':
+            if aksiyon in ['FIYAT_KAPAT_16A', '16A']:
+                _gecis('16A', 'Fiyat Revizyonu Kapanışına Geçildi -> Adım 16A', 'Adım 14A: Fiyat Revizyonu Kapanışı',
+                       f"Fiyat revizyon kabulü kesinleşti. Adım 16A Kapanışına geçildi. Not: {notlar}",
+                       msg_text="Fiyat revizyon kapanışı için 16A Adımına geçildi.")
+            elif aksiyon in ['DEVREYE_ALMA_16B', '16B']:
+                _gecis('16B', 'Yeni Proje Devreye Alma Devrine Geçildi -> Adım 16B', 'Adım 14A: Devreye Alma Devri',
+                       f"Yeni parça kabulü kesinleşti. Adım 16B Devreye Alma Devrine geçildi. Not: {notlar}",
+                       msg_text="Yeni ürün devreye alma devri için 16B Adımına geçildi.")
+            else:
+                _gecis('16', 'Kabul Kesinleşti -> Adım 16 Sonuçlandırma', 'Adım 14A: Kabul Onaylandı',
+                       f"Kabul bildirimi ile 16. Adım Sonuçlandırma ve Devir aşamasına geçildi. Not: {notlar}",
+                       msg_text="Adım 14A tamamlandı. 16. Adıma geçildi.")
+
+        # -------------------------------------------------------------
+        # 30. ADIM 14B: Müşteri Revizyon / Karşı Teklif / İndirim Talep Etti
+        # -------------------------------------------------------------
+        elif adim_kodu == '14B':
+            _gecis('15', 'Revizyon Talebi Alındı -> Adım 15 Müzakere Değerlendirmesi', 'Adım 14B: Müzakere Başlatıldı',
+                   f"Müşteri revizyon talebi 15. Adım Müzakere Değerlendirmesine aktarıldı. Not: {notlar}",
+                   yeni_durum='REVIZYONDA', msg_text="Adım 14B tamamlandı. 15. Adıma (Revizyon Değerlendirmesi) geçildi.")
+
+        # -------------------------------------------------------------
+        # 31. ADIM 14C: Müşteri Teklifi Reddetti / Proje İptal Edildi
+        # -------------------------------------------------------------
+        elif adim_kodu == '14C':
+            _gecis('16C', 'Ret / İptal Bildirildi -> 16C Olumsuz Kapatma', 'Adım 14C: Ret / İptal Süreci',
+                   f"Ret gerekçesi kaydedilerek 16C Adımına aktarıldı. Not: {notlar}",
+                   yeni_durum='OLUMSUZ_KAPATILDI', msg_type='warning',
+                   msg_text="Müşteri ret gerekçesiyle süreç 16C Adımına aktarıldı.")
+
+        # -------------------------------------------------------------
+        # 32. ADIM 14D: Müşteri Kararı Bekleniyor / Süreç Devam Ediyor
+        # -------------------------------------------------------------
+        elif adim_kodu == '14D':
+            if aksiyon in ['TAKIP_13', '13']:
+                _gecis('13', 'Takibe Devam Ediliyor (Adım 13)', 'Adım 14D: Takip Periyodu Uzatıldı',
+                       f"Müşteri karar süresi uzadığından 13. Adıma dönüldü. Not: {notlar}",
+                       msg_text="Müşteri takibine devam etmek üzere 13. Adıma dönüldü.")
+            elif aksiyon in ['KAPSAM_5', '5']:
+                _gecis('5', 'Teknik Değişiklik Talebi (Adım 5)', 'Adım 14D: Kapsam Değişikliği',
+                       f"Müşteri teknik şartları değiştirdiği için 5. Adıma dönüldü. Not: {notlar}",
+                       msg_text="Kapsam değişikliği için 5. Adıma dönüldü.")
+            elif aksiyon in ['OLUMSUZ_16C', '16C', 'KAPAT']:
+                _gecis('16C', 'Zaman Aşımı / İptal -> 16C Olumsuz Kapatma', 'Adım 14D: Zaman Aşımı Kapatma',
+                       f"Süreç zaman aşımına uğradığından 16C Adımında olumsuz kapatıldı. Not: {notlar}",
+                       yeni_durum='OLUMSUZ_KAPATILDI', msg_type='warning',
+                       msg_text="Zaman aşımı sebebiyle süreç 16C Adımında kapatıldı.")
+
+        # -------------------------------------------------------------
+        # 33. ADIM 15: Revizyon / Müzakere Taleplerinin Değerlendirilmesi ve Karar
+        # -------------------------------------------------------------
+        elif adim_kodu == '15':
+            if aksiyon in ['15A', 'YETKI_DAHILI_15A', 'EVET']:
+                _gecis('15A', 'Revizyon Talebi Yetki Sınırları İçinde (15A)', 'Adım 15: Yetki Sınırları İçinde Kabul',
+                       f"Müzakere talebi mevcut yetki marjları dahilinde onaylandı. Adım 15A'ya geçildi. Not: {notlar}",
+                       msg_text="Revizyon talebi yetki sınırları içinde kabul edildi (Adım 15A).")
+            elif aksiyon in ['15B', 'YONETIM_ONAYI_15B']:
+                _gecis('15B', 'Yeniden Yönetim Onayı Gerektiriyor (15B)', 'Adım 15: Yönetim Onayına Sevk Edildi',
+                       f"Yetki marjını aştığı için üst yönetim onayına sevk edildi. Adım 15B'ye geçildi. Not: {notlar}",
+                       yeni_durum='YONETIM_ONAYINDA', msg_type='info',
+                       msg_text="Revizyon yeniden yönetim onayı gerektiriyor (Adım 15B).")
+            elif aksiyon in ['15C', 'KARSILANAMAZ_15C', 'HAYIR']:
+                _gecis('15C', 'Talepler Karşılanamıyor / Müzakere Sonlandırıldı (15C)', 'Adım 15: Müzakere Sonlandırıldı',
+                       f"Müşteri talepleri karşılanamadığı için müzakere tıkandı. Adım 15C'ye geçildi. Not: {notlar}",
+                       msg_type='warning', msg_text="Müşteri talepleri karşılanamıyor (Adım 15C).")
+
+        # -------------------------------------------------------------
+        # 34. ADIM 15A: Revizyon Talebi Yetki Sınırları İçinde / Kabul Edilebilir
+        # -------------------------------------------------------------
+        elif adim_kodu == '15A':
+            if aksiyon in ['SUN_12', '12']:
+                _gecis('12', 'Revize Teklif Müşteriye Sunuldu (Adım 12)', 'Adım 15A: Revize Teklif İletildi',
+                       f"Revize teklif mektubu 12. Adımda müşteriye sunuldu. Not: {notlar}",
+                       yeni_durum='MUSTERIYE_ILETILDI',
+                       msg_text="Revize teklif müşteriye sunulmak üzere 12. Adıma aktarıldı.")
+            elif aksiyon in ['DOSYA_10', '10']:
+                _gecis('10', 'Teklif Dosyası Güncellendi (Adım 10)', 'Adım 15A: Dosya Güncellemesi',
+                       f"Dosya revizyonu için 10. Adıma aktarıldı. Not: {notlar}",
+                       msg_text="Teklif dosyasını güncellemek için 10. Adıma dönüldü.")
+
+        # -------------------------------------------------------------
+        # 35. ADIM 15B: Revizyon Talebi Yeniden Yönetim Onayı Gerektiriyor
+        # -------------------------------------------------------------
+        elif adim_kodu == '15B':
+            if aksiyon in ['FIYAT_8', '8']:
+                _gecis('8', 'Fiyatlandırmaya Geri Dönüldü (Adım 8)', 'Adım 15B: Fiyatlandırma Revizyonu',
+                       f"Fiyat yapısı revizyonu için 8. Adıma dönüldü. Not: {notlar}",
+                       msg_text="Fiyat revizyonu için 8. Adıma dönüldü.")
+            elif aksiyon in ['MALIYET_5', '5']:
+                _gecis('5', 'Maliyet Analizine Geri Dönüldü (Adım 5)', 'Adım 15B: Maliyet Revizyonu',
+                       f"Maliyet optimizasyonu için 5. Adıma dönüldü. Not: {notlar}",
+                       msg_text="Maliyet analizi için 5. Adıma dönüldü.")
+            elif aksiyon in ['RFQ_3B', '3B']:
+                _gecis('3B', 'RFQ Kapsamına Geri Dönüldü (Adım 3B)', 'Adım 15B: Kapsam Revizyonu',
+                       f"Talep kapsamı revizyonu için 3B Adımına dönüldü. Not: {notlar}",
+                       msg_text="Talep kapsamı için 3B Adımına dönüldü.")
+            elif aksiyon in ['SUN_12', '12']:
+                _gecis('12', 'Yönetim Onayladı -> Adım 12 Müşteriye Sunum', 'Adım 15B: Yönetim Onayladı',
+                       f"Yönetim revizyonu onayladı, 12. Adımda müşteriye sunuldu. Not: {notlar}",
+                       yeni_durum='MUSTERIYE_ILETILDI',
+                       msg_text="Yönetim onayı ile revize teklif müşteriye sunulmak üzere 12. Adıma aktarıldı.")
+
+        # -------------------------------------------------------------
+        # 36. ADIM 15C: Müşteri Talepleri Karşılanamıyor / Müzakere Sonlandırıldı
+        # -------------------------------------------------------------
+        elif adim_kodu == '15C':
+            if aksiyon in ['YONETIM_15B', '15B']:
+                _gecis('15B', 'Yeniden Yönetim Görüşüne İletildi (Adım 15B)', 'Adım 15C: Yönetim Görüşü',
+                       f"Son kez yönetim değerlendirmesi için 15B Adımına aktarıldı. Not: {notlar}",
+                       msg_text="Son değerlendirme için 15B Adımına sevk edildi.")
+            elif aksiyon in ['MUSTERI_13', '13']:
+                _gecis('13', 'Müşteri ile Müzakereye Devam (Adım 13)', 'Adım 15C: Müzakereye Devam',
+                       f"Alternatif teklif için müşteri iletişimine 13. Adımda devam edildi. Not: {notlar}",
+                       msg_text="Müşteri görüşmelerine devam için 13. Adıma dönüldü.")
+            elif aksiyon in ['RET_14C', 'OLUMSUZ_16C', '16C', 'KAPAT']:
+                _gecis('16C', 'Müzakere Tıkandı -> 16C Olumsuz Kapatma', 'Adım 15C: Müzakere Başarısız Kapatma',
+                       f"Karşılıklı mutabakat sağlanamadı. 16C Adımında olumsuz kapatıldı. Not: {notlar}",
+                       yeni_durum='OLUMSUZ_KAPATILDI', msg_type='warning',
+                       msg_text="Müzakere sağlanamadığından süreç 16C Adımında olumsuz kapatıldı.")
+
+        # -------------------------------------------------------------
+        # 37. ADIM 16: Teklif Sürecinin Sonuçlandırılması ve Devir
+        # -------------------------------------------------------------
+        elif adim_kodu == '16':
+            if aksiyon in ['16A', 'FIYAT_KAPAT_16A']:
+                _gecis('16A', 'Fiyat Revizyonu Kapanışına Geçildi (16A)', 'Adım 16: Fiyat Revizyonu Kapanışı',
+                       f"Fiyat revizyon kapatma işlemleri için 16A Adımına geçildi. Not: {notlar}",
+                       msg_text="Fiyat revizyon kapanışı için 16A Adımına geçildi.")
+            elif aksiyon in ['16B', 'DEVREYE_ALMA_16B']:
+                _gecis('16B', 'Devreye Alma Devir Kapanışına Geçildi (16B)', 'Adım 16: Devreye Alma Devri',
+                       f"Yeni ürün devreye alma devri için 16B Adımına geçildi. Not: {notlar}",
+                       msg_text="Yeni ürün devreye alma devri için 16B Adımına geçildi.")
+            elif aksiyon in ['16C', 'OLUMSUZ_16C']:
+                _gecis('16C', 'Olumsuz Kapanışa Geçildi (16C)', 'Adım 16: Olumsuz Kapanış',
+                       f"Olumsuz kapanış işlemleri için 16C Adımına geçildi. Not: {notlar}",
+                       yeni_durum='OLUMSUZ_KAPATILDI', msg_type='warning',
+                       msg_text="Olumsuz kapanış için 16C Adımına geçildi.")
+            else:
+                _gecis('16B', 'Tamamlandı -> 16B Devir', 'Adım 16: Tamamlandı', f"Teklif sonuçlandırıldı. Not: {notlar}")
+
+        # -------------------------------------------------------------
+        # 38. ADIM 16A: Fiyat Revizyonu Kapanışı ve Sistem Kaydı
+        # -------------------------------------------------------------
+        elif adim_kodu == '16A':
             adim_kaydi.durum = 'TAMAMLANDI'
-            adim_kaydi.karar_sonucu = 'Süreç Başarıyla Tamamlandı & Öğrenilmiş Dersler Paylaşıldı'
+            adim_kaydi.karar_sonucu = 'Fiyat Revizyonu Başarıyla Tamamlandı ve Sistemde Güncellendi'
+            adim_kaydi.tamamlanma_tarihi = timezone.now()
             adim_kaydi.save()
 
             surec.durum = 'BASARIYLA_TAMAMLANDI'
-            surec.guncel_adim_no = 15
+            surec.guncel_adim_kodu = '16A'
+            surec.guncel_adim_no = 16
             surec.save()
 
             UrunTeklifGecmisLog.objects.create(
                 surec=surec,
-                islem="Ürün Teklif Süreci Başarıyla Tamamlandı",
-                detay=f"15 adımlık ürün teklif süreci başarıyla tamamlandı. Öğrenilmiş dersler modülüne aktarıldı. Kapanış Notu: {notlar}",
+                islem="Fiyat Revizyonu Süreci Başarıyla Kapatıldı",
+                detay=f"Fiyat revizyonu tamamlandı, ERP/Netsis sistemlerine fiyatlar işlendi ve süreç başarıyla arşivlendi. Kapanış Notu: {notlar}",
                 yapan=tamamlayan
             )
-            messages.success(request, "Ürün Teklif Süreci başarıyla tamamlandı ve arşivlendi.")
+            messages.success(request, "Tebrikler! Fiyat Revizyonu Süreci başarıyla tamamlandı ve arşivlendi.")
 
-    return redirect(f"{redirect('urun_teklif_detay', pk=surec.pk).url}#adim-{surec.guncel_adim_no}")
+        # -------------------------------------------------------------
+        # 39. ADIM 16B: Yeni Proje / Parça Teklifi Kabul Kapanışı ve Devreye Alma Sürecine Devir
+        # -------------------------------------------------------------
+        elif adim_kodu == '16B':
+            adim_kaydi.durum = 'TAMAMLANDI'
+            adim_kaydi.karar_sonucu = 'Teklif Kabul Edildi ve Yeni Ürün Devreye Alma Sürecine Devredildi'
+            adim_kaydi.tamamlanma_tarihi = timezone.now()
+            adim_kaydi.save()
+
+            surec.durum = 'BASARIYLA_TAMAMLANDI'
+            surec.guncel_adim_kodu = '16B'
+            surec.guncel_adim_no = 16
+            surec.save()
+
+            UrunTeklifGecmisLog.objects.create(
+                surec=surec,
+                islem="Teklif Süreci Başarıyla Tamamlandı & APQP Devri Yapıldı",
+                detay=f"Teklif müşteri tarafından kabul edildi, proje devir toplantısı yapıldı ve APQP/Devreye Alma sürecine devredildi. Kapanış Notu: {notlar}",
+                yapan=tamamlayan
+            )
+            messages.success(request, "Tebrikler! Yeni Ürün Teklifi başarıyla tamamlandı ve Devreye Alma Sürecine devredildi.")
+
+        # -------------------------------------------------------------
+        # 40. ADIM 16C: Teklif Sürecinin Olumsuz Kapanışı, Raporlama ve Öğrenilmiş Dersler
+        # -------------------------------------------------------------
+        elif adim_kodu == '16C':
+            adim_kaydi.durum = 'TAMAMLANDI'
+            adim_kaydi.karar_sonucu = 'Teklif Süreci Olumsuz Kapatıldı & Öğrenilmiş Dersler Kaydedildi'
+            adim_kaydi.tamamlanma_tarihi = timezone.now()
+            adim_kaydi.save()
+
+            surec.durum = 'OLUMSUZ_KAPATILDI'
+            surec.guncel_adim_kodu = '16C'
+            surec.guncel_adim_no = 16
+            surec.save()
+
+            UrunTeklifGecmisLog.objects.create(
+                surec=surec,
+                islem="Teklif Süreci Olumsuz Olarak Kapatıldı",
+                detay=f"Teklif süreci olumsuz sonuçlandı. Kayıp analiz raporu oluşturuldu ve öğrenilmiş dersler sistemine işlendi. Kapanış Notu: {notlar}",
+                yapan=tamamlayan
+            )
+            messages.warning(request, "Ürün Teklif Süreci olumsuz sonuçlanarak kapatıldı ve arşivlendi.")
+
+        # -------------------------------------------------------------
+        # DİĞER / GENEL FALLBACK ADIMLAR
+        # -------------------------------------------------------------
+        else:
+            adim_kaydi.durum = 'TAMAMLANDI'
+            adim_kaydi.karar_sonucu = 'Tamamlandı'
+            adim_kaydi.tamamlanma_tarihi = timezone.now()
+            adim_kaydi.save()
+
+            next_adim = UrunTeklifAdimTanimi.objects.filter(sira_no__gt=adim_kaydi.adim.sira_no).first()
+            if next_adim:
+                _gecis(next_adim.adim_kodu, 'Tamamlandı', f"Adım {adim_kodu} Tamamlandı", f"{adim_kaydi.adim.baslik} tamamlandı. {next_adim.adim_kodu} Adımına geçildi.", msg_text=f"Adım {adim_kodu} tamamlandı.")
+            else:
+                surec.durum = 'BASARIYLA_TAMAMLANDI'
+                surec.save()
+                messages.success(request, f"Adım {adim_kodu} tamamlandı.")
+
+    return redirect(f"{redirect('urun_teklif_detay', pk=surec.pk).url}#adim-{surec.guncel_adim_kodu}")
 
 
 def urun_teklif_sil(request, pk):
@@ -1662,13 +2079,14 @@ def sozlesme_sureci_liste(request):
         'fabrikalar': PazarlamaProjesi.FABRIKA_CHOICES,
         'sozlesme_tipleri': SozlesmeSureci.SOZLESME_TIPI_CHOICES,
         'durum_listesi': SozlesmeSureci.DURUM_CHOICES,
+        'master_adimlar': SozlesmeAdimTanimi.objects.all().order_by('adim_no'),
     }
     return render(request, 'crm_takip/sozlesme_sureci_liste.html', context)
 
 
 def sozlesme_sureci_olustur(request):
     """
-    Yeni Sözleşme Değerlendirme Süreci Başlatma (15 Standart Adım)
+    Yeni Sözleşme Değerlendirme Süreci Başlatma (9 Standart Adım)
     """
     if request.method == 'POST':
         kod = request.POST.get('kod', '').strip()
@@ -1742,7 +2160,7 @@ def sozlesme_sureci_olustur(request):
             messages.error(request, f"Sözleşme değerlendirme süreci oluşturulurken hata: {str(e)}")
             return redirect('sozlesme_sureci_liste')
 
-        # 15 Standart Adım Kaydı Oluşturulması
+        # 9 Standart Adım Kaydı Oluşturulması
         master_adimlar = SozlesmeAdimTanimi.objects.all().order_by('adim_no')
         for adim in master_adimlar:
             durum = 'DEVAM_EDIYOR' if adim.adim_no == 1 else 'BEKLIYOR'
@@ -1758,7 +2176,7 @@ def sozlesme_sureci_olustur(request):
         SozlesmeGecmisLog.objects.create(
             surec=surec,
             islem="Sözleşme Değerlendirme Süreci Başlatıldı",
-            detay=f"15 adımlık standart sözleşme değerlendirme iş akışı başlatıldı. Sözleşme Tipi: {surec.get_sozlesme_tipi_display()}, Fabrika: {ilgili_fabrika}.",
+            detay=f"9 adımlık standart sözleşme değerlendirme iş akışı başlatıldı. Sözleşme Tipi: {surec.get_sozlesme_tipi_display()}, Fabrika: {ilgili_fabrika}.",
             yapan=sorumlu_satis_uzmani
         )
 
@@ -1770,17 +2188,17 @@ def sozlesme_sureci_olustur(request):
 
 def sozlesme_sureci_detay(request, pk):
     """
-    15 Adımlık İnteraktif Sözleşme Değerlendirme Süreci Detay ve Karar Ekranı
+    9 Adımlık İnteraktif Sözleşme Değerlendirme Süreci Detay ve Karar Ekranı (Minimalist Standart)
     """
     surec = get_object_or_404(SozlesmeSureci, pk=pk)
     adim_kayitlari = surec.adim_kayitlari.select_related('adim').order_by('adim__adim_no')
 
-    # Fazlara göre gruplama
+    # Fazlara göre gruplama (9 Adım)
     faz_tanimlari = [
-        ('FAZ1', 'Faz 1: Sözleşme Kabulü, Hukuki İnceleme & Uygunluk (Adım 1-4)'),
-        ('FAZ2', 'Faz 2: Şartlar, Risk Değerlendirmesi & Yönetim Onayı (Adım 5-8)'),
-        ('FAZ3', 'Faz 3: Müşteri Bilgilendirmesi, Müzakere & Karşılıklı İmza (Adım 9-12)'),
-        ('FAZ4', 'Faz 4: EYS Entegrasyonu, Kapanış & Öğrenilmiş Dersler (Adım 13-15)'),
+        ('FAZ1', 'Faz 1: Talep Kaydı & İnceleme (Adım 1-3)'),
+        ('FAZ2', 'Faz 2: Değerlendirme & Yetkili Makam Kararı (Adım 4-5)'),
+        ('FAZ3', 'Faz 3: Müşteri Müzakeresi & Mutabakat Kontrolü (Adım 6-7)'),
+        ('FAZ4', 'Faz 4: Yetkili İmza & Yürürlük Takibi (Adım 8-9)'),
     ]
 
     fazlar = []
@@ -1793,12 +2211,14 @@ def sozlesme_sureci_detay(request, pk):
                 'adimlar': faz_adimlari
             })
 
+    master_adimlar = SozlesmeAdimTanimi.objects.all().order_by('adim_no')
     tarihce = surec.tarihce_kayitlari.all().order_by('-tarih')
 
     context = {
         'surec': surec,
         'adim_kayitlari': adim_kayitlari,
         'fazlar': fazlar,
+        'master_adimlar': master_adimlar,
         'tarihce': tarihce,
     }
     return render(request, 'crm_takip/sozlesme_sureci_detay.html', context)
@@ -1806,14 +2226,14 @@ def sozlesme_sureci_detay(request, pk):
 
 def sozlesme_sureci_adim_aksiyon(request, pk, adim_id):
     """
-    15 Adımlık Sözleşme Süreci Adım Tamamlama ve Karar Kapısı Aksiyon Motoru
+    9 Adımlık Sözleşme Süreci Adım Tamamlama ve Karar Kapısı Aksiyon Motoru
     """
     surec = get_object_or_404(SozlesmeSureci, pk=pk)
     adim_kaydi = get_object_or_404(SozlesmeAdimKaydi, pk=adim_id, surec=surec)
     adim_no = adim_kaydi.adim.adim_no
 
     if request.method == 'POST':
-        aksiyon = request.POST.get('aksiyon', 'TAMAMLA')
+        aksiyon = request.POST.get('aksiyon', 'TAMAMLA').strip().upper()
         notlar = request.POST.get('notlar', '').strip()
         tamamlayan = request.POST.get('tamamlayan', 'Satış Uzmanı').strip() or 'Satış Uzmanı'
 
@@ -1834,218 +2254,318 @@ def sozlesme_sureci_adim_aksiyon(request, pk, adim_id):
                 detay=f"Sözleşme adım değerlendirme notları güncellendi. Not: {notlar or 'Girilmedi.'}",
                 yapan=tamamlayan
             )
-            messages.success(request, f"Adım {adim_no} not ve değerlendirme bilgileri başarıyla kaydedildi.")
+            messages.success(request, f"Adım {adim_no} not ve değerlendirme bilgileri kaydedildi.")
             return redirect(f"{redirect('sozlesme_sureci_detay', pk=surec.pk).url}#adim-{adim_no}")
 
         now = timezone.now()
         adim_kaydi.tamamlanma_tarihi = now
 
-        # 1. STANDART İLERLEME ADIMLARI (Adım 1, 2, 3, 5, 6, 9, 11, 12, 13, 14)
-        if adim_no in [1, 2, 3, 5, 6, 9, 11, 12, 13, 14]:
+        # -------------------------------------------------------------
+        # 1. ADIM 1: Talebin Kaydı ve İnceleme Planının Oluşturulması
+        # -------------------------------------------------------------
+        if adim_no == 1:
             adim_kaydi.durum = 'TAMAMLANDI'
-            adim_kaydi.karar_sonucu = 'Tamamlandı'
+            adim_kaydi.karar_sonucu = 'Kayıt Açıldı & İnceleme Planı Oluşturuldu (Adım 2 ve Adım 3 Paralel Başlatıldı)'
             adim_kaydi.save()
 
-            sonraki_adim_no = adim_no + 1
-            surec.guncel_adim_no = sonraki_adim_no
-
-            if adim_no == 3:
-                surec.durum = 'HUKUKI_INCELEMEDE'
-            elif adim_no == 9:
-                surec.durum = 'MUSTERI_MUZAKERESINDE'
-            elif adim_no == 11:
-                surec.durum = 'DEVAM_EDIYOR'
-
+            # Adım 2 ve 3 paralel olarak DEVAM_EDIYOR durumuna geçer
+            SozlesmeAdimKaydi.objects.filter(surec=surec, adim__adim_no__in=[2, 3]).update(durum='DEVAM_EDIYOR')
+            surec.guncel_adim_no = 2
+            surec.durum = 'DEVAM_EDIYOR'
             surec.save()
-
-            sonraki_adim_kaydi = SozlesmeAdimKaydi.objects.filter(surec=surec, adim__adim_no=sonraki_adim_no).first()
-            if sonraki_adim_kaydi:
-                sonraki_adim_kaydi.durum = 'DEVAM_EDIYOR'
-                sonraki_adim_kaydi.save()
 
             SozlesmeGecmisLog.objects.create(
                 surec=surec,
-                islem=f"Adım {adim_no} Tamamlandı",
-                detay=f"{adim_kaydi.adim.baslik} tamamlandı. {sonraki_adim_no}. Adıma geçildi.",
+                islem="Adım 1: Talebin Kaydı ve İnceleme Planı Tamamlandı",
+                detay="Sözleşme takip kaydı açıldı, ekler kontrol edildi. Atanan Birimler (Adım 2) ve Şirket Hukuk Danışmanı (Adım 3) paralel incelemeye aktarıldı.",
                 yapan=tamamlayan
             )
-            messages.success(request, f"Adım {adim_no} başarıyla tamamlandı. Süreç Adım {sonraki_adim_no}'e geçti.")
+            messages.success(request, "1. Adım tamamlandı! Atanan Birimler İncelemesi (Adım 2) ve Hukuk Danışmanı İncelemesi (Adım 3) paralel olarak başlatıldı.")
 
-        # 2. ADIM 4: KARAR KAPISI (Hukuki Görüş ve Sözleşme Uygunluğu)
-        elif adim_no == 4:
-            if aksiyon in ['OK', 'EVET', 'UYGUN', 'ONAYLA']:
-                adim_kaydi.durum = 'TAMAMLANDI'
-                adim_kaydi.karar_sonucu = 'OK (Sözleşme Hukuki Olarak Uygun -> Adım 5)'
-                adim_kaydi.save()
+        # -------------------------------------------------------------
+        # 2. ADIM 2: Atanan Birimlerin İncelemesi
+        # -------------------------------------------------------------
+        elif adim_no == 2:
+            adim_kaydi.durum = 'TAMAMLANDI'
+            adim_kaydi.karar_sonucu = 'Atanan Birim İncelemeleri Dochuman Üzerinde Tamamlandı'
+            adim_kaydi.save()
 
-                surec.guncel_adim_no = 5
+            # Adım 3'ün durumunu kontrol et
+            adim3_kaydi = SozlesmeAdimKaydi.objects.filter(surec=surec, adim__adim_no=3).first()
+            adim3_tamam = adim3_kaydi and adim3_kaydi.durum in ['TAMAMLANDI', 'PAS_GECILDI']
+
+            if adim3_tamam:
+                # İkisi de bitti -> Adım 4'e geçilir
+                surec.guncel_adim_no = 4
                 surec.save()
-                SozlesmeAdimKaydi.objects.filter(surec=surec, adim__adim_no=5).update(durum='DEVAM_EDIYOR')
+                SozlesmeAdimKaydi.objects.filter(surec=surec, adim__adim_no=4).update(durum='DEVAM_EDIYOR')
+                messages.success(request, "2. Adım tamamlandı! Hukuk incelemesi de hazır olduğundan 4. Adıma (Görüşlerin Birleştirilmesi) geçildi.")
+            else:
+                surec.guncel_adim_no = 3
+                surec.save()
+                messages.info(request, "2. Adım (Birim İncelemeleri) tamamlandı. 3. Adım (Hukuk Danışmanı İncelemesi) bekleniyor.")
 
-                SozlesmeGecmisLog.objects.create(
-                    surec=surec,
-                    islem="Adım 4: Sözleşme Hukuki Olarak Uygun Bulundu (OK)",
-                    detay=f"Sözleşme mevzuat ve şartlar açısından uygun bulundu. 5. Adıma geçildi. Not: {notlar}",
-                    yapan=tamamlayan
-                )
-                messages.success(request, "Sözleşme hukuki olarak uygun bulundu! 5. Adıma geçildi.")
+            SozlesmeGecmisLog.objects.create(
+                surec=surec,
+                islem="Adım 2: Atanan Birimlerin İncelemesi Tamamlandı",
+                detay=f"Sözleşme maddeleri ilgili birimlerce değerlendirildi. Not: {notlar}",
+                yapan=tamamlayan
+            )
 
-            elif aksiyon in ['NOK', 'HAYIR', 'UYGUNSUZ', 'MUZAKERE']:
+        # -------------------------------------------------------------
+        # 3. ADIM 3: Şirket Hukuk Danışmanı İncelemesi
+        # -------------------------------------------------------------
+        elif adim_no == 3:
+            adim_kaydi.durum = 'TAMAMLANDI'
+            adim_kaydi.karar_sonucu = 'Yazılı Hukuk Görüşü ve Revizyonlar Dochuman Kaydına Eklendi'
+            adim_kaydi.save()
+
+            # Adım 2'nin durumunu kontrol et
+            adim2_kaydi = SozlesmeAdimKaydi.objects.filter(surec=surec, adim__adim_no=2).first()
+            adim2_tamam = adim2_kaydi and adim2_kaydi.durum in ['TAMAMLANDI', 'PAS_GECILDI']
+
+            if adim2_tamam:
+                # İkisi de bitti -> Adım 4'e geçilir
+                surec.guncel_adim_no = 4
+                surec.save()
+                SozlesmeAdimKaydi.objects.filter(surec=surec, adim__adim_no=4).update(durum='DEVAM_EDIYOR')
+                messages.success(request, "3. Adım tamamlandı! Birim incelemeleri de hazır olduğundan 4. Adıma (Görüşlerin Birleştirilmesi) geçildi.")
+            else:
+                surec.guncel_adim_no = 2
+                surec.save()
+                messages.info(request, "3. Adım (Hukuk İncelemesi) tamamlandı. 2. Adım (Birim İncelemeleri) bekleniyor.")
+
+            SozlesmeGecmisLog.objects.create(
+                surec=surec,
+                islem="Adım 3: Şirket Hukuk Danışmanı İncelemesi Tamamlandı",
+                detay=f"Hukuki görüş ve revizyonlu taslak sisteme yüklendi. Not: {notlar}",
+                yapan=tamamlayan
+            )
+
+        # -------------------------------------------------------------
+        # 4. ADIM 4: Görüşlerin Birleştirilmesi ve Risk Değerlendirmesi
+        # -------------------------------------------------------------
+        elif adim_no == 4:
+            adim_kaydi.durum = 'TAMAMLANDI'
+            adim_kaydi.karar_sonucu = 'Birim & Hukuk Görüşleri Birleştirildi, Kritik Sapmalar Belirlendi'
+            adim_kaydi.save()
+
+            surec.guncel_adim_no = 5
+            surec.durum = 'YONETIM_ONAYINDA'
+            surec.save()
+
+            SozlesmeAdimKaydi.objects.filter(surec=surec, adim__adim_no=5).update(durum='DEVAM_EDIYOR')
+
+            SozlesmeGecmisLog.objects.create(
+                surec=surec,
+                islem="Adım 4: Görüşlerin Birleştirilmesi ve Risk Değerlendirmesi Tamamlandı",
+                detay=f"Tüm iç değerlendirmeler tek bir ana kayıtta konsolide edildi. 5. Adıma (Yetkili Makam Kararı) aktarıldı. Not: {notlar}",
+                yapan=tamamlayan
+            )
+            messages.success(request, "4. Adım tamamlandı! Riskler birleştirildi ve 5. Adım (Yetkili Makam Kararı) aşamasına sunuldu.")
+
+        # -------------------------------------------------------------
+        # 5. ADIM 5: Kritik Sapma ve Yetkili Makam Kararı (KARAR KAPISI)
+        # -------------------------------------------------------------
+        elif adim_no == 5:
+            if aksiyon in ['ONAY', 'SAPMA_YOK', 'ONAYLANDI', 'DEVAM', 'TAMAMLA']:
                 adim_kaydi.durum = 'TAMAMLANDI'
-                adim_kaydi.karar_sonucu = 'NOK (Uygunsuzluk / Riskli Maddeler -> Doğrudan Adım 9 Müşteri Bilgilendirmesi)'
+                adim_kaydi.karar_sonucu = 'Kritik Sapma Yok / Sapma Yetkili Makamca Onaylandı -> Adım 6'
                 adim_kaydi.save()
 
-                # 5, 6, 7, 8 adımlar pas geçilip doğrudan 9. adıma yönlendirilir
-                SozlesmeAdimKaydi.objects.filter(surec=surec, adim__adim_no__in=[5, 6, 7, 8]).update(durum='PAS_GECILDI')
-                surec.guncel_adim_no = 9
+                surec.guncel_adim_no = 6
                 surec.durum = 'MUSTERI_MUZAKERESINDE'
                 surec.save()
-                SozlesmeAdimKaydi.objects.filter(surec=surec, adim__adim_no=9).update(durum='DEVAM_EDIYOR')
+
+                SozlesmeAdimKaydi.objects.filter(surec=surec, adim__adim_no=6).update(durum='DEVAM_EDIYOR')
 
                 SozlesmeGecmisLog.objects.create(
                     surec=surec,
-                    islem="Adım 4: Hukuki Uygunsuzluk Sebebiyle Müşteri Müzakeresine Yönlendirildi (NOK -> Adım 9)",
-                    detay=f"Sözleşme maddelerinde hukuki çekince veya uygunsuzluk tespit edildi. Müzakere için doğrudan 9. Adıma aktarıldı. Gerekçe: {notlar}",
+                    islem="Adım 5: Yetkili Makam Onayı Alındı (Sapma Yok / Onaylandı)",
+                    detay=f"Sözleşme şartları ve sapmalar yetkili makamca onaylandı. Teleset müzakere pozisyonu için 6. Adıma geçildi. Not: {notlar}",
                     yapan=tamamlayan
                 )
-                messages.warning(request, "Hukuki çekinceler nedeniyle süreç doğrudan 9. Adıma (Müşteri Bilgilendirme) aktarıldı.")
+                messages.success(request, "Yetkili Makam Kararı Onaylandı! 6. Adım Teleset Müzakere Pozisyonu ve Görüşmelerine geçildi.")
 
-        # 3. ADIM 7: KARAR KAPISI (Risk Değerlendirmesi Sonucu Görüş & Öneriler)
-        elif adim_no == 7:
-            if aksiyon in ['OK', 'EVET', 'UYGUN', 'ONAYLA']:
+            elif aksiyon in ['REVIZYON', 'EK_DEGERLENDIRME', 'DEGERLENDIRMEYE_DON']:
+                adim_kaydi.durum = 'MUZAKEREYE_YONLENDIRILDI'
+                adim_kaydi.karar_sonucu = 'Ek Değerlendirme / Revizyon İstendi -> 4. Adıma Dönüş'
+                adim_kaydi.save()
+
+                surec.guncel_adim_no = 4
+                surec.durum = 'DEVAM_EDIYOR'
+                surec.save()
+
+                SozlesmeAdimKaydi.objects.filter(surec=surec, adim__adim_no=4).update(durum='DEVAM_EDIYOR')
+
+                SozlesmeGecmisLog.objects.create(
+                    surec=surec,
+                    islem="Adım 5: Yetkili Makam Ek Revizyon / Değerlendirme Talep Etti (Adım 4'e Dönüş)",
+                    detay=f"Makam değerlendirmesi sonucunda ek teknik/ticari çalışma istendi. 4. Adıma dönüldü. Gerekçe: {notlar}",
+                    yapan=tamamlayan
+                )
+                messages.warning(request, "Yetkili makam ek revizyon/değerlendirme talep etti. Süreç 4. Adıma yönlendirildi.")
+
+            elif aksiyon in ['RED', 'DEVAM_EDILMEYECEK', 'IPTAL', 'OLUMSUZ']:
                 adim_kaydi.durum = 'TAMAMLANDI'
-                adim_kaydi.karar_sonucu = 'OK (Risk Değerlendirmesi Uygun -> Adım 8 Üst Yönetim Onayı)'
+                adim_kaydi.karar_sonucu = 'Sözleşmeye Devam Edilmeme Kararı Alındı (Ret)'
+                adim_kaydi.save()
+
+                # 6, 7, 8, 9 adımlar pas geçilerek olumsuz kapatılır
+                SozlesmeAdimKaydi.objects.filter(surec=surec, adim__adim_no__in=[6, 7, 8, 9]).update(durum='PAS_GECILDI')
+                surec.durum = 'OLUMSUZ_KAPATILDI'
+                surec.save()
+
+                SozlesmeGecmisLog.objects.create(
+                    surec=surec,
+                    islem="Adım 5: Sözleşmeye Devam Edilmeme Kararı (Süreç Olumsuz Kapatıldı)",
+                    detay=f"Riskler veya koşullar kabul edilemez bulundu. Sözleşme süreci sonlandırıldı. Gerekçe: {notlar}",
+                    yapan=tamamlayan
+                )
+                messages.error(request, "Sözleşmeye devam edilmeme kararı verildi. Süreç olumsuz olarak kapatıldı.")
+
+        # -------------------------------------------------------------
+        # 6. ADIM 6: Teleset Müzakere Pozisyonunun Oluşturulması ve Müşteri Görüşmeleri
+        # -------------------------------------------------------------
+        elif adim_no == 6:
+            adim_kaydi.durum = 'TAMAMLANDI'
+            adim_kaydi.karar_sonucu = 'Müzakere Pozisyonu Oluşturuldu, Müşteri Görüşmeleri Tamamlandı'
+            adim_kaydi.save()
+
+            surec.guncel_adim_no = 7
+            surec.durum = 'DEVAM_EDIYOR'
+            surec.save()
+
+            SozlesmeAdimKaydi.objects.filter(surec=surec, adim__adim_no=7).update(durum='DEVAM_EDIYOR')
+
+            SozlesmeGecmisLog.objects.create(
+                surec=surec,
+                islem="Adım 6: Müzakere Pozisyonu ve Görüşmeler Tamamlandı",
+                detay=f"Onaylanan sınırlar dahilinde müşteri müzakeresi yapıldı, revizyonlu metin hazırlandı. 7. Adım (Nihai Mutabakat Kontrolü) aşamasına geçildi. Not: {notlar}",
+                yapan=tamamlayan
+            )
+            messages.success(request, "6. Adım tamamlandı! Müzakereler sonrasında 7. Adım (Nihai Mutabakat ve Metin Kontrolü) aşamasına geçildi.")
+
+        # -------------------------------------------------------------
+        # 7. ADIM 7: Nihai Mutabakat ve Sözleşme Metni Kontrolü (KARAR KAPISI)
+        # -------------------------------------------------------------
+        elif adim_no == 7:
+            if aksiyon in ['MUTABAKAT_SAGLANDI', 'ONAY', 'OLUMLU', 'UYGUN', 'TAMAMLA']:
+                adim_kaydi.durum = 'TAMAMLANDI'
+                adim_kaydi.karar_sonucu = 'Nihai Mutabakat Sağlandı / Kritik Sapma Yok (İmzaya Uygun -> Adım 8)'
                 adim_kaydi.save()
 
                 surec.guncel_adim_no = 8
-                surec.durum = 'YONETIM_ONAYINDA'
+                surec.durum = 'DEVAM_EDIYOR'
                 surec.save()
+
                 SozlesmeAdimKaydi.objects.filter(surec=surec, adim__adim_no=8).update(durum='DEVAM_EDIYOR')
 
                 SozlesmeGecmisLog.objects.create(
                     surec=surec,
-                    islem="Adım 7: Risk Değerlendirmesi Mutabakatı Sağlandı (OK)",
-                    detay="Risk puanları kabul edilebilir seviyede bulundu. 8. Adım (Üst Yönetim Onayı) aşamasına geçildi.",
+                    islem="Adım 7: Nihai Mutabakat Sağlandı ve Metin Kontrolü Onaylandı",
+                    detay=f"Müşteri ile nihai sözleşme metninde tam mutabakata varıldı, kritik sapma bulunmuyor. 8. Adım (Yetkili İmza) aşamasına geçildi. Not: {notlar}",
                     yapan=tamamlayan
                 )
-                messages.success(request, "Risk değerlendirmesi onaylandı! 8. Adım Üst Yönetim Onayına geçildi.")
+                messages.success(request, "Nihai mutabakat sağlandı! 8. Adım Yetkili İmza, Arşivleme ve Dağıtım aşamasına geçildi.")
 
-            elif aksiyon in ['NOK', 'HAYIR', 'RISKLI', 'MUZAKERE']:
-                adim_kaydi.durum = 'TAMAMLANDI'
-                adim_kaydi.karar_sonucu = 'NOK (Yüksek Riskli Maddeler -> Doğrudan Adım 9 Müşteri Bilgilendirmesi)'
+            elif aksiyon in ['KRITIK_SAPMA_VAR', 'YONETIM_ONAYINA_DON', 'REVIZYON']:
+                adim_kaydi.durum = 'MUZAKEREYE_YONLENDIRILDI'
+                adim_kaydi.karar_sonucu = 'Yeni Kritik Sapma / Revizyon Gerekli -> Adım 5 Yetkili Makam Onayına Dönüş'
                 adim_kaydi.save()
 
-                SozlesmeAdimKaydi.objects.filter(surec=surec, adim__adim_no=8).update(durum='PAS_GECILDI')
-                surec.guncel_adim_no = 9
-                surec.durum = 'MUSTERI_MUZAKERESINDE'
+                surec.guncel_adim_no = 5
+                surec.durum = 'YONETIM_ONAYINDA'
                 surec.save()
-                SozlesmeAdimKaydi.objects.filter(surec=surec, adim__adim_no=9).update(durum='DEVAM_EDIYOR')
+
+                SozlesmeAdimKaydi.objects.filter(surec=surec, adim__adim_no=5).update(durum='DEVAM_EDIYOR')
 
                 SozlesmeGecmisLog.objects.create(
                     surec=surec,
-                    islem="Adım 7: Yüksek Risk Nedeniyle Müşteri Bilgilendirmesine Yönlendirildi (NOK -> Adım 9)",
-                    detay=f"Bölüm değerlendirmelerinde kritik riskli maddeler belirlendi. 9. Adıma aktarıldı. Not: {notlar}",
+                    islem="Adım 7: Yeni Kritik Sapma Sebebiyle Yetkili Makam Onayına Dönüldü (Adım 5'e Dönüş)",
+                    detay=f"Müzakere sonucu ortaya çıkan yeni kritik sapmalar için yetkili makam onayına dönüldü. Gerekçe: {notlar}",
                     yapan=tamamlayan
                 )
-                messages.warning(request, "Kritik riskli maddeler nedeniyle süreç 9. Adıma (Müşteri Bilgilendirme) aktarıldı.")
+                messages.warning(request, "Yeni kritik sapma tespit edildi. Süreç 5. Adıma (Yetkili Makam Kararı) yönlendirildi.")
 
-        # 4. ADIM 8: KARAR KAPISI (Üst Yönetim Onayı)
-        elif adim_no == 8:
-            if aksiyon in ['OK', 'EVET', 'ONAYLA', 'DOGRUDAN_ONAY']:
+            elif aksiyon in ['MUSTERI_RED', 'IPTAL', 'OLUMSUZ']:
                 adim_kaydi.durum = 'TAMAMLANDI'
-                adim_kaydi.karar_sonucu = 'OK (Yönetimce Doğrudan Onaylandı -> Adım 11 İmzalanma)'
+                adim_kaydi.karar_sonucu = 'Müşteri Şartları Kabul Etmedi / Müzakere Olumsuz Kapatıldı'
                 adim_kaydi.save()
 
-                # Adım 9 ve 10 pas geçilerek doğrudan Adım 11'e atlanır
-                SozlesmeAdimKaydi.objects.filter(surec=surec, adim__adim_no__in=[9, 10]).update(durum='PAS_GECILDI')
-                surec.guncel_adim_no = 11
-                surec.save()
-                SozlesmeAdimKaydi.objects.filter(surec=surec, adim__adim_no=11).update(durum='DEVAM_EDIYOR')
-
-                SozlesmeGecmisLog.objects.create(
-                    surec=surec,
-                    islem="Adım 8: Sözleşme Üst Yönetimce Onaylandı (OK -> Adım 11)",
-                    detay="Üst yönetim sözleşmeyi doğrudan onayladı. 9 ve 10. adımlar pas geçilerek 11. Adıma (İmzalanma) geçildi.",
-                    yapan=tamamlayan
-                )
-                messages.success(request, "Sözleşme üst yönetim tarafından onaylandı! Doğrudan 11. Adım İmzalanma aşamasına geçildi.")
-
-            elif aksiyon in ['NOK', 'HAYIR', 'MUZAKERE_ISTENDI', 'MUZAKERE']:
-                adim_kaydi.durum = 'TAMAMLANDI'
-                adim_kaydi.karar_sonucu = 'NOK (Yönetim Revizyon / Müzakere İstedi -> Adım 9)'
-                adim_kaydi.save()
-
-                surec.guncel_adim_no = 9
-                surec.durum = 'MUSTERI_MUZAKERESINDE'
-                surec.save()
-                SozlesmeAdimKaydi.objects.filter(surec=surec, adim__adim_no=9).update(durum='DEVAM_EDIYOR')
-
-                SozlesmeGecmisLog.objects.create(
-                    surec=surec,
-                    islem="Adım 8: Yönetim Müzakere Talep Etti (NOK -> Adım 9)",
-                    detay=f"Yönetim bazı sözleşme koşullarının müşteriyle müzakere edilmesini istedi. Gerekçe: {notlar}",
-                    yapan=tamamlayan
-                )
-                messages.warning(request, "Yönetim değerlendirmesi doğrultusunda müşteri müzakeresi için 9. Adıma geçildi.")
-
-        # 5. ADIM 10: KARAR KAPISI (Müşteri İle Müzakere Mutabakatı)
-        elif adim_no == 10:
-            if aksiyon in ['OK', 'EVET', 'MUTABAKAT_SAGLANDI', 'MUTABIK']:
-                adim_kaydi.durum = 'TAMAMLANDI'
-                adim_kaydi.karar_sonucu = 'OK (Müşteriyle Mutabakat Sağlandı -> Adım 11 İmzalanma)'
-                adim_kaydi.save()
-
-                surec.guncel_adim_no = 11
-                surec.durum = 'DEVAM_EDIYOR'
-                surec.save()
-                SozlesmeAdimKaydi.objects.filter(surec=surec, adim__adim_no=11).update(durum='DEVAM_EDIYOR')
-
-                SozlesmeGecmisLog.objects.create(
-                    surec=surec,
-                    islem="Adım 10: Müşteri İle Müzakere Mutabakatı Sağlandı (OK)",
-                    detay=f"Müşteri ile revize maddeler üzerinde tam mutabakata varıldı. 11. Adıma (İmzalanma) geçildi. Not: {notlar}",
-                    yapan=tamamlayan
-                )
-                messages.success(request, "Müşteri ile mutabakat sağlandı! 11. Adım İmzalanma aşamasına geçildi.")
-
-            elif aksiyon in ['NOK', 'HAYIR', 'MUTABAKAT_YOK', 'IPTAL']:
-                adim_kaydi.durum = 'TAMAMLANDI'
-                adim_kaydi.karar_sonucu = 'NOK (Mutabakat Sağlanamadı -> Adım 14 Kapanış)'
-                adim_kaydi.save()
-
-                # Adım 11, 12, 13 pas geçilip doğrudan Adım 14'e gidilir
-                SozlesmeAdimKaydi.objects.filter(surec=surec, adim__adim_no__in=[11, 12, 13]).update(durum='PAS_GECILDI')
-                surec.guncel_adim_no = 14
+                SozlesmeAdimKaydi.objects.filter(surec=surec, adim__adim_no__in=[8, 9]).update(durum='PAS_GECILDI')
                 surec.durum = 'OLUMSUZ_KAPATILDI'
                 surec.save()
-                SozlesmeAdimKaydi.objects.filter(surec=surec, adim__adim_no=14).update(durum='DEVAM_EDIYOR')
 
                 SozlesmeGecmisLog.objects.create(
                     surec=surec,
-                    islem="Adım 10: Müzakere Sonucu Mutabakat Sağlanamadı (NOK -> Adım 14)",
-                    detay=f"Müşteri ile kritik maddelerde uzlaşılamadı. Süreç olumsuz olarak 14. Adıma (Kapanış) aktarıldı. Gerekçe: {notlar}",
+                    islem="Adım 7: Müşteri Müzakeresi Olumsuz / Ret (Süreç Kapatıldı)",
+                    detay=f"Müşteriyle sözleşme koşullarında uzlaşılamadı. Süreç olumsuz kapatıldı. Gerekçe: {notlar}",
                     yapan=tamamlayan
                 )
-                messages.error(request, "Mutabakat sağlanamadığı için süreç olumsuz kapanış amacıyla 14. Adıma aktarıldı.")
+                messages.error(request, "Müşteri ile mutabakat sağlanamadı. Süreç olumsuz olarak kapatıldı.")
 
-        # 6. ADIM 15: Süreç Kapanışı ve Öğrenilmiş Dersler (Nihai İstasyon)
-        elif adim_no == 15:
+        # -------------------------------------------------------------
+        # 8. ADIM 8: Yetkili İmza, Arşivleme ve Dağıtım
+        # -------------------------------------------------------------
+        elif adim_no == 8:
             adim_kaydi.durum = 'TAMAMLANDI'
-            adim_kaydi.karar_sonucu = 'Sözleşme Süreci Başarıyla Tamamlandı & Öğrenilmiş Dersler Kaydedildi'
+            adim_kaydi.karar_sonucu = 'Yetkili İmzalar Tamamlandı, Sözleşme Dochuman’a Yüklendi ve İlgili Birimlere Dağıtıldı'
             adim_kaydi.save()
 
-            if surec.durum != 'OLUMSUZ_KAPATILDI':
-                surec.durum = 'BASARIYLA_TAMAMLANDI'
-            surec.guncel_adim_no = 15
+            surec.guncel_adim_no = 9
+            surec.durum = 'DEVAM_EDIYOR'
             surec.save()
+
+            SozlesmeAdimKaydi.objects.filter(surec=surec, adim__adim_no=9).update(durum='DEVAM_EDIYOR')
 
             SozlesmeGecmisLog.objects.create(
                 surec=surec,
-                islem="Sözleşme Değerlendirme Süreci Başarıyla Tamamlandı",
-                detay=f"15 adımlık sözleşme değerlendirme süreci tamamlandı. Öğrenilmiş dersler modülüne aktarıldı. Kapanış Notu: {notlar}",
+                islem="Adım 8: Yetkili İmza, Arşivleme ve Dağıtım Tamamlandı",
+                detay=f"İmza sirkülerine uygun olarak sözleşme imzalandı ve sisteme arşivlendi. 9. Adım (Sözleşme Yükümlülüklerinin ve Sürelerinin Takibi) aşamasına geçildi. Not: {notlar}",
                 yapan=tamamlayan
             )
-            messages.success(request, "Sözleşme Değerlendirme Süreci başarıyla tamamlandı ve arşivlendi.")
+            messages.success(request, "8. Adım tamamlandı! Sözleşme imzalandı, arşivlendi ve 9. Adım (Yükümlülük & Süre Takibi) aşamasına geçildi.")
+
+        # -------------------------------------------------------------
+        # 9. ADIM 9: Sözleşme Yükümlülüklerinin ve Sürelerinin Takibi (NİHAİ ADIM)
+        # -------------------------------------------------------------
+        elif adim_no == 9:
+            if aksiyon in ['TAMAMLA', 'YURURLUKTE_TAKIP', 'ONAY']:
+                adim_kaydi.durum = 'TAMAMLANDI'
+                adim_kaydi.karar_sonucu = 'Sözleşme Başarıyla Yürürlüğe Alındı & Yükümlülük Takibi Başlatıldı'
+                adim_kaydi.save()
+
+                surec.durum = 'BASARIYLA_TAMAMLANDI'
+                surec.guncel_adim_no = 9
+                surec.save()
+
+                SozlesmeGecmisLog.objects.create(
+                    surec=surec,
+                    islem="Adım 9: Sözleşme Değerlendirme Süreci Başarıyla Tamamlandı",
+                    detay=f"Sözleşme yürürlükte aktif olarak takip edilmektedir. Yükümlülükler ilgili birimlere tebliğ edildi. Kapanış Notu: {notlar}",
+                    yapan=tamamlayan
+                )
+                messages.success(request, "Sözleşmenin Değerlendirilmesi Süreci başarıyla tamamlandı ve yürürlüğe alındı!")
+
+            elif aksiyon in ['YENILEME_TALEBI', 'DEGISIKLIK']:
+                adim_kaydi.durum = 'TAMAMLANDI'
+                adim_kaydi.karar_sonucu = 'Sözleşme Yenileme / Değişiklik Talebi Başlatıldı (1. Adım Döngüsüne Dönüş)'
+                adim_kaydi.save()
+
+                surec.durum = 'DEVAM_EDIYOR'
+                surec.guncel_adim_no = 1
+                surec.save()
+
+                SozlesmeAdimKaydi.objects.filter(surec=surec, adim__adim_no=1).update(durum='DEVAM_EDIYOR')
+
+                SozlesmeGecmisLog.objects.create(
+                    surec=surec,
+                    islem="Adım 9: Sözleşme Yenileme / Revizyon Talebi Başlatıldı",
+                    detay=f"Sözleşme süresi veya koşul değişikliği gereksinimiyle yeni sözleşme döngüsü Adım 1 üzerinden başlatıldı. Talep Notu: {notlar}",
+                    yapan=tamamlayan
+                )
+                messages.info(request, "Sözleşme yenileme/değişiklik talebi kaydedildi. Yeni değerlendirme için 1. Adıma yönlendirildi.")
 
     return redirect(f"{redirect('sozlesme_sureci_detay', pk=pk).url}#adim-{surec.guncel_adim_no}")
 
@@ -4074,9 +4594,35 @@ def ana_sayfa_view(request):
     ).prefetch_related('prototip_iterasyonlari', 'eco_iterasyonlari').order_by('id')
 
     if secili_fabrika:
-        ana_projeler_qs = ana_projeler_qs.filter(
-            Q(bolum__icontains=secili_fabrika) | Q(fabrika__icontains=secili_fabrika)
-        )
+        sf_upper = secili_fabrika.upper()
+        if 'PRES' in sf_upper:
+            ana_projeler_qs = ana_projeler_qs.filter(
+                Q(bolum__icontains='Pres') | Q(fabrika__icontains='PRES')
+            )
+        elif 'KALIP' in sf_upper:
+            ana_projeler_qs = ana_projeler_qs.filter(
+                Q(bolum__icontains='Kalıp') | Q(bolum__icontains='Kalip') | Q(fabrika__icontains='KALIP')
+            )
+        elif 'KONDANSER' in sf_upper:
+            ana_projeler_qs = ana_projeler_qs.filter(
+                Q(bolum__icontains='Kondanser') | Q(fabrika__icontains='KONDANSER')
+            )
+        elif 'KABLO' in sf_upper:
+            ana_projeler_qs = ana_projeler_qs.filter(
+                Q(bolum__icontains='Kablo') | Q(fabrika__icontains='KABLO')
+            )
+        elif 'CERKEZ' in sf_upper:
+            ana_projeler_qs = ana_projeler_qs.filter(
+                Q(bolum__icontains='Çerkez') | Q(bolum__icontains='Cerkez') | Q(fabrika__icontains='CERKEZ')
+            )
+        elif 'MANISA' in sf_upper:
+            ana_projeler_qs = ana_projeler_qs.filter(
+                Q(bolum__icontains='Manisa') | Q(fabrika__icontains='MANISA')
+            )
+        else:
+            ana_projeler_qs = ana_projeler_qs.filter(
+                Q(bolum__icontains=secili_fabrika) | Q(fabrika__icontains=secili_fabrika)
+            )
 
     if secili_musteri_id:
         try:
@@ -4137,13 +4683,14 @@ def ana_sayfa_view(request):
     kondanser_sayisi = AnaProje.objects.filter(bolum__icontains='Kondanser').count()
     kablo_sayisi = AnaProje.objects.filter(bolum__icontains='Kablo').count()
 
-    # Bölüm Listesi
+    # Konsolide Bölüm / Fabrika Listesi
     bolumler_listesi = [
-        ('Kalıphane', 'Kalıphane'),
-        ('Preshane + Kalıphane', 'Preshane + Kalıphane'),
-        ('Preshane', 'Preshane'),
-        ('Kondanser', 'Kondanser'),
-        ('Kablo Gruplama', 'Kablo Gruplama'),
+        ('PRESHANE', 'Preshane'),
+        ('KALIPHANE', 'Kalıphane'),
+        ('KONDANSER', 'Kondanser'),
+        ('KABLOGR', 'Kablo Gruplama'),
+        ('CERKEZKOY', 'Çerkezköy'),
+        ('MANISA ORTAK', 'Manisa Ortak'),
     ]
 
     # Teleset_Intranet SQL Server Verileri & IncKey
@@ -4385,6 +4932,459 @@ def faaliyet_sil_view(request, pk):
         faaliyet.delete()
         messages.success(request, f"'{baslik}' faaliyeti başarıyla silindi.")
     return redirect(request.META.get('HTTP_REFERER', 'ana_sayfa'))
+
+
+# ==============================================================================
+# MÜŞTERİ ADAYLARI (LEAD / PROSPECT) & MÜŞTERİ YÖNETİMİ
+# ==============================================================================
+
+def musteri_adaylari_liste(request):
+    """
+    Aday Havuzu - Müşteri Adayları (Leads) Listeleme, Canlı Arama ve Filtreleme
+    """
+    adaylar = MusteriAdayi.objects.all()
+
+    # Filtre Parametreleri
+    q = request.GET.get('q', '').strip()
+    durum_filtre = request.GET.get('durum', 'ALL')
+    ulke_filtre = request.GET.get('ulke', 'ALL')
+    kanal_filtre = request.GET.get('kanal', 'ALL')
+    kaynak_filtre = request.GET.get('kaynak', 'ALL')
+    oncelik_filtre = request.GET.get('oncelik', 'ALL')
+
+    # Arama Filtresi
+    if q:
+        adaylar = adaylar.filter(
+            Q(ad_soyad__icontains=q) |
+            Q(sirket_adi__icontains=q) |
+            Q(unvan__icontains=q) |
+            Q(eposta__icontains=q) |
+            Q(telefon__icontains=q) |
+            Q(etiketler__icontains=q) |
+            Q(sehir__icontains=q) |
+            Q(ulke__icontains=q)
+        )
+
+    # Durum Filtresi
+    if durum_filtre != 'ALL':
+        adaylar = adaylar.filter(durum=durum_filtre)
+
+    # Ülke Filtresi
+    if ulke_filtre != 'ALL':
+        adaylar = adaylar.filter(ulke=ulke_filtre)
+
+    # Kanal Filtresi
+    if kanal_filtre != 'ALL':
+        adaylar = adaylar.filter(kanal=kanal_filtre)
+
+    # Kaynak Filtresi
+    if kaynak_filtre != 'ALL':
+        adaylar = adaylar.filter(kaynak=kaynak_filtre)
+
+    # Öncelik Filtresi
+    if oncelik_filtre != 'ALL':
+        adaylar = adaylar.filter(oncelik=oncelik_filtre)
+
+    # Metrik Sayaçları
+    tum_adaylar = MusteriAdayi.objects.all()
+    toplam_aday = tum_adaylar.count()
+    yeni_adaylar_sayisi = tum_adaylar.filter(durum='YENI').count()
+    iletisimde_sayisi = tum_adaylar.filter(durum='ILETISIMDE').count()
+    nitelikli_sayisi = tum_adaylar.filter(durum__in=['NITELIKLI', 'TEKLIF_ASAMASINDA']).count()
+    donusturulen_sayisi = tum_adaylar.filter(durum='DONUSTURULDU').count()
+    kaybedilen_sayisi = tum_adaylar.filter(durum='KAYBEDILDI').count()
+    
+    # Aktif Potansiyel Ciro
+    aktif_potansiyel_ciro = tum_adaylar.exclude(durum__in=['DONUSTURULDU', 'KAYBEDILDI']).aggregate(
+        toplam=Sum('tahmini_potansiyel_ciro')
+    )['toplam'] or 0
+
+    # Filtreleme Seçenekleri
+    mevcut_ulkeler = sorted(list(set(tum_adaylar.values_list('ulke', flat=True).distinct())))
+    mevcut_kaynaklar = sorted(list(set(tum_adaylar.exclude(kaynak__isnull=True).exclude(kaynak__exact='').values_list('kaynak', flat=True).distinct())))
+
+    context = {
+        'adaylar': adaylar,
+        'toplam_aday': toplam_aday,
+        'yeni_adaylar_sayisi': yeni_adaylar_sayisi,
+        'iletisimde_sayisi': iletisimde_sayisi,
+        'nitelikli_sayisi': nitelikli_sayisi,
+        'donusturulen_sayisi': donusturulen_sayisi,
+        'kaybedilen_sayisi': kaybedilen_sayisi,
+        'aktif_potansiyel_ciro': aktif_potansiyel_ciro,
+        'q': q,
+        'durum_filtre': durum_filtre,
+        'ulke_filtre': ulke_filtre,
+        'kanal_filtre': kanal_filtre,
+        'kaynak_filtre': kaynak_filtre,
+        'oncelik_filtre': oncelik_filtre,
+        'mevcut_ulkeler': mevcut_ulkeler,
+        'mevcut_kaynaklar': mevcut_kaynaklar,
+        'durum_choices': MusteriAdayi.DURUM_CHOICES,
+        'kanal_choices': MusteriAdayi.KANAL_CHOICES,
+        'oncelik_choices': MusteriAdayi.ONCELIK_CHOICES,
+        'sektor_choices': MusteriAdayi.SEKTOR_CHOICES,
+    }
+    return render(request, 'crm_takip/musteri_adaylari_liste.html', context)
+
+
+def musteri_adayi_olustur(request):
+    """
+    Yeni Müşteri Adayı Kaydı Oluşturma (Modal ve Hızlı Form)
+    """
+    if request.method == 'POST':
+        ad_soyad = request.POST.get('ad_soyad', '').strip()
+        sirket_adi = request.POST.get('sirket_adi', '').strip()
+
+        if not ad_soyad or not sirket_adi:
+            messages.error(request, "Yetkili Adı Soyadı ve Şirket Adı zorunludur.")
+            return redirect(request.META.get('HTTP_REFERER', 'musteri_adaylari_liste'))
+
+        unvan = request.POST.get('unvan', '').strip()
+        sektor = request.POST.get('sektor', 'Beyaz Eşya')
+        ulke = request.POST.get('ulke', 'Almanya').strip()
+        sehir = request.POST.get('sehir', '').strip()
+        adres = request.POST.get('adres', '').strip()
+        eposta = request.POST.get('eposta', '').strip()
+        telefon = request.POST.get('telefon', '').strip()
+        web_sitesi = request.POST.get('web_sitesi', '').strip()
+        kanal = request.POST.get('kanal', 'Pazar Ziyareti')
+        kaynak = request.POST.get('kaynak', '').strip()
+        durum = request.POST.get('durum', 'YENI')
+        oncelik = request.POST.get('oncelik', 'ILIK')
+        ilgili_urun_gruplari = request.POST.get('ilgili_urun_gruplari', '').strip()
+        etiketler = request.POST.get('etiketler', '').strip()
+        atanan_sorumlu = request.POST.get('atanan_sorumlu', 'Buse Nur BALTACIOĞLU').strip()
+        aciklama = request.POST.get('aciklama', '').strip()
+
+        # Tahmini Potansiyel Ciro
+        tahmini_potansiyel_ciro = None
+        ciro_val = request.POST.get('tahmini_potansiyel_ciro', '').strip()
+        if ciro_val:
+            try:
+                tahmini_potansiyel_ciro = float(ciro_val.replace(',', '.'))
+            except ValueError:
+                tahmini_potansiyel_ciro = None
+
+        adayi = MusteriAdayi.objects.create(
+            ad_soyad=ad_soyad,
+            unvan=unvan,
+            sirket_adi=sirket_adi,
+            sektor=sektor,
+            ulke=ulke,
+            sehir=sehir,
+            adres=adres,
+            eposta=eposta,
+            telefon=telefon,
+            web_sitesi=web_sitesi,
+            kanal=kanal,
+            kaynak=kaynak,
+            durum=durum,
+            oncelik=oncelik,
+            tahmini_potansiyel_ciro=tahmini_potansiyel_ciro,
+            ilgili_urun_gruplari=ilgili_urun_gruplari,
+            etiketler=etiketler,
+            atanan_sorumlu=atanan_sorumlu,
+            aciklama=aciklama
+        )
+
+        # İlk Kayıt Notu
+        MusteriAdayiNotu.objects.create(
+            adayi=adayi,
+            not_tipi='NOT',
+            baslik='Aday Kaydı Oluşturuldu',
+            icerik=f"Aday sisteme kaydedildi. Kanal: {kanal}, Kaynak: {kaynak or 'Doğrudan Giriş'}.",
+            ekleyen=atanan_sorumlu or 'Buse Nur BALTACIOĞLU'
+        )
+
+        messages.success(request, f"'{sirket_adi} - {ad_soyad}' müşteri adayı havuzuna başarıyla eklendi.")
+        return redirect('musteri_adayi_detay', pk=adayi.pk)
+
+    return redirect('musteri_adaylari_liste')
+
+
+def musteri_adayi_detay(request, pk):
+    """
+    Müşteri Adayı 360° Detay, Aktivite / Zaman Tüneli ve Dönüştürme Merkezi
+    """
+    adayi = get_object_or_404(MusteriAdayi, pk=pk)
+    notlar = adayi.notlar.all().order_by('-tarih', '-id')
+    musteri_kartlari = MusteriKarti.objects.all().order_by('kisa_ad')
+
+    # Otomatik Müşteri Kodu Önerisi
+    son_kod_sayisi = MusteriKarti.objects.count() + 1
+    onerilen_firma_kodu = f"FRM-{son_kod_sayisi:02d}"
+    while MusteriKarti.objects.filter(kod=onerilen_firma_kodu).exists():
+        son_kod_sayisi += 1
+        onerilen_firma_kodu = f"FRM-{son_kod_sayisi:02d}"
+
+    context = {
+        'adayi': adayi,
+        'notlar': notlar,
+        'musteri_kartlari': musteri_kartlari,
+        'onerilen_firma_kodu': onerilen_firma_kodu,
+        'durum_choices': MusteriAdayi.DURUM_CHOICES,
+        'kanal_choices': MusteriAdayi.KANAL_CHOICES,
+        'oncelik_choices': MusteriAdayi.ONCELIK_CHOICES,
+        'sektor_choices': MusteriAdayi.SEKTOR_CHOICES,
+        'not_tipi_choices': MusteriAdayiNotu.NOT_TIPI_CHOICES,
+        'tier_choices': MusteriKarti.TIER_CHOICES,
+        'strategy_choices': MusteriKarti.STRATEGY_CHOICES,
+    }
+    return render(request, 'crm_takip/musteri_adayi_detay.html', context)
+
+
+def musteri_adayi_donustur(request, pk):
+    """
+    Müşteri Adayını Resmi Müşteri Portföy Kartına (ve İsteğe Bağlı Sürece) Dönüştürme (Lead Conversion)
+    """
+    adayi = get_object_or_404(MusteriAdayi, pk=pk)
+    if request.method == 'POST':
+        tier = request.POST.get('tier', 'Tier 2 - Growth')
+        strateji = request.POST.get('strateji', 'Start')
+        firma_kodu = request.POST.get('firma_kodu', '').strip()
+        surec_baslat = request.POST.get('surec_baslat', 'YOK')
+        user_name = request.POST.get('user_name', 'Buse Nur BALTACIOĞLU').strip() or 'Buse Nur BALTACIOĞLU'
+
+        # Dönüştürme metodunu çağır
+        musteri = adayi.donustur_musteri_kartina(
+            tier=tier, 
+            strateji=strateji, 
+            firma_kodu=firma_kodu or None, 
+            user=user_name
+        )
+
+        # İsteğe Bağlı Süreç Başlatma
+        if surec_baslat == 'URUN_TEKLIF':
+            # Yeni Teklif Süreci Aç
+            teklif_kodu = inckey_uret('TEK', timezone.now().year)
+            teklif = UrunTeklifSureci.objects.create(
+                kod=teklif_kodu,
+                ad=f"{adayi.sirket_adi} - İlk Teklif Talebi (RFQ)",
+                musteri_adi=adayi.sirket_adi,
+                musteri_karti=musteri,
+                urun_grubu=adayi.ilgili_urun_gruplari or 'Metal Parca & Sac',
+                ilgili_fabrika='PRESHANE',
+                sorumlu_satis_uzmani=user_name,
+                sorumlu_satis_yoneticisi='YİĞİT EFE BİLİR',
+                teklif_tutari=adayi.tahmini_potansiyel_ciro or 100000,
+                aciklama=f"Müşteri Adayı ({adayi.ad_soyad}) dönüştürülerek otomatik RFQ Teklif Süreci başlatıldı."
+            )
+            # 1. Adımı aktif yap
+            for adim_tanim in UrunTeklifAdimTanimi.objects.all().order_by('sira_no'):
+                UrunTeklifAdimKaydi.objects.create(
+                    surec=teklif,
+                    adim=adim_tanim,
+                    durum='DEVAM_EDIYOR' if adim_tanim.sira_no == 1 else 'BEKLIYOR'
+                )
+            messages.success(request, f"'{adayi.sirket_adi}' portföye aktarıldı ve '{teklif.kod}' Teklif Süreci başlatıldı!")
+            return redirect('urun_teklif_detay', pk=teklif.pk)
+
+        elif surec_baslat == 'PAZARLAMA':
+            # Yeni Pazarlama Fırsatı Aç
+            proje_kodu = inckey_uret('PRJ', timezone.now().year)
+            proje = PazarlamaProjesi.objects.create(
+                kod=proje_kodu,
+                ad=f"{adayi.sirket_adi} - İş Geliştirme ve Pazarlama Fırsatı",
+                musteri_adi=adayi.sirket_adi,
+                musteri_karti=musteri,
+                hedef_ulke=adayi.ulke,
+                urun_grubu='Metal Parca & Sac',
+                ilgili_fabrika='PRESHANE',
+                sorumlu_pazarlama_uzmani=user_name,
+                sorumlu_satis_muduru='YİĞİT EFE BİLİR',
+                beklenen_ciro=adayi.tahmini_potansiyel_ciro or 500000,
+                aciklama=f"Müşteri Adayı ({adayi.ad_soyad}) dönüştürülerek 15 Adımlık Pazarlama Süreci başlatıldı."
+            )
+            for adim_tanim in SurecAdimTanimi.objects.all().order_by('adim_no'):
+                ProjeAdimKaydi.objects.create(
+                    proje=proje,
+                    adim=adim_tanim,
+                    durum='DEVAM_EDIYOR' if adim_tanim.adim_no == 1 else 'BEKLIYOR'
+                )
+            messages.success(request, f"'{adayi.sirket_adi}' portföye aktarıldı ve '{proje.kod}' Pazarlama Süreci başlatıldı!")
+            return redirect('proje_detay', pk=proje.pk)
+
+        messages.success(request, f"'{adayi.sirket_adi}' başarıyla '{musteri.kod}' Müşteri Portföy Kartı olarak oluşturuldu.")
+        return redirect('musteri_360_detay', pk=musteri.pk)
+
+    return redirect('musteri_adayi_detay', pk=adayi.pk)
+
+
+def musteri_adayi_durum_guncelle(request, pk):
+    """
+    Aday Durumu ve Önceliğini Hızlı Güncelleme
+    """
+    adayi = get_object_or_404(MusteriAdayi, pk=pk)
+    if request.method == 'POST':
+        eski_durum = adayi.get_durum_display()
+        yeni_durum = request.POST.get('durum', adayi.durum)
+        yeni_oncelik = request.POST.get('oncelik', adayi.oncelik)
+        not_metni = request.POST.get('not_metni', '').strip()
+        user_name = request.POST.get('ekleyen', 'Buse Nur BALTACIOĞLU')
+
+        if yeni_durum in dict(MusteriAdayi.DURUM_CHOICES):
+            adayi.durum = yeni_durum
+        if yeni_oncelik in dict(MusteriAdayi.ONCELIK_CHOICES):
+            adayi.oncelik = yeni_oncelik
+
+        adayi.save()
+
+        # Durum değişikliği aktivite notu
+        MusteriAdayiNotu.objects.create(
+            adayi=adayi,
+            not_tipi='DURUM_DEGISIKLIGI',
+            baslik=f"Durum '{adayi.get_durum_display()}' Olarak Güncellendi",
+            icerik=f"Önceki Durum: {eski_durum} -> Yeni Durum: {adayi.get_durum_display()}" + (f"\nNot: {not_metni}" if not_metni else ""),
+            ekleyen=user_name
+        )
+
+        messages.success(request, f"Aday durumu '{adayi.get_durum_display()}' olarak güncellendi.")
+
+    return redirect('musteri_adayi_detay', pk=adayi.pk)
+
+
+def musteri_adayi_not_ekle(request, pk):
+    """
+    Müşteri Adayına Etkileşim Notu / Aktivite Ekleme
+    """
+    adayi = get_object_or_404(MusteriAdayi, pk=pk)
+    if request.method == 'POST':
+        not_tipi = request.POST.get('not_tipi', 'NOT')
+        baslik = request.POST.get('baslik', '').strip()
+        icerik = request.POST.get('icerik', '').strip()
+        ekleyen = request.POST.get('ekleyen', 'Buse Nur BALTACIOĞLU').strip() or 'Buse Nur BALTACIOĞLU'
+
+        if not baslik:
+            baslik = f"{dict(MusteriAdayiNotu.NOT_TIPI_CHOICES).get(not_tipi, 'Aktivite')} Kaydı"
+
+        MusteriAdayiNotu.objects.create(
+            adayi=adayi,
+            not_tipi=not_tipi,
+            baslik=baslik,
+            icerik=icerik,
+            ekleyen=ekleyen
+        )
+        messages.success(request, "Aktivite notu başarıyla kaydedildi.")
+
+    return redirect('musteri_adayi_detay', pk=adayi.pk)
+
+
+def musteri_adayi_sil(request, pk):
+    """
+    Müşteri Adayı Kaydını Silme
+    """
+    adayi = get_object_or_404(MusteriAdayi, pk=pk)
+    if request.method == 'POST':
+        sirket = adayi.sirket_adi
+        ad_soyad = adayi.ad_soyad
+        adayi.delete()
+        messages.success(request, f"'{sirket} - {ad_soyad}' müşteri adayı başarıyla silindi.")
+    return redirect('musteri_adaylari_liste')
+
+
+def musteri_karti_olustur(request):
+    """
+    Doğrudan Portföye Yeni Kurumsal Müşteri Kartı Ekleme
+    """
+    if request.method == 'POST':
+        ad = request.POST.get('ad', '').strip()
+        kisa_ad = request.POST.get('kisa_ad', '').strip()
+        ulke = request.POST.get('ulke', 'Almanya').strip()
+        sehir = request.POST.get('sehir', '').strip()
+        tier = request.POST.get('tier', 'Tier 2 - Growth')
+        strateji = request.POST.get('strateji', 'Grow')
+        kam_satis_lideri = request.POST.get('kam_satis_lideri', 'Buse Nur BALTACIOĞLU').strip() or 'Buse Nur BALTACIOĞLU'
+        aktif_urunler = request.POST.get('aktif_urunler', 'Kondanser, Metal Parça').strip()
+        yetkili_kisi = request.POST.get('yetkili_kisi', '').strip()
+        yetkili_unvan = request.POST.get('yetkili_unvan', 'Satınalma Yöneticisi').strip()
+        yetkili_email = request.POST.get('yetkili_email', '').strip()
+        yetkili_telefon = request.POST.get('yetkili_telefon', '').strip()
+        notlar = request.POST.get('notlar', '').strip()
+
+        # Otomatik Firma Kodu
+        kod = request.POST.get('kod', '').strip()
+        if not kod:
+            sayi = MusteriKarti.objects.count() + 1
+            kod = f"FRM-{sayi:02d}"
+            while MusteriKarti.objects.filter(kod=kod).exists():
+                sayi += 1
+                kod = f"FRM-{sayi:02d}"
+
+        if not kisa_ad and ad:
+            kisa_ad = ad.split()[0][:50]
+
+        # Yıllık Ciro
+        yillik_ciro = 0
+        ciro_str = request.POST.get('yillik_ciro_eur', '').strip()
+        if ciro_str:
+            try:
+                yillik_ciro = float(ciro_str.replace(',', '.'))
+            except ValueError:
+                yillik_ciro = 0
+
+        musteri = MusteriKarti.objects.create(
+            kod=kod,
+            ad=ad,
+            kisa_ad=kisa_ad,
+            ulke=ulke,
+            sehir=sehir,
+            tier=tier,
+            strateji=strateji,
+            yillik_ciro_eur=yillik_ciro,
+            cuzdan_payi_yuzde=25,
+            aktif_proje_sayisi=1,
+            kam_satis_lideri=kam_satis_lideri,
+            aktif_urunler=aktif_urunler,
+            sozlesme_durumu="Yeni Tanımlandı",
+            churn_riski="0.05 (Düşük Risk)",
+            notlar=notlar
+        )
+
+        # Müşteri Tesis / İletişim Kartı Oluştur
+        MusteriTesisi.objects.create(
+            musteri=musteri,
+            sira=1,
+            tesis_adi=f"{musteri.kisa_ad} Ana Fabrika",
+            lokasyon=f"{sehir}, {ulke}".strip(', '),
+            kod=f"{musteri.kisa_ad}-01",
+            clv_m=f"{(float(musteri.yillik_ciro_eur or 0) * 3.76) / 1000000.0:.1f} M€",
+            churn_skoru="0.05",
+            churn_durumu="Düşük Risk",
+            yillik_ciro_str=f"€ {float(musteri.yillik_ciro_eur or 0)/1000000.0:.2f}M",
+            ciro_alt_bilgi="Aktif Portföy",
+            cuzdan_payi_yuzde=25,
+            cuzdan_alt_bilgi="Sac & Kablo Grubu",
+            destek_sayisi=1,
+            npi_proje_sayisi=1,
+            teklif_sayisi=1,
+            sevkiyat_sayisi=0,
+            kam_satis_lideri=kam_satis_lideri,
+            yetkili_adi=yetkili_kisi or f"{musteri.kisa_ad} Satınalma Sorumlusu",
+            yetkili_unvan=yetkili_unvan,
+            yetkili_email=yetkili_email or f"info@{musteri.kisa_ad.lower().replace(' ', '')}.com",
+            yetkili_telefon=yetkili_telefon or "",
+            son_etkilesim=f"{timezone.now().strftime('%d.%m.%Y')} - Portföy Kartı Oluşturuldu"
+        )
+
+        # Başlangıç Zaman Tüneli
+        MusteriEtkilesimZamanTuneli.objects.create(
+            musteri=musteri,
+            kod="FRM-START",
+            baslik=f"{musteri.kisa_ad} Müşteri Kartı Portföye Eklendi",
+            aciklama=f"{musteri.ad} firması Teleset CRM müşteri portföyüne başarıyla kaydedildi.",
+            sorumlu=kam_satis_lideri,
+            tarih=timezone.now().date(),
+            donem_ay_yil=f"{timezone.now().strftime('%B %Y').upper()} (YENİ MÜŞTERİ)",
+            ikon="bi-buildings",
+            ikon_bg="bg-primary text-white"
+        )
+
+        messages.success(request, f"'{musteri.ad}' ({musteri.kod}) müşteri portföyüne başarıyla eklendi.")
+        return redirect('musteri_360_detay', pk=musteri.pk)
+
+    return redirect('kartlar')
+
 
 
 

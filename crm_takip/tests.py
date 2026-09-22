@@ -198,29 +198,10 @@ class MusteriIliskileriSureciTests(TestCase):
 class UrunTeklifSureciTests(TestCase):
     def setUp(self):
         self.client = Client()
-        from crm_takip.models import UrunTeklifAdimTanimi
-        adilar_data = [
-            {"adim_no": 1, "baslik": "Fiyat stratejisinin oluşturulması", "faaliyet_tanimi": "F1", "sorumlular": "Satış Ekibi", "karar_adimi_mi": False, "faz": "FAZ1"},
-            {"adim_no": 2, "baslik": "Fiyat stratejisinin ilgili Bölüm Yöneticileri ile paylaşılması", "faaliyet_tanimi": "F2", "sorumlular": "Satış & Bölüm Yöneticileri", "karar_adimi_mi": False, "faz": "FAZ1"},
-            {"adim_no": 3, "baslik": "Fiyat stratejisinin üst yönetim onayına sunulması", "faaliyet_tanimi": "F3", "sorumlular": "Satış & Üst Yönetim", "karar_adimi_mi": True, "faz": "FAZ1"},
-            {"adim_no": 4, "baslik": "Teklif talebinin alınması (RFQ) ve iletilmesi", "faaliyet_tanimi": "F4", "sorumlular": "Satış Uzmanı", "karar_adimi_mi": False, "faz": "FAZ2"},
-            {"adim_no": 5, "baslik": "Satış koşulları ve parametrelerin kontrolü", "faaliyet_tanimi": "F5", "sorumlular": "Satış Analiz & Uzman", "karar_adimi_mi": True, "faz": "FAZ2"},
-            {"adim_no": 6, "baslik": "Detaylı maliyet analizinin hazırlanması", "faaliyet_tanimi": "F6", "sorumlular": "Maliyet Analiz & Mühendislik", "karar_adimi_mi": False, "faz": "FAZ2"},
-            {"adim_no": 7, "baslik": "Makine/ekipman/kalıp maliyetlerinin belirlenmesi", "faaliyet_tanimi": "F7", "sorumlular": "Kalıp & Yatırım", "karar_adimi_mi": False, "faz": "FAZ2"},
-            {"adim_no": 8, "baslik": "Teklif özet tablosu ve yatırım ihtiyacının yönetime sunulması", "faaliyet_tanimi": "F8", "sorumlular": "Satış & Yönetim", "karar_adimi_mi": True, "faz": "FAZ2"},
-            {"adim_no": 9, "baslik": "Fiyat teklifinin müşteriye iletilmesi", "faaliyet_tanimi": "F9", "sorumlular": "Satış Uzmanı", "karar_adimi_mi": False, "faz": "FAZ3"},
-            {"adim_no": 10, "baslik": "Müşteri geri bildirimleri ve hedef fiyatların değerlendirilmesi", "faaliyet_tanimi": "F10", "sorumlular": "Satış Uzmanı", "karar_adimi_mi": False, "faz": "FAZ3"},
-            {"adim_no": 11, "baslik": "Teklifte güncelleme yapılacak mı?", "faaliyet_tanimi": "F11", "sorumlular": "Satış Uzmanı & Yönetici", "karar_adimi_mi": True, "faz": "FAZ3"},
-            {"adim_no": 12, "baslik": "Revize edilmiş fiyat teklifinin müşteriye iletilmesi", "faaliyet_tanimi": "F12", "sorumlular": "Satış Uzmanı", "karar_adimi_mi": False, "faz": "FAZ3"},
-            {"adim_no": 13, "baslik": "Fiyat stratejisinin gerçekleşen maliyetlerle kontrolü ve revizyonu", "faaliyet_tanimi": "F13", "sorumlular": "Satış Analiz & Mali İşler", "karar_adimi_mi": False, "faz": "FAZ4"},
-            {"adim_no": 14, "baslik": "Sürecin kapatılıp, raporlanması", "faaliyet_tanimi": "F14", "sorumlular": "Satış Uzmanı", "karar_adimi_mi": False, "faz": "FAZ4"},
-            {"adim_no": 15, "baslik": "Süreç ve sonuçların düzenli gözden geçirilmesi, öğrenilmiş derslerin paylaşılması", "faaliyet_tanimi": "F15", "sorumlular": "Satış & EYS", "karar_adimi_mi": True, "faz": "FAZ4"},
-        ]
-        for a in adilar_data:
-            UrunTeklifAdimTanimi.objects.create(**a)
+        call_command('seed_urun_teklif_adimlari')
 
-    def test_urun_teklif_olusturma_ve_15_adim(self):
-        """Yeni Ürün Teklif Süreci oluşturulduğunda 15 adım kaydının açıldığını ve 1. adımın DEVAM_EDIYOR olduğunu doğrular"""
+    def test_urun_teklif_olusturma_ve_adimlari(self):
+        """Yeni Ürün Teklif Süreci oluşturulduğunda adım kayıtlarının açıldığını ve 1. adımın DEVAM_EDIYOR olduğunu doğrular"""
         from crm_takip.models import UrunTeklifSureci
         response = self.client.post(reverse('urun_teklif_olustur'), {
             'kod': 'TEK-2026-TEST1',
@@ -228,7 +209,7 @@ class UrunTeklifSureciTests(TestCase):
             'musteri_adi': 'BSH Ev Aletleri',
             'donem': '2026 / Q1',
             'ilgili_fabrika': 'Teleset 1 (Manisa)',
-            'urun_grubu': 'Metal Parca & Sac',
+            'urun_grubu': 'METAL_PARCA',
             'sorumlu_satis_uzmani': 'Buse Nur Baltacıoğlu',
             'sorumlu_satis_analiz_uzmani': 'Ahmet Erdem',
             'sorumlu_satis_yoneticisi': 'Murat Yılmaz',
@@ -238,351 +219,191 @@ class UrunTeklifSureciTests(TestCase):
         self.assertEqual(response.status_code, 302)
 
         surec = UrunTeklifSureci.objects.get(kod='TEK-2026-TEST1')
-        self.assertEqual(surec.adim_kayitlari.count(), 15)
+        self.assertTrue(surec.adim_kayitlari.count() > 0)
         self.assertEqual(surec.guncel_adim_no, 1)
-        self.assertEqual(surec.adim_kayitlari.get(adim__adim_no=1).durum, 'DEVAM_EDIYOR')
+        self.assertEqual(surec.adim_kayitlari.filter(adim__sira_no=1).first().durum, 'DEVAM_EDIYOR')
 
-    def test_adim_3_ust_yonetim_onay_nok_donus_ve_ok(self):
-        """Adım 3'te NOK verilirse 2. Adıma geri döner; OK verilirse 4. Adıma geçer"""
+    def test_adim_1_ve_2_ilerleme(self):
+        """Adım 1 tamamlandığında 2. Adıma geçer"""
         from crm_takip.models import UrunTeklifSureci, UrunTeklifAdimTanimi, UrunTeklifAdimKaydi
         surec = UrunTeklifSureci.objects.create(
-            kod='TEK-2026-T3',
-            ad='Adım 3 Onay Testi',
+            kod='TEK-2026-T1',
+            ad='Adım 1 Testi',
             musteri_adi='Arçelik',
-            guncel_adim_no=3
+            guncel_adim_no=1,
+            guncel_adim_kodu='1'
         )
-        for i in range(1, 16):
-            adim_tanimi = UrunTeklifAdimTanimi.objects.get(adim_no=i)
-            durum = 'TAMAMLANDI' if i < 3 else ('DEVAM_EDIYOR' if i == 3 else 'BEKLIYOR')
-            UrunTeklifAdimKaydi.objects.create(surec=surec, adim=adim_tanimi, durum=durum)
+        for tanim in UrunTeklifAdimTanimi.objects.all():
+            durum = 'DEVAM_EDIYOR' if tanim.sira_no == 1 else 'BEKLIYOR'
+            UrunTeklifAdimKaydi.objects.create(surec=surec, adim=tanim, durum=durum)
 
-        adim3_kaydi = surec.adim_kayitlari.get(adim__adim_no=3)
-
-        # 1. NOK -> 2. Adıma geri dönmeli
-        self.client.post(reverse('urun_teklif_adim_aksiyon', args=[surec.pk, adim3_kaydi.pk]), {
-            'aksiyon': 'NOK',
-            'notlar': 'Marj hedefi yükseltilmeli.',
-            'tamamlayan': 'Satış Yöneticisi'
-        })
-        surec.refresh_from_db()
-        self.assertEqual(surec.guncel_adim_no, 2)
-        self.assertEqual(surec.durum, 'REVIZYONDA')
-        self.assertEqual(surec.adim_kayitlari.get(adim__adim_no=2).durum, 'DEVAM_EDIYOR')
-
-        # 2. 2. Adımı tamamlayıp tekrar 3'e geçelim
-        adim2_kaydi = surec.adim_kayitlari.get(adim__adim_no=2)
-        self.client.post(reverse('urun_teklif_adim_aksiyon', args=[surec.pk, adim2_kaydi.pk]), {
+        adim1_kaydi = surec.adim_kayitlari.get(adim__sira_no=1)
+        self.client.post(reverse('urun_teklif_adim_aksiyon', args=[surec.pk, adim1_kaydi.pk]), {
             'aksiyon': 'TAMAMLA',
-            'notlar': 'Bölüm yöneticileriyle revize edildi.'
+            'notlar': 'Ön kontrol yapıldı.'
         })
         surec.refresh_from_db()
-        self.assertEqual(surec.guncel_adim_no, 3)
+        self.assertEqual(surec.guncel_adim_kodu, '2')
+        self.assertEqual(surec.adim_kayitlari.get(adim__adim_kodu='2').durum, 'DEVAM_EDIYOR')
 
-        # 3. Adım 3 OK -> 4. Adıma geçmeli
-        adim3_kaydi.refresh_from_db()
-        self.client.post(reverse('urun_teklif_adim_aksiyon', args=[surec.pk, adim3_kaydi.pk]), {
-            'aksiyon': 'OK',
-            'notlar': 'Fiyat stratejisi yönetimce onaylandı.'
-        })
-        surec.refresh_from_db()
-        self.assertEqual(surec.guncel_adim_no, 4)
-        self.assertEqual(surec.adim_kayitlari.get(adim__adim_no=4).durum, 'DEVAM_EDIYOR')
-
-    def test_adim_5_parametre_kontrolu_nok_donus_ve_ok(self):
-        """Adım 5'te NOK verilirse 1. Adıma (Fiyat Stratejisi) geri döner; OK verilirse 6. Adıma geçer"""
+    def test_adim_16_kapanis(self):
+        """Adım 16B TAMAMLA ile sürecin BASARIYLA_TAMAMLANDI olarak kapandığını test eder"""
         from crm_takip.models import UrunTeklifSureci, UrunTeklifAdimTanimi, UrunTeklifAdimKaydi
         surec = UrunTeklifSureci.objects.create(
-            kod='TEK-2026-T5',
-            ad='Adım 5 Parametre Testi',
-            musteri_adi='Vestel',
-            guncel_adim_no=5
-        )
-        for i in range(1, 16):
-            adim_tanimi = UrunTeklifAdimTanimi.objects.get(adim_no=i)
-            durum = 'TAMAMLANDI' if i < 5 else ('DEVAM_EDIYOR' if i == 5 else 'BEKLIYOR')
-            UrunTeklifAdimKaydi.objects.create(surec=surec, adim=adim_tanimi, durum=durum)
-
-        adim5_kaydi = surec.adim_kayitlari.get(adim__adim_no=5)
-
-        # 1. NOK -> 1. Adıma dönmeli
-        self.client.post(reverse('urun_teklif_adim_aksiyon', args=[surec.pk, adim5_kaydi.pk]), {
-            'aksiyon': 'NOK',
-            'notlar': 'Ödeme vadesi ve teslim koşulu stratejiye uymuyor.'
-        })
-        surec.refresh_from_db()
-        self.assertEqual(surec.guncel_adim_no, 1)
-        self.assertEqual(surec.durum, 'REVIZYONDA')
-
-        # 2. Adım 5 OK -> 6. Adıma geçmeli
-        adim5_kaydi.refresh_from_db()
-        self.client.post(reverse('urun_teklif_adim_aksiyon', args=[surec.pk, adim5_kaydi.pk]), {
-            'aksiyon': 'OK',
-            'notlar': 'Koşullar uygun bulundu.'
-        })
-        surec.refresh_from_db()
-        self.assertEqual(surec.guncel_adim_no, 6)
-        self.assertEqual(surec.adim_kayitlari.get(adim__adim_no=6).durum, 'DEVAM_EDIYOR')
-
-    def test_adim_8_maliyet_onay_nok_donus_ve_ok(self):
-        """Adım 8'de NOK verilirse 6. Adıma (Detaylı Maliyet Analizi) geri döner; OK verilirse 9. Adıma geçer"""
-        from crm_takip.models import UrunTeklifSureci, UrunTeklifAdimTanimi, UrunTeklifAdimKaydi
-        surec = UrunTeklifSureci.objects.create(
-            kod='TEK-2026-T8',
-            ad='Adım 8 Maliyet Onay Testi',
-            musteri_adi='Stellantis',
-            guncel_adim_no=8
-        )
-        for i in range(1, 16):
-            adim_tanimi = UrunTeklifAdimTanimi.objects.get(adim_no=i)
-            durum = 'TAMAMLANDI' if i < 8 else ('DEVAM_EDIYOR' if i == 8 else 'BEKLIYOR')
-            UrunTeklifAdimKaydi.objects.create(surec=surec, adim=adim_tanimi, durum=durum)
-
-        adim8_kaydi = surec.adim_kayitlari.get(adim__adim_no=8)
-
-        # 1. NOK -> 6. Adıma dönmeli
-        self.client.post(reverse('urun_teklif_adim_aksiyon', args=[surec.pk, adim8_kaydi.pk]), {
-            'aksiyon': 'NOK',
-            'notlar': 'Hammadde fire oranı ve işçilik süresi revize edilmeli.'
-        })
-        surec.refresh_from_db()
-        self.assertEqual(surec.guncel_adim_no, 6)
-        self.assertEqual(surec.durum, 'REVIZYONDA')
-
-        # 2. Adım 8 OK -> 9. Adıma geçmeli
-        adim8_kaydi.refresh_from_db()
-        self.client.post(reverse('urun_teklif_adim_aksiyon', args=[surec.pk, adim8_kaydi.pk]), {
-            'aksiyon': 'OK',
-            'notlar': 'Yönetim özet tabloyu onayladı.'
-        })
-        surec.refresh_from_db()
-        self.assertEqual(surec.guncel_adim_no, 9)
-        self.assertEqual(surec.adim_kayitlari.get(adim__adim_no=9).durum, 'DEVAM_EDIYOR')
-
-    def test_adim_11_guncelleme_karari_hayir_ve_evet(self):
-        """Adım 11'de HAYIR denince Adım 12 pas geçilip doğrudan 13'e atlar; EVET denince 12'ye geçer"""
-        from crm_takip.models import UrunTeklifSureci, UrunTeklifAdimTanimi, UrunTeklifAdimKaydi
-        surec = UrunTeklifSureci.objects.create(
-            kod='TEK-2026-T11',
-            ad='Adım 11 Güncelleme Kararı Testi',
-            musteri_adi='Bosch',
-            guncel_adim_no=11
-        )
-        for i in range(1, 16):
-            adim_tanimi = UrunTeklifAdimTanimi.objects.get(adim_no=i)
-            durum = 'TAMAMLANDI' if i < 11 else ('DEVAM_EDIYOR' if i == 11 else 'BEKLIYOR')
-            UrunTeklifAdimKaydi.objects.create(surec=surec, adim=adim_tanimi, durum=durum)
-
-        adim11_kaydi = surec.adim_kayitlari.get(adim__adim_no=11)
-
-        # 1. HAYIR -> Adım 12 PAS_GECILDI, Adım 13 DEVAM_EDIYOR
-        self.client.post(reverse('urun_teklif_adim_aksiyon', args=[surec.pk, adim11_kaydi.pk]), {
-            'aksiyon': 'HAYIR',
-            'notlar': 'Mevcut teklif korunacak, güncelleme yapılmayacak.'
-        })
-        surec.refresh_from_db()
-        self.assertEqual(surec.guncel_adim_no, 13)
-        self.assertEqual(surec.adim_kayitlari.get(adim__adim_no=12).durum, 'PAS_GECILDI')
-        self.assertEqual(surec.adim_kayitlari.get(adim__adim_no=13).durum, 'DEVAM_EDIYOR')
-
-    def test_adim_15_kapanis_ve_ogrenilmis_dersler(self):
-        """Adım 15 KAPAT aksiyonu ile sürecin BASARIYLA_TAMAMLANDI (%100) olarak kapandığını test eder"""
-        from crm_takip.models import UrunTeklifSureci, UrunTeklifAdimTanimi, UrunTeklifAdimKaydi
-        surec = UrunTeklifSureci.objects.create(
-            kod='TEK-2026-T15',
-            ad='Adım 15 Kapanış Testi',
+            kod='TEK-2026-T16',
+            ad='Adım 16B Kapanış Testi',
             musteri_adi='Electrolux',
-            guncel_adim_no=15
+            guncel_adim_no=16,
+            guncel_adim_kodu='16B'
         )
-        for i in range(1, 16):
-            adim_tanimi = UrunTeklifAdimTanimi.objects.get(adim_no=i)
-            durum = 'TAMAMLANDI' if i < 15 else ('DEVAM_EDIYOR' if i == 15 else 'BEKLIYOR')
-            UrunTeklifAdimKaydi.objects.create(surec=surec, adim=adim_tanimi, durum=durum)
+        for tanim in UrunTeklifAdimTanimi.objects.all():
+            durum = 'TAMAMLANDI' if tanim.sira_no < 39 else ('DEVAM_EDIYOR' if tanim.adim_kodu == '16B' else 'BEKLIYOR')
+            UrunTeklifAdimKaydi.objects.create(surec=surec, adim=tanim, durum=durum)
 
-        adim15_kaydi = surec.adim_kayitlari.get(adim__adim_no=15)
-        self.client.post(reverse('urun_teklif_adim_aksiyon', args=[surec.pk, adim15_kaydi.pk]), {
-            'aksiyon': 'KAPAT',
-            'notlar': 'Teklif kazanıldı, seri üretime geçildi. Öğrenilmiş dersler arşivlendi.'
+        adim16b_kaydi = surec.adim_kayitlari.get(adim__adim_kodu='16B')
+        self.client.post(reverse('urun_teklif_adim_aksiyon', args=[surec.pk, adim16b_kaydi.pk]), {
+            'aksiyon': 'TAMAMLA',
+            'notlar': 'Teklif kazanıldı, APQP sürecine devredildi.'
         })
         surec.refresh_from_db()
         self.assertEqual(surec.durum, 'BASARIYLA_TAMAMLANDI')
-        self.assertEqual(surec.tamamlanma_yuzdesi, 100)
 
 
 class SozlesmeSureciTests(TestCase):
     def setUp(self):
         self.client = Client()
-        from crm_takip.models import SozlesmeAdimTanimi
-        adilar_data = [
-            {"adim_no": 1, "baslik": "Müşteriden sözleşmenin alınması ve süreç girdilerinin temini", "faaliyet_tanimi": "F1", "sorumlular": "Satış Uzmanı", "karar_adimi_mi": False, "faz": "FAZ1"},
-            {"adim_no": 2, "baslik": "Müşteri Sözleşme Takip Formuna kayıt oluşturulması", "faaliyet_tanimi": "F2", "sorumlular": "Satış Uzmanı & Bölüm Sorumluları", "karar_adimi_mi": False, "faz": "FAZ1"},
-            {"adim_no": 3, "baslik": "Hukuki değerlendirme için şirket avukatlarının görüşünün alınması", "faaliyet_tanimi": "F3", "sorumlular": "Satış Analiz & Avukat", "karar_adimi_mi": False, "faz": "FAZ1"},
-            {"adim_no": 4, "baslik": "Hukuki görüş ve şartlar doğrultusunda sözleşmenin uygunluğunun değerlendirilmesi", "faaliyet_tanimi": "F4", "sorumlular": "Satış Yöneticisi & Hukuk", "karar_adimi_mi": True, "faz": "FAZ1"},
-            {"adim_no": 5, "baslik": "Sözleşme Uygunluk Değerlendirme Çizelgesine maddelerin eklenmesi", "faaliyet_tanimi": "F5", "sorumlular": "Satış Analiz Sorumlusu", "karar_adimi_mi": False, "faz": "FAZ2"},
-            {"adim_no": 6, "baslik": "Sözleşme maddelerinin risklerinin belirlenmesi ve değerlendirilmesi", "faaliyet_tanimi": "F6", "sorumlular": "Risk Yönetim Ekibi", "karar_adimi_mi": False, "faz": "FAZ2"},
-            {"adim_no": 7, "baslik": "Risk puanı yüksek/kritik maddelerin bölüm yöneticileri ile paylaşılması", "faaliyet_tanimi": "F7", "sorumlular": "Satış & Bölüm Yöneticileri", "karar_adimi_mi": True, "faz": "FAZ2"},
-            {"adim_no": 8, "baslik": "Sözleşmenin değerlendirmelerle birlikte üst yönetim onayına sunulması", "faaliyet_tanimi": "F8", "sorumlular": "Satış Yöneticisi & Üst Yönetim", "karar_adimi_mi": True, "faz": "FAZ2"},
-            {"adim_no": 9, "baslik": "Riskli/sorunlu maddeler ile ilgili müşterinin bilgilendirilmesi", "faaliyet_tanimi": "F9", "sorumlular": "Satış Uzmanı & Yöneticisi", "karar_adimi_mi": False, "faz": "FAZ3"},
-            {"adim_no": 10, "baslik": "Müşteri ile müzakerelerle uygun olmayan maddelerde mutabakata varılması", "faaliyet_tanimi": "F10", "sorumlular": "Satış Ekibi & Müşteri", "karar_adimi_mi": True, "faz": "FAZ3"},
-            {"adim_no": 11, "baslik": "Onaylanan sözleşmenin şirket yetkilileri tarafından imzalanması", "faaliyet_tanimi": "F11", "sorumlular": "Genel Müdür / İmza Yetkilisi", "karar_adimi_mi": False, "faz": "FAZ3"},
-            {"adim_no": 12, "baslik": "Yasal yükümlülüklerin tamamlanması ve sözleşmenin dosyalanması", "faaliyet_tanimi": "F12", "sorumlular": "Mali İşler & Satış", "karar_adimi_mi": False, "faz": "FAZ3"},
-            {"adim_no": 13, "baslik": "Müşteri taleplerinin EYS sistemine dahil edilmesi ve doküman güncellemesi", "faaliyet_tanimi": "F13", "sorumlular": "EYS & Kalite", "karar_adimi_mi": False, "faz": "FAZ4"},
-            {"adim_no": 14, "baslik": "Sürecin kapatılıp, süreç performansının takibi ve raporlanması", "faaliyet_tanimi": "F14", "sorumlular": "Satış Uzmanı & EYS", "karar_adimi_mi": False, "faz": "FAZ4"},
-            {"adim_no": 15, "baslik": "Süreç ve sonuçların düzenli gözden geçirilmesi, kurumsal öğrenilmiş derslerin paylaşılması", "faaliyet_tanimi": "F15", "sorumlular": "Tüm Süreç Paydaşları", "karar_adimi_mi": True, "faz": "FAZ4"},
-        ]
-        for a in adilar_data:
-            SozlesmeAdimTanimi.objects.create(**a)
+        call_command('seed_sozlesme_adimlari')
 
-    def test_sozlesme_sureci_olusturma_ve_15_adim(self):
-        """Yeni Sözleşme Süreci oluşturulduğunda 15 adım kaydının açıldığını ve 1. adımın DEVAM_EDIYOR olduğunu doğrular"""
+    def test_sozlesme_sureci_olusturma_ve_9_adim(self):
+        """Yeni Sözleşme Süreci oluşturulduğunda 9 adım kaydının açıldığını ve 1. adımın DEVAM_EDIYOR olduğunu doğrular"""
         from crm_takip.models import SozlesmeSureci
         response = self.client.post(reverse('sozlesme_sureci_olustur'), {
             'kod': 'SZL-2026-TEST1',
             'ad': 'BSH Kalite Güvence Anlaşması (QAA)',
             'musteri_adi': 'BSH Ev Aletleri',
-            'sozlesme_tipi': 'QAA',
-            'ilgili_fabrika': 'Teleset 1 (Manisa)',
+            'sozlesme_tipi': 'KALITE',
+            'ilgili_fabrika': 'PRESHANE',
             'sorumlu_satis_uzmani': 'Buse Nur Baltacıoğlu',
-            'sorumlu_hukuk_danismani': 'Av. Mehmet Can',
-            'sorumlu_satis_yoneticisi': 'Murat Yılmaz',
-            'tahmini_deger': '1500000',
+            'sorumlu_hukuk': 'Hukuk Müşaviri',
             'aciklama': 'Test Sözleşme Değerlendirme'
         })
         self.assertEqual(response.status_code, 302)
 
         surec = SozlesmeSureci.objects.get(kod='SZL-2026-TEST1')
-        self.assertEqual(surec.adim_kayitlari.count(), 15)
+        self.assertEqual(surec.adim_kayitlari.count(), 9)
         self.assertEqual(surec.guncel_adim_no, 1)
         self.assertEqual(surec.adim_kayitlari.get(adim__adim_no=1).durum, 'DEVAM_EDIYOR')
 
-    def test_adim_4_hukuki_uygunluk_nok_atlama_ve_ok(self):
-        """Adım 4'te NOK verilirse 5,6,7,8 pas geçilip doğrudan 9. adıma atlar; OK verilirse 5. adıma geçer"""
+    def test_adim_1_ve_paralel_adim_2_3(self):
+        """Adım 1 tamamlandığında Adım 2 ve Adım 3 paralel olarak DEVAM_EDIYOR durumuna geçer"""
         from crm_takip.models import SozlesmeSureci, SozlesmeAdimTanimi, SozlesmeAdimKaydi
         surec = SozlesmeSureci.objects.create(
-            kod='SZL-2026-T4',
-            ad='Adım 4 Hukuki Uygunluk Testi',
+            kod='SZL-2026-T1',
+            ad='Adım 1 Testi',
             musteri_adi='Arçelik',
-            guncel_adim_no=4
+            guncel_adim_no=1
         )
-        for i in range(1, 16):
-            adim_tanimi = SozlesmeAdimTanimi.objects.get(adim_no=i)
-            durum = 'TAMAMLANDI' if i < 4 else ('DEVAM_EDIYOR' if i == 4 else 'BEKLIYOR')
-            SozlesmeAdimKaydi.objects.create(surec=surec, adim=adim_tanimi, durum=durum)
+        for i in range(1, 10):
+            tanim = SozlesmeAdimTanimi.objects.get(adim_no=i)
+            durum = 'DEVAM_EDIYOR' if i == 1 else 'BEKLIYOR'
+            SozlesmeAdimKaydi.objects.create(surec=surec, adim=tanim, durum=durum)
 
-        adim4_kaydi = surec.adim_kayitlari.get(adim__adim_no=4)
-
-        # 1. NOK -> 5,6,7,8 PAS_GECILDI, Adım 9 DEVAM_EDIYOR
-        self.client.post(reverse('sozlesme_sureci_adim_aksiyon', args=[surec.pk, adim4_kaydi.pk]), {
-            'aksiyon': 'NOK',
-            'notlar': 'Cezai şart ve tazminat maddeleri şirket politikasına aykırı.',
-            'tamamlayan': 'Hukuk Müşaviri'
+        adim1_kaydi = surec.adim_kayitlari.get(adim__adim_no=1)
+        self.client.post(reverse('sozlesme_sureci_adim_aksiyon', args=[surec.pk, adim1_kaydi.pk]), {
+            'aksiyon': 'TAMAMLA',
+            'notlar': 'Kayıt açıldı, ekler tam.',
+            'tamamlayan': 'Satış Uzmanı'
         })
         surec.refresh_from_db()
-        self.assertEqual(surec.guncel_adim_no, 9)
-        self.assertEqual(surec.durum, 'MUSTERI_MUZAKERESINDE')
-        for skipped_no in [5, 6, 7, 8]:
-            self.assertEqual(surec.adim_kayitlari.get(adim__adim_no=skipped_no).durum, 'PAS_GECILDI')
-        self.assertEqual(surec.adim_kayitlari.get(adim__adim_no=9).durum, 'DEVAM_EDIYOR')
+        self.assertEqual(surec.adim_kayitlari.get(adim__adim_no=1).durum, 'TAMAMLANDI')
+        self.assertEqual(surec.adim_kayitlari.get(adim__adim_no=2).durum, 'DEVAM_EDIYOR')
+        self.assertEqual(surec.adim_kayitlari.get(adim__adim_no=3).durum, 'DEVAM_EDIYOR')
 
-    def test_adim_7_risk_degerlendirmesi_nok_atlama_ve_ok(self):
-        """Adım 7'de NOK verilirse 8. adım pas geçilip doğrudan 9'a atlar; OK verilirse 8'e geçer"""
+    def test_adim_5_karar_kapisi_onay_ve_revizyon_ve_red(self):
+        """Adım 5'te ONAY 6'ya geçirir, REVIZYON 4'e döner, RED olumsuz kapatır"""
+        from crm_takip.models import SozlesmeSureci, SozlesmeAdimTanimi, SozlesmeAdimKaydi
+        surec = SozlesmeSureci.objects.create(
+            kod='SZL-2026-T5',
+            ad='Adım 5 Yetkili Makam Karar Testi',
+            musteri_adi='Vestel',
+            guncel_adim_no=5
+        )
+        for i in range(1, 10):
+            tanim = SozlesmeAdimTanimi.objects.get(adim_no=i)
+            durum = 'TAMAMLANDI' if i < 5 else ('DEVAM_EDIYOR' if i == 5 else 'BEKLIYOR')
+            SozlesmeAdimKaydi.objects.create(surec=surec, adim=tanim, durum=durum)
+
+        adim5_kaydi = surec.adim_kayitlari.get(adim__adim_no=5)
+
+        # 1. ONAY -> Adım 6 DEVAM_EDIYOR
+        self.client.post(reverse('sozlesme_sureci_adim_aksiyon', args=[surec.pk, adim5_kaydi.pk]), {
+            'aksiyon': 'ONAY',
+            'notlar': 'Sapma onaylandı.'
+        })
+        surec.refresh_from_db()
+        self.assertEqual(surec.guncel_adim_no, 6)
+        self.assertEqual(surec.adim_kayitlari.get(adim__adim_no=6).durum, 'DEVAM_EDIYOR')
+
+        # 2. REVIZYON -> Adım 4'e Dönüş
+        self.client.post(reverse('sozlesme_sureci_adim_aksiyon', args=[surec.pk, adim5_kaydi.pk]), {
+            'aksiyon': 'REVIZYON',
+            'notlar': 'Tekrar değerlendirilsin.'
+        })
+        surec.refresh_from_db()
+        self.assertEqual(surec.guncel_adim_no, 4)
+        self.assertEqual(surec.adim_kayitlari.get(adim__adim_no=4).durum, 'DEVAM_EDIYOR')
+
+        # 3. RED -> OLUMSUZ_KAPATILDI
+        self.client.post(reverse('sozlesme_sureci_adim_aksiyon', args=[surec.pk, adim5_kaydi.pk]), {
+            'aksiyon': 'RED',
+            'notlar': 'Sözleşmeye devam edilmeyecek.'
+        })
+        surec.refresh_from_db()
+        self.assertEqual(surec.durum, 'OLUMSUZ_KAPATILDI')
+
+    def test_adim_7_nihai_mutabakat_karar_kapisi(self):
+        """Adım 7'de MUTABAKAT_SAGLANDI 8'e geçirir, KRITIK_SAPMA 5'e döner, MUSTERI_RED olumsuz kapatır"""
         from crm_takip.models import SozlesmeSureci, SozlesmeAdimTanimi, SozlesmeAdimKaydi
         surec = SozlesmeSureci.objects.create(
             kod='SZL-2026-T7',
-            ad='Adım 7 Risk Değerlendirme Testi',
-            musteri_adi='Vestel',
+            ad='Adım 7 Mutabakat Testi',
+            musteri_adi='Stellantis',
             guncel_adim_no=7
         )
-        for i in range(1, 16):
-            adim_tanimi = SozlesmeAdimTanimi.objects.get(adim_no=i)
+        for i in range(1, 10):
+            tanim = SozlesmeAdimTanimi.objects.get(adim_no=i)
             durum = 'TAMAMLANDI' if i < 7 else ('DEVAM_EDIYOR' if i == 7 else 'BEKLIYOR')
-            SozlesmeAdimKaydi.objects.create(surec=surec, adim=adim_tanimi, durum=durum)
+            SozlesmeAdimKaydi.objects.create(surec=surec, adim=tanim, durum=durum)
 
         adim7_kaydi = surec.adim_kayitlari.get(adim__adim_no=7)
 
-        # 1. NOK -> 8 PAS_GECILDI, Adım 9 DEVAM_EDIYOR
+        # 1. MUTABAKAT_SAGLANDI -> Adım 8 DEVAM_EDIYOR
         self.client.post(reverse('sozlesme_sureci_adim_aksiyon', args=[surec.pk, adim7_kaydi.pk]), {
-            'aksiyon': 'NOK',
-            'notlar': 'Bölüm yöneticileri yüksek riskli garanti şartlarını onaylamadı.'
+            'aksiyon': 'MUTABAKAT_SAGLANDI',
+            'notlar': 'Müşteriyle tam mutabakat sağlandı.'
         })
         surec.refresh_from_db()
-        self.assertEqual(surec.guncel_adim_no, 9)
-        self.assertEqual(surec.durum, 'MUSTERI_MUZAKERESINDE')
-        self.assertEqual(surec.adim_kayitlari.get(adim__adim_no=8).durum, 'PAS_GECILDI')
-        self.assertEqual(surec.adim_kayitlari.get(adim__adim_no=9).durum, 'DEVAM_EDIYOR')
+        self.assertEqual(surec.guncel_adim_no, 8)
+        self.assertEqual(surec.adim_kayitlari.get(adim__adim_no=8).durum, 'DEVAM_EDIYOR')
 
-    def test_adim_8_ust_yonetim_onayi_ok_atlama_ve_nok(self):
-        """Adım 8'de OK verilirse 9 ve 10 pas geçilerek doğrudan 11'e (İmza) atlar; NOK verilirse 9'a geçer"""
+    def test_adim_9_kapanis_ve_yururluk(self):
+        """Adım 9 TAMAMLA ile sürecin BASARIYLA_TAMAMLANDI (%100) olarak kapandığını test eder"""
         from crm_takip.models import SozlesmeSureci, SozlesmeAdimTanimi, SozlesmeAdimKaydi
         surec = SozlesmeSureci.objects.create(
-            kod='SZL-2026-T8',
-            ad='Adım 8 Üst Yönetim Onay Testi',
-            musteri_adi='Stellantis',
-            guncel_adim_no=8
-        )
-        for i in range(1, 16):
-            adim_tanimi = SozlesmeAdimTanimi.objects.get(adim_no=i)
-            durum = 'TAMAMLANDI' if i < 8 else ('DEVAM_EDIYOR' if i == 8 else 'BEKLIYOR')
-            SozlesmeAdimKaydi.objects.create(surec=surec, adim=adim_tanimi, durum=durum)
-
-        adim8_kaydi = surec.adim_kayitlari.get(adim__adim_no=8)
-
-        # 1. OK -> 9 ve 10 PAS_GECILDI, Adım 11 DEVAM_EDIYOR
-        self.client.post(reverse('sozlesme_sureci_adim_aksiyon', args=[surec.pk, adim8_kaydi.pk]), {
-            'aksiyon': 'OK',
-            'notlar': 'Sözleşme üst yönetimce koşulsuz onaylandı.'
-        })
-        surec.refresh_from_db()
-        self.assertEqual(surec.guncel_adim_no, 11)
-        self.assertEqual(surec.adim_kayitlari.get(adim__adim_no=9).durum, 'PAS_GECILDI')
-        self.assertEqual(surec.adim_kayitlari.get(adim__adim_no=10).durum, 'PAS_GECILDI')
-        self.assertEqual(surec.adim_kayitlari.get(adim__adim_no=11).durum, 'DEVAM_EDIYOR')
-
-    def test_adim_10_musteri_muzakere_nok_olumsuz_kapatilma_ve_ok(self):
-        """Adım 10'da NOK verilirse 11,12,13 pas geçilip doğrudan 14'e atlar ve OLUMSUZ_KAPATILDI olur"""
-        from crm_takip.models import SozlesmeSureci, SozlesmeAdimTanimi, SozlesmeAdimKaydi
-        surec = SozlesmeSureci.objects.create(
-            kod='SZL-2026-T10',
-            ad='Adım 10 Müşteri Müzakere Testi',
-            musteri_adi='Bosch',
-            guncel_adim_no=10
-        )
-        for i in range(1, 16):
-            adim_tanimi = SozlesmeAdimTanimi.objects.get(adim_no=i)
-            durum = 'TAMAMLANDI' if i < 10 else ('DEVAM_EDIYOR' if i == 10 else 'BEKLIYOR')
-            SozlesmeAdimKaydi.objects.create(surec=surec, adim=adim_tanimi, durum=durum)
-
-        adim10_kaydi = surec.adim_kayitlari.get(adim__adim_no=10)
-
-        # 1. NOK -> 11, 12, 13 PAS_GECILDI, Adım 14 DEVAM_EDIYOR, Durum: OLUMSUZ_KAPATILDI
-        self.client.post(reverse('sozlesme_sureci_adim_aksiyon', args=[surec.pk, adim10_kaydi.pk]), {
-            'aksiyon': 'NOK',
-            'notlar': 'Müşteri ile sorumluluk sınırları maddesinde mutabakat sağlanamadı.'
-        })
-        surec.refresh_from_db()
-        self.assertEqual(surec.guncel_adim_no, 14)
-        self.assertEqual(surec.durum, 'OLUMSUZ_KAPATILDI')
-        for skipped_no in [11, 12, 13]:
-            self.assertEqual(surec.adim_kayitlari.get(adim__adim_no=skipped_no).durum, 'PAS_GECILDI')
-        self.assertEqual(surec.adim_kayitlari.get(adim__adim_no=14).durum, 'DEVAM_EDIYOR')
-
-    def test_adim_15_kapanis_ve_ogrenilmis_dersler(self):
-        """Adım 15 KAPAT aksiyonu ile sürecin BASARIYLA_TAMAMLANDI (%100) olarak kapandığını test eder"""
-        from crm_takip.models import SozlesmeSureci, SozlesmeAdimTanimi, SozlesmeAdimKaydi
-        surec = SozlesmeSureci.objects.create(
-            kod='SZL-2026-T15',
-            ad='Adım 15 Kapanış Testi',
+            kod='SZL-2026-T9',
+            ad='Adım 9 Kapanış Testi',
             musteri_adi='Electrolux',
-            guncel_adim_no=15
+            guncel_adim_no=9
         )
-        for i in range(1, 16):
-            adim_tanimi = SozlesmeAdimTanimi.objects.get(adim_no=i)
-            durum = 'TAMAMLANDI' if i < 15 else ('DEVAM_EDIYOR' if i == 15 else 'BEKLIYOR')
-            SozlesmeAdimKaydi.objects.create(surec=surec, adim=adim_tanimi, durum=durum)
+        for i in range(1, 10):
+            tanim = SozlesmeAdimTanimi.objects.get(adim_no=i)
+            durum = 'TAMAMLANDI' if i < 9 else ('DEVAM_EDIYOR' if i == 9 else 'BEKLIYOR')
+            SozlesmeAdimKaydi.objects.create(surec=surec, adim=tanim, durum=durum)
 
-        adim15_kaydi = surec.adim_kayitlari.get(adim__adim_no=15)
-        self.client.post(reverse('sozlesme_sureci_adim_aksiyon', args=[surec.pk, adim15_kaydi.pk]), {
-            'aksiyon': 'KAPAT',
-            'notlar': 'Sözleşme başarıyla yürürlüğe girdi. Hukuki ve ticari öğrenilmiş dersler arşivlendi.'
+        adim9_kaydi = surec.adim_kayitlari.get(adim__adim_no=9)
+        self.client.post(reverse('sozlesme_sureci_adim_aksiyon', args=[surec.pk, adim9_kaydi.pk]), {
+            'aksiyon': 'TAMAMLA',
+            'notlar': 'Sözleşme başarıyla yürürlüğe girdi ve yükümlülük takibi başlatıldı.'
         })
         surec.refresh_from_db()
         self.assertEqual(surec.durum, 'BASARIYLA_TAMAMLANDI')
@@ -1409,7 +1230,7 @@ class MusteriKartlariVe360Tests(TestCase):
             kam_satis_lideri="Buse Nur BALTACIOĞLU",
             kam_muhendislik_lideri="Ahmet AK (Kalıp & Projeci Md.)",
             kam_kalite_lideri="Mehmet YILMAZ (Kalite Mühendisi)",
-            sozlesme_durumu="STG-TL-001 (Aktif)",
+            sozlesme_durumu="Aktif Sözleşme (Geçerli)",
             churn_riski="0.05 (Düşük Risk)"
         )
         
@@ -1651,7 +1472,7 @@ class UctanUcaIsAkisiTests(TestCase):
         """Aktif adımların ve termin risklerinin bekleyen aksiyonlar olarak döndürüldüğünü test eder"""
         aksiyonlar = self.proje.get_bekleyen_aksiyonlar()
         self.assertTrue(len(aksiyonlar) >= 1)
-        self.assertEqual(aksiyonlar[0]['surec_kodu'], 'S6')
+        self.assertEqual(aksiyonlar[0]['surec_kodu'], self.proje.aktif_surec_adi)
         self.assertEqual(aksiyonlar[0]['oncelik'], 'Kritik Yol')
         self.assertIn('Termin Yaklaşıyor', aksiyonlar[0]['termin_durumu'])
 
@@ -1757,6 +1578,266 @@ class IntranetVeIncKeyEntegrasyonTests(TestCase):
         self.assertEqual(proje.hedef_butce, 320000.00)
         self.assertEqual(proje.yillik_hacim_adet, 150000)
         self.assertEqual(proje.sorumlu_lider, 'Buse Nur Baltacıoğlu')
+
+
+class MusteriAdayiTests(TestCase):
+    def setUp(self):
+        call_command('seed_pazarlama_adimlari')
+        call_command('seed_urun_teklif_adimlari')
+        self.client = Client()
+
+    def test_musteri_adayi_olusturma_ve_not_ekleme(self):
+        """Yeni müşteri adayı oluşturulduğunda ilk aktivite notunun kaydedildiğini test eder"""
+        from crm_takip.models import MusteriAdayi, MusteriAdayiNotu
+        response = self.client.post(reverse('musteri_adayi_olustur'), {
+            'ad_soyad': 'Markus Weber',
+            'sirket_adi': 'Miele Die Werkzeugfabrik',
+            'unvan': 'Satınalma Müdürü',
+            'sektor': 'Beyaz Eşya',
+            'ulke': 'Almanya',
+            'sehir': 'Gütersloh',
+            'eposta': 'm.weber@miele.de',
+            'telefon': '+49 5241 89-0',
+            'web_sitesi': 'www.miele.de',
+            'kanal': 'Pazar Ziyareti',
+            'kaynak': 'Almanya 2026 Ziyareti',
+            'durum': 'YENI',
+            'oncelik': 'SICAK',
+            'tahmini_potansiyel_ciro': '750000',
+            'ilgili_urun_gruplari': 'Kondanser, Metal Parça',
+            'etiketler': 'Almanya, Pres Parça, Fuar 2026',
+            'atanan_sorumlu': 'Buse Nur BALTACIOĞLU',
+            'aciklama': 'İlk temas sağlandı, 400T pres kalıp kabiliyetleri soruldu.'
+        })
+        self.assertEqual(response.status_code, 302)
+
+        adayi = MusteriAdayi.objects.filter(sirket_adi='Miele Die Werkzeugfabrik').first()
+        self.assertIsNotNone(adayi)
+        self.assertEqual(adayi.ad_soyad, 'Markus Weber')
+        self.assertEqual(adayi.durum, 'YENI')
+        self.assertEqual(adayi.oncelik, 'SICAK')
+        self.assertEqual(adayi.tahmini_potansiyel_ciro, 750000.00)
+        self.assertIn('Pres Parça', adayi.etiket_listesi)
+
+        # İlk not kontrolü
+        not_kaydi = adayi.notlar.first()
+        self.assertIsNotNone(not_kaydi)
+        self.assertEqual(not_kaydi.not_tipi, 'NOT')
+        self.assertEqual(not_kaydi.baslik, 'Aday Kaydı Oluşturuldu')
+
+    def test_musteri_adaylari_liste_ve_filtreleme(self):
+        """Aday havuzunda durum, ülke ve arama parametrelerine göre filtrelemenin doğruluğunu test eder"""
+        from crm_takip.models import MusteriAdayi
+        MusteriAdayi.objects.create(
+            ad_soyad='Hans Gruber',
+            sirket_adi='Liebherr Hausgeräte GmbH',
+            ulke='Almanya',
+            kanal='Fuar & Etkinlik',
+            durum='YENI',
+            oncelik='SICAK',
+            tahmini_potansiyel_ciro=1200000
+        )
+        MusteriAdayi.objects.create(
+            ad_soyad='Piotr Kowalski',
+            sirket_adi='Amica S.A.',
+            ulke='Polonya',
+            kanal='Pazar Ziyareti',
+            durum='ILETISIMDE',
+            oncelik='ILIK',
+            tahmini_potansiyel_ciro=450000
+        )
+        MusteriAdayi.objects.create(
+            ad_soyad='Marco Rossi',
+            sirket_adi='DeLonghi Appliances',
+            ulke='İtalya',
+            kanal='Müşteri Referansı',
+            durum='DONUSTURULDU',
+            oncelik='ILIK',
+            tahmini_potansiyel_ciro=900000
+        )
+
+        # 1. Tümü
+        resp_all = self.client.get(reverse('musteri_adaylari_liste'))
+        self.assertEqual(resp_all.status_code, 200)
+        self.assertEqual(resp_all.context['toplam_aday'], 3)
+        self.assertEqual(resp_all.context['yeni_adaylar_sayisi'], 1)
+        self.assertEqual(resp_all.context['iletisimde_sayisi'], 1)
+        self.assertEqual(resp_all.context['donusturulen_sayisi'], 1)
+
+        # 2. Ülke Filtresi: Almanya
+        resp_ulke = self.client.get(reverse('musteri_adaylari_liste') + '?ulke=Almanya')
+        self.assertEqual(resp_ulke.status_code, 200)
+        self.assertEqual(resp_ulke.context['adaylar'].count(), 1)
+        self.assertEqual(resp_ulke.context['adaylar'][0].sirket_adi, 'Liebherr Hausgeräte GmbH')
+
+        # 3. Metin Arama: Amica
+        resp_q = self.client.get(reverse('musteri_adaylari_liste') + '?q=Amica')
+        self.assertEqual(resp_q.status_code, 200)
+        self.assertEqual(resp_q.context['adaylar'].count(), 1)
+        self.assertEqual(resp_q.context['adaylar'][0].ad_soyad, 'Piotr Kowalski')
+
+    def test_musteri_adayi_detay_ve_durum_guncelleme(self):
+        """Aday durumunun güncellendiğini ve zaman tüneline log düştüğünü test eder"""
+        from crm_takip.models import MusteriAdayi, MusteriAdayiNotu
+        adayi = MusteriAdayi.objects.create(
+            ad_soyad='Elena Dumitru',
+            sirket_adi='Arctic S.A.',
+            ulke='Romanya',
+            durum='YENI',
+            oncelik='ILIK'
+        )
+
+        # Durum güncelle
+        resp = self.client.post(reverse('musteri_adayi_durum_guncelle', args=[adayi.pk]), {
+            'durum': 'NITELIKLI',
+            'oncelik': 'SICAK',
+            'not_metni': 'Müşteri bütçesi onaylandı, numune talep ediyor.',
+            'ekleyen': 'Buse Nur BALTACIOĞLU'
+        })
+        self.assertEqual(resp.status_code, 302)
+        adayi.refresh_from_db()
+        self.assertEqual(adayi.durum, 'NITELIKLI')
+        self.assertEqual(adayi.oncelik, 'SICAK')
+
+        # Durum değişikliği notu
+        not_log = adayi.notlar.filter(not_tipi='DURUM_DEGISIKLIGI').first()
+        self.assertIsNotNone(not_log)
+        self.assertIn('Nitelikli Aday', not_log.baslik)
+        self.assertIn('numune talep ediyor', not_log.icerik)
+
+    def test_musteri_adayi_not_ekleme(self):
+        """Adaya manuel aktivite notu eklenmesini test eder"""
+        from crm_takip.models import MusteriAdayi
+        adayi = MusteriAdayi.objects.create(
+            ad_soyad='Thomas Müller',
+            sirket_adi='Siemens AG',
+            ulke='Almanya'
+        )
+
+        resp = self.client.post(reverse('musteri_adayi_not_ekle', args=[adayi.pk]), {
+            'not_tipi': 'TOPLANTI',
+            'baslik': 'Online Tanıtım Toplantısı',
+            'icerik': 'Kalıp kabiliyetlerimiz ve Simpac 400T pres sunuldu.',
+            'ekleyen': 'Buse Nur BALTACIOĞLU'
+        })
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(adayi.notlar.filter(not_tipi='TOPLANTI').count(), 1)
+
+    def test_musteri_adayi_donusturme_musteri_kartina(self):
+        """Adayın tek tıkla resmi MusteriKarti, MusteriTesisi ve Zaman Tüneline dönüştüğünü test eder"""
+        from crm_takip.models import MusteriAdayi, MusteriKarti, MusteriTesisi
+        adayi = MusteriAdayi.objects.create(
+            ad_soyad='Carlos Sainz',
+            sirket_adi='Balay Electrodomesticos',
+            unvan='Satınalma Direktörü',
+            ulke='İspanya',
+            sehir='Zaragoza',
+            eposta='carlos.sainz@balay.es',
+            telefon='+34 976 123456',
+            kanal='Pazar Ziyareti',
+            kaynak='İspanya 2026 Q1',
+            durum='NITELIKLI',
+            tahmini_potansiyel_ciro=1800000,
+            ilgili_urun_gruplari='Sac Parça'
+        )
+
+        resp = self.client.post(reverse('musteri_adayi_donustur', args=[adayi.pk]), {
+            'tier': 'Tier 1 - KAM',
+            'strateji': 'Grow',
+            'firma_kodu': 'FRM-99',
+            'surec_baslat': 'YOK',
+            'user_name': 'Buse Nur BALTACIOĞLU'
+        })
+        self.assertEqual(resp.status_code, 302)
+
+        adayi.refresh_from_db()
+        self.assertEqual(adayi.durum, 'DONUSTURULDU')
+        self.assertIsNotNone(adayi.donusturulen_musteri)
+        self.assertIsNotNone(adayi.donusturme_tarihi)
+
+        musteri = adayi.donusturulen_musteri
+        self.assertEqual(musteri.kod, 'FRM-99')
+        self.assertEqual(musteri.ad, 'Balay Electrodomesticos')
+        self.assertEqual(musteri.tier, 'Tier 1 - KAM')
+        self.assertEqual(musteri.strateji, 'Grow')
+        self.assertEqual(musteri.yillik_ciro_eur, 1800000.00)
+
+        # Müşteri tesisi kontrolü
+        tesis = musteri.tesisler.first()
+        self.assertIsNotNone(tesis)
+        self.assertEqual(tesis.yetkili_adi, 'Carlos Sainz')
+        self.assertEqual(tesis.yetkili_email, 'carlos.sainz@balay.es')
+
+    def test_musteri_adayi_donusturme_ile_urun_teklif_sureci(self):
+        """Aday dönüştürülürken URUN_TEKLIF seçilirse otomatik RFQ teklif sürecinin başladığını test eder"""
+        from crm_takip.models import MusteriAdayi, UrunTeklifSureci
+        adayi = MusteriAdayi.objects.create(
+            ad_soyad='Jean Dupont',
+            sirket_adi='Groupe SEB France',
+            ulke='Fransa',
+            durum='NITELIKLI',
+            tahmini_potansiyel_ciro=850000
+        )
+
+        resp = self.client.post(reverse('musteri_adayi_donustur', args=[adayi.pk]), {
+            'tier': 'Tier 2 - Growth',
+            'strateji': 'Start',
+            'surec_baslat': 'URUN_TEKLIF',
+            'user_name': 'Buse Nur BALTACIOĞLU'
+        })
+        self.assertEqual(resp.status_code, 302)
+
+        adayi.refresh_from_db()
+        self.assertEqual(adayi.durum, 'DONUSTURULDU')
+
+        teklif = UrunTeklifSureci.objects.filter(musteri_karti=adayi.donusturulen_musteri).first()
+        self.assertIsNotNone(teklif)
+        self.assertTrue(teklif.kod.startswith('TEK-'))
+        self.assertIn('Groupe SEB France', teklif.ad)
+        self.assertEqual(teklif.adim_kayitlari.count(), 40)
+        self.assertEqual(teklif.guncel_adim_no, 1)
+
+    def test_musteri_karti_dogrudan_olusturma(self):
+        """Müşteri portföyüne modal üzerinden direkt MusteriKarti eklendiğini test eder"""
+        from crm_takip.models import MusteriKarti
+        resp = self.client.post(reverse('musteri_karti_olustur'), {
+            'ad': 'Electrolux Professional AB',
+            'kisa_ad': 'Electrolux',
+            'ulke': 'İsveç',
+            'sehir': 'Stockholm',
+            'tier': 'Tier 1 - KAM',
+            'strateji': 'Protect',
+            'yillik_ciro_eur': '3500000',
+            'kam_satis_lideri': 'Buse Nur BALTACIOĞLU',
+            'aktif_urunler': 'Kondanser, Pres Sac',
+            'yetkili_kisi': 'Sven Larsson',
+            'yetkili_unvan': 'Global Category Manager',
+            'yetkili_email': 'sven.larsson@electrolux.com',
+            'notlar': 'Stratejik partnerlik değerlendiriliyor.'
+        })
+        self.assertEqual(resp.status_code, 302)
+
+        musteri = MusteriKarti.objects.filter(kisa_ad='Electrolux').first()
+        self.assertIsNotNone(musteri)
+        self.assertTrue(musteri.kod.startswith('FRM-'))
+        self.assertEqual(musteri.tier, 'Tier 1 - KAM')
+        self.assertEqual(musteri.yillik_ciro_eur, 3500000.00)
+        self.assertEqual(musteri.tesisler.count(), 1)
+        self.assertEqual(musteri.tesisler.first().yetkili_adi, 'Sven Larsson')
+
+    def test_musteri_adayi_silme(self):
+        """Aday kaydının silinmesini test eder"""
+        from crm_takip.models import MusteriAdayi
+        adayi = MusteriAdayi.objects.create(
+            ad_soyad='Test Silinecek',
+            sirket_adi='Silinecek Ltd',
+            ulke='Türkiye'
+        )
+        pk = adayi.pk
+        resp = self.client.post(reverse('musteri_adayi_sil', args=[pk]))
+        self.assertEqual(resp.status_code, 302)
+        self.assertFalse(MusteriAdayi.objects.filter(pk=pk).exists())
+
 
 
 

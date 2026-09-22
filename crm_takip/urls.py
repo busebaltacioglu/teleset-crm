@@ -12,6 +12,16 @@ urlpatterns = [
     path('faaliyet/<int:pk>/durum/', views.faaliyet_durum_guncelle_view, name='faaliyet_durum_guncelle'),
     path('faaliyet/<int:pk>/sil/', views.faaliyet_sil_view, name='faaliyet_sil'),
 
+    # Müşteri ve Aday Yönetimi (Leads & Portföy)
+    path('musteri-adaylari/', views.musteri_adaylari_liste, name='musteri_adaylari_liste'),
+    path('musteri-adaylari/yeni/', views.musteri_adayi_olustur, name='musteri_adayi_olustur'),
+    path('musteri-adaylari/<int:pk>/', views.musteri_adayi_detay, name='musteri_adayi_detay'),
+    path('musteri-adaylari/<int:pk>/donustur/', views.musteri_adayi_donustur, name='musteri_adayi_donustur'),
+    path('musteri-adaylari/<int:pk>/durum/', views.musteri_adayi_durum_guncelle, name='musteri_adayi_durum_guncelle'),
+    path('musteri-adaylari/<int:pk>/not-ekle/', views.musteri_adayi_not_ekle, name='musteri_adayi_not_ekle'),
+    path('musteri-adaylari/<int:pk>/sil/', views.musteri_adayi_sil, name='musteri_adayi_sil'),
+    path('musteri-karti/yeni/', views.musteri_karti_olustur, name='musteri_karti_olustur'),
+
     # Pazarlama Süreci
     path('pazarlama-sureci/', views.dashboard, name='dashboard'),
     path('kartlar/', views.kartlar_view, name='kartlar'),

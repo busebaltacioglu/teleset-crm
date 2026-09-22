@@ -46,7 +46,7 @@ class Migration(migrations.Migration):
                 ('sorumlu_fabrika_muduru', models.CharField(default='Fabrika Müdürü', max_length=100, verbose_name='Fabrika Müdürü')),
                 ('sorumlu_satis_analiz', models.CharField(default='Satış-Analiz Sorumlusu', max_length=100, verbose_name='Satış-Analiz Sorumlusu')),
                 ('sorumlu_kalite', models.CharField(default='Kalite Sorumlusu', max_length=100, verbose_name='Kalite Sorumlusu')),
-                ('durum', models.CharField(choices=[('DEVAM_EDIYOR', 'Devam Ediyor'), ('UYGUNSUZLUK_YONETIMINDE', '️ DÖF / Uygunsuzluk Sürecinde'), ('REVIZYONDA', ' Revizyon Aşamasında'), ('BASARIYLA_TAMAMLANDI', ' Başarıyla Seri Üretime Alındı & Kapatıldı'), ('OLUMSUZ_KAPATILDI', ' Müşteri Onayı Alınamadı / Kapatıldı'), ('ASKIDA', 'Askıda / Beklemede')], default='DEVAM_EDIYOR', max_length=35, verbose_name='Süreç Durumu')),
+                ('durum', models.CharField(choices=[('DEVAM_EDIYOR', 'Devam Ediyor'), ('UYGUNSUZLUK_YONETIMINDE', 'DÖF / Uygunsuzluk Sürecinde'), ('REVIZYONDA', 'Revizyon Aşamasında'), ('BASARIYLA_TAMAMLANDI', 'Başarıyla Seri Üretime Alındı & Kapatıldı'), ('OLUMSUZ_KAPATILDI', 'Müşteri Onayı Alınamadı / Kapatıldı'), ('ASKIDA', 'Askıda / Beklemede')], default='DEVAM_EDIYOR', max_length=35, verbose_name='Süreç Durumu')),
                 ('guncel_adim_no', models.PositiveSmallIntegerField(default=1, verbose_name='Güncel Adım No')),
                 ('aciklama', models.TextField(blank=True, null=True, verbose_name='Proje Kapsamı & Notlar')),
                 ('olusturma_tarihi', models.DateTimeField(auto_now_add=True, verbose_name='Oluşturulma Tarihi')),

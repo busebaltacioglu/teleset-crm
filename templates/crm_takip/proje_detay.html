@@ -204,21 +204,8 @@
         </div>
             </div>
 
+            <!-- FAALİYET TANIMI -->
             <p class="text-secondary small mb-3 lh-base">{{ k.adim.faaliyet_tanimi }}</p>
-
-            {% if k.adim.adim_no == 2 or k.adim.adim_no == 3 %}
-                {% if ulke_kanvasi %}
-                <div class="alert alert-success border-0 py-2 px-3 rounded-3 d-flex justify-content-between align-items-center mb-3">
-                    <div class="small">
-                        <i class="bi bi-info-circle-fill me-1 text-success"></i>
-                        <strong>{{ ulke_kanvasi.ulke_adi }} Hedef Pazar Kanvası</strong> ve pazar analiz girdileri hazır.
-                    </div>
-                    <button class="btn btn-sm btn-success rounded-pill px-3 fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#ulkeKanvasiModal">
-                        Ülke Kartını İncele
-                    </button>
-                </div>
-                {% endif %}
-            {% endif %}
 
             <!-- FORM: Notlar ve Aksiyonlar -->
             <form action="{% url 'adim_aksiyon' proje.pk k.adim.adim_no %}" method="POST">
@@ -294,9 +281,9 @@
                                 <button type="submit" name="aksiyon" value="HAYIR" class="btn btn-danger btn-sm rounded-pill px-3 shadow-sm fw-semibold" onclick="return confirm('Mutabakat sağlanamadı. Süreç 15. adımda kapatılacak?')"><i class="bi bi-x-circle me-1"></i> HAYIR (15. Adımda Kapat)</button>
                             {% elif k.adim.adim_no == 12 %}
                                 <button type="submit" name="aksiyon" value="EVET" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm fw-semibold"><i class="bi bi-shield-check me-1"></i> EVET - Tedarikçi Değerlendirmesi (13. Adım)</button>
-                                <button type="submit" name="aksiyon" value="GECERLI_ONAY_VAR" class="btn btn-success btn-sm rounded-pill px-3 shadow-sm fw-bold"><i class="bi bi-trophy-fill me-1"></i>  GEÇERLİ ONAY VAR (Teklif Sürecine Aktar)</button>
+                                <button type="submit" name="aksiyon" value="GECERLI_ONAY_VAR" class="btn btn-success btn-sm rounded-pill px-3 shadow-sm fw-bold"><i class="bi bi-trophy-fill me-1"></i> GEÇERLİ ONAY VAR (Teklif Sürecine Aktar)</button>
                             {% elif k.adim.adim_no == 14 %}
-                                <button type="submit" name="aksiyon" value="OLUMLU" class="btn btn-success btn-sm rounded-pill px-3 shadow-sm fw-bold"><i class="bi bi-check-circle-fill me-1"></i>  OLUMLU (Teklif Sürecine Geç)</button>
+                                <button type="submit" name="aksiyon" value="OLUMLU" class="btn btn-success btn-sm rounded-pill px-3 shadow-sm fw-bold"><i class="bi bi-check-circle-fill me-1"></i> OLUMLU (Teklif Sürecine Geç)</button>
                                 <button type="submit" name="aksiyon" value="KOSULLU_AKSIYON" class="btn btn-warning btn-sm rounded-pill px-3 shadow-sm fw-semibold"><i class="bi bi-arrow-repeat me-1"></i> Koşullu Onay (13. Adım)</button>
                                 <button type="submit" name="aksiyon" value="OLUMSUZ" class="btn btn-danger btn-sm rounded-pill px-3 shadow-sm fw-semibold" onclick="return confirm('Tedarikçi denetimi olumsuz sonuçlandı. Kapatılsın mı?')"><i class="bi bi-x-circle me-1"></i> OLUMSUZ (15. Adımda Kapat)</button>
                             {% elif k.adim.adim_no == 15 %}
@@ -308,7 +295,7 @@
                     </div>
                 </div>
                 {% elif k.durum == 'TAMAMLANDI' %}
-                <!-- Tamamlanmış Adımda Notları Güncelleme Alanı -->
+                <!-- Tamamlanmış Adımda Notları Düzenle Alanı -->
                 <div class="mt-2 text-end">
                     <button class="btn btn-light btn-sm text-secondary border rounded-pill px-3" type="button" data-bs-toggle="collapse" data-bs-target="#editAdim{{ k.adim.adim_no }}" aria-expanded="false">
                         <i class="bi bi-pencil-square me-1"></i> Notları Düzenle
@@ -361,7 +348,7 @@
             </div>
             <div class="mb-2.5">
                 <small class="text-muted d-block">Satış ve Pazarlama Müdürü (A - Onay Veren):</small>
-                <div class="fw-bold text-dark small"><i class="bi bi-person-badge-fill text-danger me-1"></i>{{ proje.sorumlu_satis_muduru|default:'ONUR TUNCER' }}</div>
+                <div class="fw-bold text-dark small"><i class="bi bi-person-badge-fill text-danger me-1"></i>{{ proje.sorumlu_satis_muduru|default:'ALİ OKSAY CANLI' }}</div>
             </div>
             <div class="mb-2.5">
                 <small class="text-muted d-block">Pazar Analisti (C - Danışılan):</small>

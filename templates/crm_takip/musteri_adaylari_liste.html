@@ -1,0 +1,345 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block sayfa_basligi %}Müşteri Adayları{% endblock %}
+
+{% block extra_css %}
+<style>
+    .lead-table th {
+        font-size: 0.76rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #64748b;
+        font-weight: 700;
+        background-color: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+        padding-top: 12px;
+        padding-bottom: 12px;
+    }
+    .lead-table td {
+        font-size: 0.84rem;
+        vertical-align: middle;
+        padding-top: 12px;
+        padding-bottom: 12px;
+    }
+    .badge-teklif {
+        background-color: #ede9fe !important;
+        color: #5b21b6 !important;
+        border: 1px solid #c4b5fd !important;
+        font-weight: 600;
+    }
+    .kpi-stat-card {
+        border-radius: 14px;
+        border: 1px solid #e2e8f0;
+        background: #ffffff;
+        transition: all 0.2s ease;
+    }
+    .kpi-stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px -6px rgba(15, 44, 77, 0.08) !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <!-- ÜST EYLEM & ÖZET ÇUBUĞU (2. EKRAN YAPISI) -->
+    <div class="portal-card p-3 shadow-sm mb-4 bg-white d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2">
+        <div class="d-flex align-items-center gap-2">
+            <h6 class="fw-bold mb-0 text-dark">
+                <i class="bi bi-people-fill text-primary me-2"></i>Müşteri Aday Havuzu Kayıtları
+            </h6>
+            <span id="leadKayitSayisi" class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1">
+                {{ adaylar|length }} Kayıt
+            </span>
+        </div>
+
+        <div>
+            <button class="btn btn-primary rounded-pill btn-sm px-3.5 py-1.5 shadow-sm fw-semibold d-inline-flex align-items-center gap-1.5" style="background-color: #2563eb; border-color: #2563eb;" data-bs-toggle="modal" data-bs-target="#yeniKayitModal">
+                <i class="bi bi-plus-lg"></i> Yeni Kayıt Ekle
+            </button>
+        </div>
+    </div>
+
+    <!-- ADAY LİSTESİ TABLOSU (SÜTUN BAZLI FİLTRELEME) -->
+    <div class="portal-card shadow-sm bg-white overflow-hidden mb-4">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle lead-table mb-0" style="font-size: 0.88rem;">
+                <thead class="table-light">
+                    <!-- ENTEGRE SÜTUN & FİLTRELEME BAŞLIK SATIRI -->
+                    <tr class="table-filter-row bg-light">
+                        <th class="ps-3 py-3" style="width: 200px;">
+                            <input type="text" id="filterLeadAdUnvan" class="form-control form-control-sm table-lead-filter shadow-sm" placeholder="Aday Adı & Ünvan..." style="font-size: 0.78rem; border-radius: 6px;">
+                        </th>
+                        <th class="py-3" style="min-width: 170px;">
+                            <input type="text" id="filterLeadSirket" class="form-control form-control-sm table-lead-filter shadow-sm" placeholder="Şirket / Sektör..." style="font-size: 0.78rem; border-radius: 6px;">
+                        </th>
+                        <th class="py-3" style="width: 130px;">
+                            <select id="filterLeadUlke" class="form-select form-select-sm table-lead-filter shadow-sm" style="font-size: 0.78rem; border-radius: 6px;">
+                                <option value="">Ülke</option>
+                                {% for u in mevcut_ulkeler %}
+                                <option value="{{ u }}">{{ u }}</option>
+                                {% endfor %}
+                            </select>
+                        </th>
+                        <th class="py-3" style="width: 150px;">
+                            <select id="filterLeadKanal" class="form-select form-select-sm table-lead-filter shadow-sm" style="font-size: 0.78rem; border-radius: 6px;">
+                                <option value="">Kanal</option>
+                                {% for k_val, k_label in kanal_choices %}
+                                <option value="{{ k_val }}">{{ k_label }}</option>
+                                {% endfor %}
+                            </select>
+                        </th>
+                        <th class="py-3" style="min-width: 160px;">
+                            <input type="text" id="filterLeadIletisim" class="form-control form-control-sm table-lead-filter shadow-sm" placeholder="E-posta / Tel..." style="font-size: 0.78rem; border-radius: 6px;">
+                        </th>
+                        <th class="py-3 text-end" style="width: 130px;">
+                            <select id="filterLeadPotansiyel" class="form-select form-select-sm table-lead-filter shadow-sm" style="font-size: 0.78rem; border-radius: 6px;">
+                                <option value="">Potansiyel €</option>
+                                <option value="1000000+">1M € ve Üzeri</option>
+                                <option value="500000-999999">500k - 1M €</option>
+                                <option value="0-499999">0 - 500k €</option>
+                            </select>
+                        </th>
+                        <th class="py-3 text-center" style="width: 110px;">
+                            <select id="filterLeadOncelik" class="form-select form-select-sm table-lead-filter shadow-sm" style="font-size: 0.78rem; border-radius: 6px;">
+                                <option value="">Öncelik</option>
+                                {% for o_val, o_label in oncelik_choices %}
+                                <option value="{{ o_val }}">{{ o_label }}</option>
+                                {% endfor %}
+                            </select>
+                        </th>
+                        <th class="py-3 text-center" style="width: 140px;">
+                            <select id="filterLeadDurum" class="form-select form-select-sm table-lead-filter shadow-sm" style="font-size: 0.78rem; border-radius: 6px;">
+                                <option value="">Durum</option>
+                                {% for d_val, d_label in durum_choices %}
+                                <option value="{{ d_val }}">{{ d_label }}</option>
+                                {% endfor %}
+                            </select>
+                        </th>
+                        <th class="text-center py-3 px-2" style="width: 95px; min-width: 90px;">
+                            <button type="button" id="clearLeadFiltersBtn" class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1 shadow-sm w-100 fw-semibold text-nowrap d-inline-flex align-items-center justify-content-center" title="Filtreleri Sıfırla" style="font-size: 0.76rem;">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i>Sıfırla
+                            </button>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for a in adaylar %}
+                    <tr class="lead-row"
+                        data-ad-unvan="{{ a.ad_soyad|lower }} {{ a.unvan|default:''|lower }}"
+                        data-sirket="{{ a.sirket_adi|lower }} {{ a.sektor|lower }} {{ a.ilgili_urun_gruplari|default:''|lower }}"
+                        data-ulke="{{ a.ulke }}"
+                        data-kanal="{{ a.kanal }}"
+                        data-iletisim="{{ a.eposta|default:''|lower }} {{ a.telefon|default:'' }}"
+                        data-potansiyel="{{ a.tahmini_potansiyel_ciro|default:0 }}"
+                        data-oncelik="{{ a.oncelik }}"
+                        data-durum="{{ a.durum }}">
+                        
+                        <!-- Aday Adı & Ünvan -->
+                        <td class="ps-3">
+                            <div>
+                                <a href="{% url 'musteri_adayi_detay' a.pk %}" class="fw-bold text-dark text-decoration-none hover-primary d-block lh-sm">
+                                    {{ a.ad_soyad }}
+                                </a>
+                                <small class="text-muted" style="font-size: 0.74rem;">{{ a.unvan|default:"Yetkili" }}</small>
+                            </div>
+                        </td>
+
+                        <!-- Şirket / Firma & Sektör -->
+                        <td>
+                            <div class="fw-semibold text-dark">{{ a.sirket_adi }}</div>
+                            <div class="d-flex align-items-center gap-1 mt-0.5">
+                                <span class="badge bg-light text-muted border" style="font-size: 0.68rem;">{{ a.sektor }}</span>
+                                {% if a.ilgili_urun_gruplari %}
+                                <span class="badge bg-light text-secondary border text-truncate" style="font-size: 0.68rem; max-width: 120px;" title="{{ a.ilgili_urun_gruplari }}">
+                                    {{ a.ilgili_urun_gruplari }}
+                                </span>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                        <!-- Ülke / Bölge -->
+                        <td>
+                            <span class="badge bg-light text-dark border px-2 py-1" style="font-size: 0.75rem;">
+                                <i class="bi bi-geo-alt text-primary me-1"></i>{{ a.ulke }}
+                            </span>
+                            {% if a.sehir %}
+                            <div class="text-muted mt-0.5" style="font-size: 0.70rem;">{{ a.sehir }}</div>
+                            {% endif %}
+                        </td>
+
+                        <!-- Kanal & Kaynak -->
+                        <td>
+                            <div class="fw-semibold text-dark" style="font-size: 0.78rem;">{{ a.kanal }}</div>
+                            {% if a.kaynak %}
+                            <small class="text-muted text-truncate d-block" style="font-size: 0.70rem;" title="{{ a.kaynak }}">
+                                {{ a.kaynak }}
+                            </small>
+                            {% endif %}
+                        </td>
+
+                        <!-- İletişim -->
+                        <td>
+                            <div class="d-flex flex-column gap-0.5">
+                                {% if a.eposta %}
+                                <a href="mailto:{{ a.eposta }}" class="text-decoration-none text-muted text-truncate d-inline-flex align-items-center gap-1" style="font-size: 0.76rem;" title="{{ a.eposta }}">
+                                    <i class="bi bi-envelope text-primary"></i> {{ a.eposta }}
+                                </a>
+                                {% endif %}
+                                {% if a.telefon %}
+                                <a href="tel:{{ a.telefon }}" class="text-decoration-none text-muted d-inline-flex align-items-center gap-1" style="font-size: 0.76rem;">
+                                    <i class="bi bi-telephone text-success"></i> {{ a.telefon }}
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                        <!-- Tahmini Potansiyel Ciro -->
+                        <td class="text-end">
+                            {% if a.tahmini_potansiyel_ciro %}
+                            <div class="fw-bold text-dark">€ {{ a.tahmini_potansiyel_ciro|floatformat:0|intcomma }}</div>
+                            <small class="text-muted" style="font-size: 0.68rem;">Yıllık Hacim</small>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Öncelik Rozeti -->
+                        <td class="text-center">
+                            <span class="badge {{ a.oncelik_badge_info.badge }} px-2 py-1" style="font-size: 0.72rem;">
+                                {{ a.get_oncelik_display }}
+                            </span>
+                        </td>
+
+                        <!-- Durum Rozeti -->
+                        <td class="text-center">
+                            <span class="badge {{ a.durum_badge_info.badge }} px-2.5 py-1 d-inline-flex align-items-center gap-1" style="font-size: 0.72rem;">
+                                <i class="bi {{ a.durum_badge_info.icon }}"></i>
+                                {{ a.get_durum_display }}
+                            </span>
+                            {% if a.donusturulen_musteri %}
+                            <div class="mt-1">
+                                <a href="{% url 'musteri_360_detay' a.donusturulen_musteri.pk %}" class="badge bg-success text-white text-decoration-none" style="font-size: 0.65rem;">
+                                    <i class="bi bi-box-arrow-up-right me-0.5"></i> {{ a.donusturulen_musteri.kod }}
+                                </a>
+                            </div>
+                            {% endif %}
+                        </td>
+
+                        <!-- Aksiyon Butonları -->
+                        <td class="text-center text-nowrap px-3">
+                            <a href="{% url 'musteri_adayi_detay' a.pk %}" class="btn btn-outline-primary btn-sm rounded-circle d-inline-flex align-items-center justify-content-center shadow-sm" style="width: 32px; height: 32px;" title="Adayı İncele & Yönet">
+                                <i class="bi bi-chevron-right fw-bold"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="text-center py-5 text-muted">
+                            <i class="bi bi-person-x fs-1 d-block mb-2 text-secondary"></i>
+                            <h6 class="fw-bold">Aday Havuzunda Kayıt Bulunamadı</h6>
+                            <p class="small mb-3">Havuzda henüz müşteri adayı bulunmuyor.</p>
+                            <button type="button" class="btn btn-primary btn-sm rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#yeniKayitModal">
+                                <i class="bi bi-plus-lg me-1"></i> İlk Kaydı Ekle
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    <tr id="leadTableNoResults" style="display: none;">
+                        <td colspan="9" class="text-center py-5 text-muted">
+                            <i class="bi bi-search fs-2 d-block mb-2 text-secondary"></i>
+                            Uyguladığınız sütun filtrelerine uygun müşteri adayı bulunamadı.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const filterAdUnvan = document.getElementById('filterLeadAdUnvan');
+    const filterSirket = document.getElementById('filterLeadSirket');
+    const filterUlke = document.getElementById('filterLeadUlke');
+    const filterKanal = document.getElementById('filterLeadKanal');
+    const filterIletisim = document.getElementById('filterLeadIletisim');
+    const filterPotansiyel = document.getElementById('filterLeadPotansiyel');
+    const filterOncelik = document.getElementById('filterLeadOncelik');
+    const filterDurum = document.getElementById('filterLeadDurum');
+    const clearBtn = document.getElementById('clearLeadFiltersBtn');
+    const rows = document.querySelectorAll('.lead-row');
+    const countBadge = document.getElementById('leadKayitSayisi');
+    const noResultsRow = document.getElementById('leadTableNoResults');
+
+    function applyLeadFilters() {
+        const valAdUnvan = (filterAdUnvan?.value || '').trim().toLowerCase();
+        const valSirket = (filterSirket?.value || '').trim().toLowerCase();
+        const valUlke = (filterUlke?.value || '').trim();
+        const valKanal = (filterKanal?.value || '').trim();
+        const valIletisim = (filterIletisim?.value || '').trim().toLowerCase();
+        const valPotansiyel = (filterPotansiyel?.value || '').trim();
+        const valOncelik = (filterOncelik?.value || '').trim();
+        const valDurum = (filterDurum?.value || '').trim();
+
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            const adUnvan = (row.getAttribute('data-ad-unvan') || '');
+            const sirket = (row.getAttribute('data-sirket') || '');
+            const ulke = (row.getAttribute('data-ulke') || '');
+            const kanal = (row.getAttribute('data-kanal') || '');
+            const iletisim = (row.getAttribute('data-iletisim') || '');
+            const potansiyel = parseFloat(row.getAttribute('data-potansiyel')) || 0;
+            const oncelik = (row.getAttribute('data-oncelik') || '');
+            const durum = (row.getAttribute('data-durum') || '');
+
+            let match = true;
+
+            if (valAdUnvan && !adUnvan.includes(valAdUnvan)) match = false;
+            if (valSirket && !sirket.includes(valSirket)) match = false;
+            if (valUlke && ulke !== valUlke) match = false;
+            if (valKanal && kanal !== valKanal) match = false;
+            if (valIletisim && !iletisim.includes(valIletisim)) match = false;
+            if (valOncelik && oncelik !== valOncelik) match = false;
+            if (valDurum && durum !== valDurum) match = false;
+
+            if (valPotansiyel) {
+                if (valPotansiyel === '1000000+' && potansiyel < 1000000) match = false;
+                else if (valPotansiyel === '500000-999999' && (potansiyel < 500000 || potansiyel > 999999)) match = false;
+                else if (valPotansiyel === '0-499999' && (potansiyel > 499999)) match = false;
+            }
+
+            if (match) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        if (noResultsRow) {
+            noResultsRow.style.display = (visibleCount === 0 && rows.length > 0) ? '' : 'none';
+        }
+        if (countBadge) {
+            countBadge.textContent = `${visibleCount} Kayıt Gösteriliyor`;
+        }
+    }
+
+    document.querySelectorAll('.table-lead-filter').forEach(input => {
+        input.addEventListener('input', applyLeadFilters);
+        input.addEventListener('change', applyLeadFilters);
+    });
+
+    clearBtn?.addEventListener('click', function () {
+        document.querySelectorAll('.table-lead-filter').forEach(input => {
+            input.value = '';
+        });
+        applyLeadFilters();
+    });
+});
+</script>
+{% endblock %}

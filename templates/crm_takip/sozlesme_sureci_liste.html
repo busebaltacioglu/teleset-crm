@@ -61,14 +61,17 @@
     <div class="portal-card p-3 shadow-sm mb-4 bg-white d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2">
         <div class="d-flex align-items-center gap-2">
             <h6 class="fw-bold mb-0 text-dark">
-                <i class="bi bi-file-earmark-text-fill text-primary me-2"></i>Sözleşme Değerlendirme Süreç Listesi (15 Adım)
+                <i class="bi bi-file-earmark-text-fill text-primary me-2"></i>Sözleşme Değerlendirme Süreç Listesi (9 Adım)
             </h6>
             <span id="sozlesmeKayitSayisi" class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1">
                 {{ surecler|length }} Kayıt
             </span>
         </div>
 
-        <div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary rounded-pill btn-sm px-3 shadow-sm fw-semibold" data-bs-toggle="modal" data-bs-target="#sozlesmeMasterModal">
+                <i class="bi bi-diagram-3-fill me-1"></i> Resmi Prosedür & Master Tablo
+            </button>
             <button class="btn btn-primary rounded-pill btn-sm px-3 shadow-sm fw-semibold" data-bs-toggle="modal" data-bs-target="#yeniSozlesmeModal">
                 <i class="bi bi-plus-lg me-1"></i> Yeni Sözleşme Süreci Başlat
             </button>
@@ -103,21 +106,15 @@
                         <th class="py-3">
                             <select id="filterSozlesmeIstasyon" class="form-select form-select-sm table-sozlesme-filter shadow-sm" style="font-size: 0.78rem; border-radius: 6px;">
                                 <option value="">Güncel İstasyon (Tümü)</option>
-                                <option value="1">1. Sözleşme Temini</option>
-                                <option value="2">2. Takip Formu Kaydı</option>
-                                <option value="3">3. Hukuki Görüş Alımı</option>
-                                <option value="4">4. Hukuki Uygunluk Kararı</option>
-                                <option value="5">5. Değerlendirme Çizelgesi</option>
-                                <option value="6">6. Risk Belirleme</option>
-                                <option value="7">7. Kritik Risk Kararı</option>
-                                <option value="8">8. Üst Yönetim Onayı</option>
-                                <option value="9">9. Müşteri Bilgilendirme</option>
-                                <option value="10">10. Müzakere Mutabakatı</option>
-                                <option value="11">11. Sözleşme İmzalanması</option>
-                                <option value="12">12. Yasal Yükümlülük & Dosyalama</option>
-                                <option value="13">13. EYS Entegrasyonu</option>
-                                <option value="14">14. Süreç Kapatma & Rapor</option>
-                                <option value="15">15. Öğrenilmiş Dersler</option>
+                                <option value="1">1. Talebin Kaydı & İnceleme Planı</option>
+                                <option value="2">2. Atanan Birimlerin İncelemesi</option>
+                                <option value="3">3. Hukuk Danışmanı İncelemesi</option>
+                                <option value="4">4. Görüşlerin Birleştirilmesi & Risk Değerlendirmesi</option>
+                                <option value="5">5. Kritik Sapma & Yetkili Makam Kararı</option>
+                                <option value="6">6. Teleset Müzakere Pozisyonu & Görüşmeler</option>
+                                <option value="7">7. Nihai Mutabakat & Metin Kontrolü</option>
+                                <option value="8">8. Yetkili İmza, Arşivleme & Dağıtım</option>
+                                <option value="9">9. Yükümlülük & Süre Takibi</option>
                             </select>
                         </th>
                         <th class="py-3" style="min-width: 120px;">
@@ -159,43 +156,41 @@
                             
                             <!-- 1. Sözleşme Kodu & Müşteri -->
                             <td class="ps-4 py-3">
-                                <a href="{% url 'sozlesme_sureci_detay' s.pk %}" class="fw-bold text-dark text-decoration-none hover-primary d-block">
+                                <a href="{% url 'sozlesme_sureci_detay' s.pk %}" class="fw-bold text-primary font-monospace text-decoration-none">
                                     {{ s.kod }}
                                 </a>
+                                <div class="fw-semibold text-dark small">{{ s.musteri_adi }}</div>
+                            </td>
+
+                            <!-- 2. Konu & Sorumlu -->
+                            <td class="py-3">
+                                <div class="text-dark fw-medium">{{ s.ad }}</div>
                                 <div class="text-muted small">
-                                    {{ s.musteri_adi }}
+                                    <i class="bi bi-person-badge me-1"></i>{{ s.sorumlu_satis_uzmani }}
+                                    {% if s.sorumlu_hukuk %} • <i class="bi bi-bank me-1"></i>{{ s.sorumlu_hukuk }}{% endif %}
                                 </div>
                             </td>
 
-                            <!-- 2. Sözleşme Konusu & Sorumlular -->
+                            <!-- 3. Tip & Fabrika -->
                             <td class="py-3">
-                                <div class="fw-semibold text-dark text-truncate" style="max-width: 260px;" title="{{ s.ad }}">
-                                    {{ s.ad }}
-                                </div>
-                                <div class="text-muted small mt-0.5">
-                                    <i class="bi bi-person me-1"></i>{{ s.sorumlu_satis_uzmani }} • <span class="text-secondary">{{ s.sorumlu_hukuk }}</span>
-                                </div>
-                            </td>
-
-                            <!-- 3. Sözleşme Tipi & Fabrika -->
-                            <td class="py-3">
-                                <div><span class="badge bg-primary-subtle text-primary fw-semibold">{{ s.get_sozlesme_tipi_display }}</span></div>
+                                <span class="badge bg-light text-dark border">{{ s.get_sozlesme_tipi_display }}</span>
                                 <div class="text-muted small mt-1">
-                                    {{ s.ilgili_fabrika }} • <span class="text-secondary">{{ s.donem }}</span>
+                                    <i class="bi bi-building me-1"></i>{{ s.ilgili_fabrika }}
                                 </div>
                             </td>
 
                             <!-- 4. Güncel İstasyon -->
                             <td class="py-3">
-                                <div class="d-flex align-items-center">
-                                    <span class="badge bg-primary text-white rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 26px; height: 26px; font-size: 0.75rem;">
-                                        {{ s.guncel_adim_no }}
-                                    </span>
-                                    <div>
-                                        <span class="fw-bold text-dark d-block" style="font-size: 0.85rem;">{{ s.guncel_adim.adim.baslik }}</span>
-                                        <span class="text-muted" style="font-size: 0.75rem;">{{ s.guncel_adim.adim.get_faz_display|truncatechars:35 }}</span>
+                                {% if s.guncel_adim %}
+                                    <div class="d-flex align-items-center gap-1.5">
+                                        <span class="badge {% if s.guncel_adim.adim.karar_adimi_mi %}bg-warning text-dark{% else %}bg-primary{% endif %} font-monospace px-2 py-1">
+                                            Adım {{ s.guncel_adim_no }}
+                                        </span>
+                                        <span class="small fw-semibold text-dark">{{ s.guncel_adim.adim.baslik }}</span>
                                     </div>
-                                </div>
+                                {% else %}
+                                    <span class="badge bg-secondary">Adım {{ s.guncel_adim_no }}</span>
+                                {% endif %}
                             </td>
 
                             <!-- 5. İlerleme -->
@@ -278,7 +273,7 @@
                 </div>
                 <div class="modal-body p-4">
                     <div class="alert alert-info py-2 px-3 small mb-4">
-                        <i class="bi bi-info-circle-fill me-1"></i> Yeni sözleşme süreci oluşturulduğunda <strong>15 Adımlık Sözleşme Değerlendirme İş Akışı</strong> (Hukuki İnceleme, Risk Analizi, Yönetim Onayı & Müzakere) otomatik devreye alınır.
+                        <i class="bi bi-info-circle-fill me-1"></i> Yeni sözleşme süreci oluşturulduğunda <strong>9 Adımlık Sözleşme Değerlendirme İş Akışı</strong> (Hukuki İnceleme, Risk Analizi, Yönetim Onayı & Müzakere) otomatik devreye alınır.
                     </div>
 
                     <div class="row g-3">
@@ -321,8 +316,8 @@
                         <div class="col-md-4">
                             <label class="form-label small fw-bold">Ana Departman / Fabrika</label>
                             <select name="ilgili_fabrika" class="form-select form-select-sm">
-                                {% for s in intranet_sirketler %}
-                                <option value="{{ s }}" {% if s == 'PRESHANE' %}selected{% endif %}>{{ s }}</option>
+                                {% for fab_val, fab_lbl in fabrikalar %}
+                                <option value="{{ fab_val }}" {% if fab_val == 'PRESHANE' or fab_val == 'Teleset 1 (Manisa)' %}selected{% endif %}>{{ fab_lbl }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -337,23 +332,11 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label small fw-bold">Satış Sorumlusu (R)</label>
-                            <select name="sorumlu_satis_uzmani" class="form-select form-select-sm">
-                                {% for p in pazarlama_uzmanlari %}
-                                <option value="{{ p.ad_soyad }}" {% if forloop.first %}selected{% endif %}>
-                                    {{ p.ad_soyad }}
-                                </option>
-                                {% endfor %}
-                            </select>
+                            <input type="text" name="sorumlu_satis_uzmani" class="form-control form-control-sm" value="BUSE NUR BALTACIOĞLU">
                         </div>
                         <div class="col-md-3">
                             <label class="form-label small fw-bold">Hukuk / Sözleşme Sorumlusu (C)</label>
-                            <select name="sorumlu_hukuk" class="form-select form-select-sm">
-                                {% for p in proje_liderleri %}
-                                <option value="{{ p.ad_soyad }}" {% if p.ad_soyad == 'YİĞİT EFE BİLİR' %}selected{% endif %}>
-                                    {{ p.ad_soyad }}
-                                </option>
-                                {% endfor %}
-                            </select>
+                            <input type="text" name="sorumlu_hukuk" class="form-control form-control-sm" value="Hukuk Müşaviri">
                         </div>
 
                         <div class="col-12">
@@ -369,6 +352,91 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- MASTER PROSEDÜR & AKIŞ ŞEMASI MODAL -->
+<div class="modal fade" id="sozlesmeMasterModal" tabindex="-1" aria-labelledby="sozlesmeMasterModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" style="max-width: 95vw;">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white py-3">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-diagram-3-fill fs-5"></i>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0" id="sozlesmeMasterModalLabel">Sözleşmenin Değerlendirilmesi Süreci - Resmi Prosedür & Akış Şeması</h5>
+                        <small class="opacity-90">9 Master Adım, Karar Kapıları, RACI Matrisi, Dokümanlar ve Dijital Platformlar</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped align-middle mb-0" style="font-size: 0.84rem;">
+                        <thead class="table-dark sticky-top" style="z-index: 5;">
+                            <tr>
+                                <th style="width: 80px;" class="text-center">Adım</th>
+                                <th style="width: 220px;">Süreç Adımı</th>
+                                <th style="min-width: 320px;">Faaliyet Tanımı</th>
+                                <th style="width: 250px;">Sorumlular (RACI)</th>
+                                <th style="width: 210px;">İlgili Dokümanlar</th>
+                                <th style="width: 140px;">Dijital Platform</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for adim in master_adimlar %}
+                            <tr>
+                                <td class="text-center font-monospace fw-bold">
+                                    <span class="badge {% if adim.karar_adimi_mi %}bg-warning text-dark border border-warning{% else %}bg-primary{% endif %} px-2 py-1">
+                                        {{ adim.adim_no }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="fw-bold text-dark">{{ adim.baslik }}</div>
+                                    {% if adim.karar_adimi_mi %}
+                                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2 py-0.5" style="font-size: 0.70rem;">
+                                            Karar Kapısı
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-secondary small lh-sm">
+                                    {{ adim.faaliyet_tanimi }}
+                                </td>
+                                <td>
+                                    {% for r in adim.raci_parsed %}
+                                    <div class="d-flex align-items-center gap-1.5 mb-1">
+                                        <span class="badge bg-{{ r.renk }} px-1.5 py-0.5 fw-bold" style="font-size: 0.70rem; width: 20px; text-align: center;">{{ r.rol|default:'R' }}</span>
+                                        <span class="small">{{ r.unvan }}</span>
+                                    </div>
+                                    {% empty %}
+                                        <span class="text-muted small">-</span>
+                                    {% endfor %}
+                                </td>
+                                <td>
+                                    {% for dok in adim.dokuman_listesi %}
+                                    <div class="small text-truncate mb-1" title="{{ dok }}">
+                                        <i class="bi bi-file-earmark-text text-primary me-1"></i>{{ dok }}
+                                    </div>
+                                    {% empty %}
+                                        <span class="text-muted small">-</span>
+                                    {% endfor %}
+                                </td>
+                                <td>
+                                    {% for plat in adim.platform_listesi %}
+                                    <span class="badge bg-light text-dark border me-1 mb-1">{{ plat }}</span>
+                                    {% empty %}
+                                        <span class="text-muted small">-</span>
+                                    {% endfor %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer bg-light py-2">
+                <button type="button" class="btn btn-secondary btn-sm rounded-pill px-4" data-bs-dismiss="modal">Kapat</button>
+            </div>
         </div>
     </div>
 </div>

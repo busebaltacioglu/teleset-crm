@@ -1,4 +1,4 @@
-﻿import os
+import os
 import django
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "teleset_crm_core.settings")
@@ -23,7 +23,7 @@ musteriler = [
         "kam_muhendislik_lideri": "Ahmet AK (Kalıp & Projeci Md.)",
         "kam_kalite_lideri": "Mehmet YILMAZ (Kalite Mühendisi)",
         "aktif_urunler": "Fırın Yan Gövde Sacı (400T), Kombi Kablo Demetleri, Buzdolabı Kondanserleri",
-        "sozlesme_durumu": "STG-TL-001 Aktif (2028'e Kadar Geçerli)",
+        "sozlesme_durumu": "Aktif Sözleşme (2028'e Kadar Geçerli)",
         "churn_riski": "Düşük (Yeşil)",
         "notlar": "Teleset'in toplam cirosunun %32'sini oluşturan en stratejik global OEM ortağı."
     },
@@ -42,7 +42,7 @@ musteriler = [
         "kam_muhendislik_lideri": "Cemil ÇELİK (Pres Hatları Md.)",
         "kam_kalite_lideri": "Hakan KILIÇ (Proses Kalite)",
         "aktif_urunler": "Arctic Çamaşır Kablo Gruplama, Kombi Metal Şasi, Tel-Boru Kondanser",
-        "sozlesme_durumu": "STG-TL-001 Aktif (2027 Romanya & TR)",
+        "sozlesme_durumu": "Aktif Sözleşme (2027 Romanya & TR)",
         "churn_riski": "Düşük (Yeşil)",
         "notlar": "Türkiye ve Romanya fabrikalarına eşzamanlı parça tedariği sağlanan ana ihracat carisi."
     },
